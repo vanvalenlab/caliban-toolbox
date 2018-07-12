@@ -26,21 +26,21 @@ df = pd.DataFrame.from_csv(csv_file)
 
 urls = df.loc[:,['annotation', 'image_url', 'broken_link']]
 for index, row in df.iterrows():
-	print row
+    print(row)
 
-	annotation_url = row['annotation'][8:-2]
-	image_url = row['image_url']
-	broken_link = row['broken_link'] 
+    annotation_url = row['annotation'][8:-2]
+    image_url = row['image_url']
+    broken_link = row['broken_link']
 
-	print broken_link
-	# Get image_name
-	if broken_link is False:
-		image_url_split = image_url.split("/")
-		image_name = image_url_split[-1][:-4] + "_annotation.png"
-		image_path = os.path.join(csv_direc, 'nuclear', 'hela', 'set3', image_name)
+    print(broken_link)
+    # Get image_name
+    if broken_link is False:
+        image_url_split = image_url.split("/")
+        image_name = image_url_split[-1][:-4] + "_annotation.png"
+        image_path = os.path.join(csv_direc, 'nuclear', 'hela', 'set3', image_name)
 
-		print image_url_split
+        print(image_url_split)
 
-		# Download annotation	
-		image = urllib.URLopener()
-		image.retrieve(annotation_url, image_path)
+    # Download annotation
+    image = urllib.URLopener()
+    image.retrieve(annotation_url, image_path)

@@ -10,14 +10,14 @@ Code for creating montages of 3D image stacks to aid image annotaters
 Import python packages
 """
 
-from deepcell import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 import os
-import tifffile as tiff
+from skimage.external import tifffile as tiff
 from scipy import ndimage
 import scipy
 
+from utils import get_image, get_images_from_directory
 
 """
 Load images
@@ -67,7 +67,7 @@ for cell_type, number_of_sets, channel_name in zip(cell_types, list_of_number_of
 
 					cropped_image_name = os.path.join(cropped_folder_name, cropped_image_name)
 					scipy.misc.imsave(cropped_image_name, cropped_image)
-					
+
 					list_of_cropped_images += [cropped_image]
 
 				list_0 = list_of_cropped_images[0:10]
@@ -83,7 +83,3 @@ for cell_type, number_of_sets, channel_name in zip(cell_types, list_of_number_of
 
 				montage_name = os.path.join(save_direc, "montage_" + str(i) + "_" + str(j) + ".png")
 				scipy.misc.imsave(montage_name, montage)
-
-
-
-

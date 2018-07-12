@@ -3,43 +3,41 @@ import numpy as np
 import skimage.measure
 import os
 
-import pdb
-
 #raw_images_folder = "/home/vanvalen/dylan_deepcell/retinanet/crowdflower_data/set1/RawImages/"
 #annotated_images_folder = "/home/vanvalen/dylan_deepcell/retinanet/crowdflower_data/set1/Annotation/"
 
 images_folders = [
-        "/retinanet/crowdflower_data/1219136/nuclear/HEK293/set2/",
-        "/retinanet/crowdflower_data/1219137/nuclear/HeLa-S3/set0/",
-        "/retinanet/crowdflower_data/1219138/nuclear/HeLa-S3/set1/",
-        "/retinanet/crowdflower_data/1219139/nuclear/HeLa-S3/set2/",
-        "/retinanet/crowdflower_data/1219140/nuclear/HeLa-S3/set3/",
-        "/retinanet/crowdflower_data/1219141/nuclear/HeLa-S3/set4/",
-        "/retinanet/crowdflower_data/1219143/nuclear/HeLa-S3/set5/",
-        "/retinanet/crowdflower_data/1219144/nuclear/HeLa-S3/set6/",
-        "/retinanet/crowdflower_data/1219145/nuclear/HeLa-S3/set7/",
-        "/retinanet/crowdflower_data/1219146/nuclear/MCF10A/set0/",
-        "/retinanet/crowdflower_data/1219147/nuclear/NIH-3T3/set0/",
-        "/retinanet/crowdflower_data/1219148/nuclear/NIH-3T3/set1/",
-        "/retinanet/crowdflower_data/1219149/nuclear/NIH-3T3/set2/",
-        "/retinanet/crowdflower_data/1219150/nuclear/RAW264.7/set0/",
-        "/retinanet/crowdflower_data/1219151/nuclear/RAW264.7/set1/",
-        "/retinanet/crowdflower_data/1219152/nuclear/RAW264.7/set2/",
-        "/retinanet/crowdflower_data/1219153/nuclear/RAW264.7/set3/",
-        "/retinanet/crowdflower_data/1219154/nuclear/RAW264.7/set4/",
-        "/retinanet/crowdflower_data/1219155/nuclear/RAW264.7/set5/",
-        "/retinanet/crowdflower_data/1219156/nuclear/RAW264.7/set6/",
-        "/retinanet/crowdflower_data/1219157/nuclear/RAW264.7/set7/"
-        ]
+    "/retinanet/crowdflower_data/1219136/nuclear/HEK293/set2/",
+    "/retinanet/crowdflower_data/1219137/nuclear/HeLa-S3/set0/",
+    "/retinanet/crowdflower_data/1219138/nuclear/HeLa-S3/set1/",
+    "/retinanet/crowdflower_data/1219139/nuclear/HeLa-S3/set2/",
+    "/retinanet/crowdflower_data/1219140/nuclear/HeLa-S3/set3/",
+    "/retinanet/crowdflower_data/1219141/nuclear/HeLa-S3/set4/",
+    "/retinanet/crowdflower_data/1219143/nuclear/HeLa-S3/set5/",
+    "/retinanet/crowdflower_data/1219144/nuclear/HeLa-S3/set6/",
+    "/retinanet/crowdflower_data/1219145/nuclear/HeLa-S3/set7/",
+    "/retinanet/crowdflower_data/1219146/nuclear/MCF10A/set0/",
+    "/retinanet/crowdflower_data/1219147/nuclear/NIH-3T3/set0/",
+    "/retinanet/crowdflower_data/1219148/nuclear/NIH-3T3/set1/",
+    "/retinanet/crowdflower_data/1219149/nuclear/NIH-3T3/set2/",
+    "/retinanet/crowdflower_data/1219150/nuclear/RAW264.7/set0/",
+    "/retinanet/crowdflower_data/1219151/nuclear/RAW264.7/set1/",
+    "/retinanet/crowdflower_data/1219152/nuclear/RAW264.7/set2/",
+    "/retinanet/crowdflower_data/1219153/nuclear/RAW264.7/set3/",
+    "/retinanet/crowdflower_data/1219154/nuclear/RAW264.7/set4/",
+    "/retinanet/crowdflower_data/1219155/nuclear/RAW264.7/set5/",
+    "/retinanet/crowdflower_data/1219156/nuclear/RAW264.7/set6/",
+    "/retinanet/crowdflower_data/1219157/nuclear/RAW264.7/set7/"
+    ]
 
 output_file = "/retinanet/crowdflower_data/retinanet_inputs/annotations.csv"
-with open(output_file,"wb") as annotations_csv:
+with open(output_file, "wb") as annotations_csv:
     for base_folder in images_folders:
         raw_images_folder = base_folder + "RawImages/"
         annotated_images_folder = base_folder + "Annotation/"
 
-        annotated_images = [f for f in os.listdir(annotated_images_folder) if os.path.isfile( os.path.join(annotated_images_folder,f) )]
-        full_image_paths = [ annotated_images_folder + im for im in annotated_images ]
+        annotated_images = [f for f in os.listdir(annotated_images_folder) if os.path.isfile(os.path.join(annotated_images_folder, f))]
+        full_image_paths = [annotated_images_folder + im for im in annotated_images]
 
         for image in full_image_paths:
             # identify corresponding raw image
@@ -51,11 +49,10 @@ with open(output_file,"wb") as annotations_csv:
 
             # Extract bounding boxes of cells and write them to the CSV file.
             im = Image.open(image)
-            #im.show()
             imarray = np.array(im)
-            imz = skimage.measure.label(imarray[:,:,0])
+            imz = skimage.measure.label(imarray[:, :, 0])
             rgs = skimage.measure.regionprops(imz)
-            #pdb.set_trace()
+
             for rg in rgs:
                 # NB: It might be necessary to shift some of these numbers if you want precise bounding boxes.
                 # Compare
