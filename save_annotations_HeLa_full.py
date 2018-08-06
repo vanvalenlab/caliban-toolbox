@@ -26,8 +26,6 @@ Load images from csv file
 """
 
 def download_csv():
-    # base_direc = 'Users/danielkim/Desktop/montages'
-    # csv_file = os.path.join(base_direc, csv_filename)
     output_path = './montages/'
     # unzip the folder with .csv if .csv file does not exist
     #if not os.path.isfile(csv_file):
@@ -72,7 +70,7 @@ def download_csv():
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 
-            annotated_image_name = "annotation_" + image_id + ".tif"
+            annotated_image_name = "annotation_" + image_id + ".png"
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)
 
             # Download annotated image
