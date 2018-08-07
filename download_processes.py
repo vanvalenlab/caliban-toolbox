@@ -9,10 +9,10 @@ import os
 def main(argv):
     key = input('What is your Figure Eight api_key? ')
     # job_type = input('What type of report? ')
-    # id = input('What is the job id to download? ')
+    id = input('What is the job id to download? ')
 
-    #key = 
-    id = 1280335
+    #key =
+    # id = 1280335
     job_type = 'full'
     newdir = './job_' + str(id) + '/'
     os.makedirs(newdir)
@@ -22,7 +22,9 @@ def main(argv):
     download(key, job_type, id)
     download_csv()
     relabel()
-    reshape()
+    montageq = str(input('Is this a montage? (y/n) ' ))
+    if montageq == 'y':
+        reshape()
     rename_annotated()
 
 if __name__ == "__main__":
