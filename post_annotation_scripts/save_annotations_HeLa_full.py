@@ -60,21 +60,17 @@ def download_csv():
 
             # generate image id
             image_url_split = image_url.split("/")
-            image_id = image_url_split[-1]
-            if '.' in image_id:
-                image_id = image_id.split('.')[0]
 
-            # image_id = image_url_split[-1][8:-4].zfill(4)
-            # lst = image_id.split('_')
-            # image_id = lst[0] + '_0' + lst[1]
-            # print(image_id)
+            image_id = image_url_split[-1][8:-4].zfill(4)
+            lst = image_id.split('_')
+            image_id = lst[0] + '_0' + lst[1]
+            print(image_id)
             # annotated image location
             annotated_image_folder = output_path
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 
             annotated_image_name = "annotation_" + image_id + ".png"
-            print(annotated_image_name)
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)
 
             # Download annotated image
