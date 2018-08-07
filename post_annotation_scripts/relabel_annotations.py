@@ -12,10 +12,9 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 
 def relabel():
 
-    montage_path = './montages/'
+    montage_path = './annotations/'
     list_of_montages = os.listdir(montage_path)
-    print(list_of_montages)
-    output_path = './relabelled_montages/'
+    output_path = './relabelled_annotations/'
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
 
@@ -26,12 +25,9 @@ def relabel():
         img_array = imread(montage_file)[:,:,0]
         img_clean = clean_montage(img_array)
         seq_label = relabel_montage(img_clean)
-        print("cleaned and relabelled!")
         seq_img = "seq_annotation" + save_ind + ".tif"
         image_path = os.path.join(output_path, seq_img)
         imsave(image_path, seq_label.astype(np.uint8))
-
-    print("done")
 
 def clean_montage(img):
     clean_img = remove_small_holes(img, connectivity=1,in_place=False)
@@ -49,7 +45,7 @@ def clean_montage(img):
                 if len(ball) == 0: # if no possible labels
                     if x>1 and y>1:
                         # take a larger area for labels, if possible
-                        ball = img[x-2:x+2, y-2:y+2].flatten() 
+                        ball = img[x-2:x+2, y-2:y+2].flatten()
                         ball = np.delete(ball,np.where(ball == 0))
                         if len(ball) != 0:
                             # if there are possible values, take the most common
@@ -80,7 +76,7 @@ def relabel_montage(y):
     for cell_id, relabel_id in zip(unique_cells, relabel_ids):
         cell_loc = np.where(y == cell_id)
         new_y[cell_loc] = relabel_id
-    return new_y
-            
+    return new_yannotations
+
 if __name__ == '__main__':
     relabel()

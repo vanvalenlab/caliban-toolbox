@@ -26,11 +26,11 @@ Load images from csv file
 """
 
 def download_csv():
-    output_path = './montages/'
+    output_path = './annotations/'
     # unzip the folder with .csv if .csv file does not exist
     #if not os.path.isfile(csv_file):
-    if not os.path.exists('./montages/'):
-        os.makedirs('./montages')
+    if not os.path.exists('./annotations/'):
+        os.makedirs('./annotations')
     if not os.path.exists('./unzipped_csv/'):
         os.makedirs('./unzipped_csv')
     call([ "unzip", "output.zip", '-d', './unzipped_csv'])
@@ -55,7 +55,6 @@ def download_csv():
         if row['broken_link'] is False:
             # Get image_name
             annotation_url = row['annotation'][8:-2]
-            print('annotation url: ', annotation_url)
             image_url = row['image_url']
 
             # generate image id

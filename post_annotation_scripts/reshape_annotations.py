@@ -25,10 +25,9 @@ import urllib.request, urllib.parse, urllib.error
 import pdb
 
 def reshape():
-    montage_path = './relabelled_montages/'
+    montage_path = './relabelled_annotations/'
     output_path = './movie/'
     list_of_montages = os.listdir(montage_path)
-    print(list_of_montages)
 
     for montage_name in list_of_montages:
         print(montage_name)
@@ -58,12 +57,12 @@ def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_i
             if debug:
                 print("x_end: " + str(x_end))
                 print("y_end: " + str(y_end))
-            images[:,:,image_number] = img[ 
-                    (x_end-(x_size-1)):(x_end+1), 
+            images[:,:,image_number] = img[
+                    (x_end-(x_size-1)):(x_end+1),
                     (y_end-(y_size-1)):(y_end+1)]
             image_number += 1
             y_end += y_size
-        # once we reach the end of a column, move to the beginning of the 
+        # once we reach the end of a column, move to the beginning of the
         # next row, and continue
         y_end = y_size - 1
         x_end += x_size
