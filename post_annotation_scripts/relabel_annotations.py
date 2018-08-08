@@ -76,7 +76,7 @@ def relabel_montage(y):
     for cell_id, relabel_id in zip(unique_cells, relabel_ids):
         cell_loc = np.where(y == cell_id)
         new_y[cell_loc] = relabel_id
-    return new_yannotations
+    return new_y
 
 if __name__ == '__main__':
     relabel()

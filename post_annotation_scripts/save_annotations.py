@@ -48,7 +48,7 @@ def download_csv():
     df = pd.DataFrame.from_csv(csv_file)
 
     urls = df.loc[:,['annotation', 'broken_link', 'image_url']]
-
+    split_start = None
     # iterate through rows of .csv file
     for index, row in df.iterrows():
 
@@ -59,17 +59,26 @@ def download_csv():
 
             # generate image id
             image_url_split = image_url.split("/")
-
-            image_id = image_url_split[-1][8:-4].zfill(4)
-            lst = image_id.split('_')
-            image_id = lst[0] + '_0' + lst[1]
+            image_id = image_url_split[-1]
+            lst = image_id.split('.png')
+            image_id = lst[0]
             print(image_id)
-            # annotated image location
+            if split_start == None:
+                split_start = int(input('Index of start? '))
+
+            if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
+                image_id = image_id[:split_start] + '0' + image_id[split_start:]
+            # image_id = image_url_split[-1][8:-4].zfill(4)
+            # lst = image_id.split('_')
+            # image_id = lst[0] + '_0' + lst[1]
+            # print(image_id)
+            # # annotated image location
             annotated_image_folder = output_path
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 
-            annotated_image_name = "annotation_" + image_id + ".png"
+
+            annotated_image_name = "annotation_" + image_id
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)
 
             # Download annotated image
@@ -78,7 +87,6 @@ def download_csv():
 
 
 if __name__ == '__main__':
-    #csv_path = '/Users/danielkim/Desktop/'
     # output path is the directory for annotated montages
 
     # download annotated montages from .csv

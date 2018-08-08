@@ -1,0 +1,14 @@
+OUTPUT_DIR: /Users/danielkim/Desktop/deepcell-data-engineering/job_1280335/HeLa_output/montage_1_00
+operations:
+- function: detect_division
+  images: /Users/danielkim/Desktop/deepcell-data-engineering/job_1280335/movie/montage_1_00/raw/
+  labels: /Users/danielkim/Desktop/deepcell-data-engineering/job_1280335/movie/montage_1_00/annotated/
+  output: nuc
+  params:
+    DISPLACEMENT: 50
+    DIVISIONMASSERR: 0.55
+- function: apply
+  images:
+  - /Users/danielkim/Desktop/deepcell-data-engineering/job_1280335/movie/montage_1_00/raw/*
+  labels:
+  - nuc

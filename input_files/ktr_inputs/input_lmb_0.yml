@@ -1,0 +1,78 @@
+OUTPUT_DIR: output/LMB/Pos004
+
+operations:
+- function: flatfield_references
+  images: /home/KTRimages/LMB/Pos004/*DAPI*
+  output: op000
+  params:
+    ff_paths: /home/KTRimages/LMB/FF/*DAPI*
+    exp_corr: True
+- function: flatfield_references
+  images: /home/KTRimages/LMB/Pos004/*YFP*
+  output: YFP
+  params:
+    ff_paths: /home/KTRimages/LMB/FF/*YFP*
+- - function: histogram_match
+    images: op000
+  - function: curvature_anisotropic_smooth
+    output: DAPI
+    params:
+      NITER: 30
+- function: gaussian_laplace
+  params:
+    NEG: True
+    SIGMA: 2.5
+  images: DAPI
+  output: op001
+- function: adaptive_thres
+  params:
+    FIL1: 14
+    R1: 300
+  images: op001
+  output: op002
+- function: propagate_multisnakes
+  images: DAPI
+  labels: op002
+  params:
+    NITER: 20
+    lambda2: 10
+  output: op002
+- - function: run_lap
+    images: DAPI
+    labels: op002
+    params:
+      MASSTHRES: 0.25
+      DISPLACEMENT: 25
+  - function: track_neck_cut
+    params:
+      MASSTHRES: 0.25
+  - function: track_neck_cut
+    params:
+      DISPLACEMENT: 20
+      THRES_ANGLE: 160
+  - function: nearest_neighbor
+    params:
+      DISPLACEMENT: 60
+      MASSTHRES: 0.1
+    output: tracked
+- - function: gap_closing
+    images: DAPI
+    labels: tracked
+  - function: cut_short_traces
+    params:
+      minframe: 100
+    output: nuc
+- function: ring_dilation_above_offset_buffer
+  params:
+    RINGWIDTH: 2
+    OFFSET: 200
+  images: YFP
+  labels: nuc
+  output: cyto
+- function: apply
+  images:
+    - DAPI
+    - YFP
+  labels:
+    - nuc
+    - cyto
