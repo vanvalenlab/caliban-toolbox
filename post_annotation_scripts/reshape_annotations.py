@@ -30,9 +30,13 @@ def reshape():
     list_of_montages = os.listdir(montage_path)
     x_image = int(input('How many images down? '))
     y_image = int(input('How many images across? '))
-    x_sizes = int(input('Size of each image down? '))
-    y_sizes = int(input('Size of each image across? '))
+    x_dim = int(input('X dim of montage: '))
+    y_dim = int(input('Y dim of montage: '))
     buffer_size = int(input('Size of buffer? '))
+    x_sizes = int((x_dim - ((x_image - 1) * buffer_size)) / x_image)
+    y_sizes = int((y_dim - ((y_image - 1) * buffer_size)) / y_image)
+    print(x_sizes, y_sizes)
+
     for montage_name in list_of_montages:
         print(montage_name)
         if os.path.isdir(output_path) is False:
