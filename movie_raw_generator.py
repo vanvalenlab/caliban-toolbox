@@ -2,10 +2,10 @@
 import sys
 import os
 import shutil
-
+# testinggggg
 
 def move():
-    data_folder = '/Users/danielkim/Desktop/deepcell-data-engineering/data/set0/stacked_raw/'
+    data_folder = '/../deepcell-data-engineering/data/set0/stacked_raw/'
     dir_list = os.listdir(data_folder)
     destination = './movie/montage_'
     for term in dir_list:

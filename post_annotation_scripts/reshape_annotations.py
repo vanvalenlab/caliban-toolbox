@@ -28,7 +28,11 @@ def reshape():
     montage_path = './relabelled_annotations/'
     output_path = './movie/'
     list_of_montages = os.listdir(montage_path)
-
+    x_image = int(input('How many images down? '))
+    y_image = int(input('How many images across? '))
+    x_sizes = int(input('Size of each image down? '))
+    y_sizes = int(input('Size of each image across? '))
+    buffer_size = int(input('Size of buffer? '))
     for montage_name in list_of_montages:
         print(montage_name)
         if os.path.isdir(output_path) is False:
@@ -36,9 +40,10 @@ def reshape():
         montage_file = os.path.join(montage_path, montage_name)
         subfolder = montage_name[14:-4]
         output_folder = os.path.join(output_path, subfolder)
-        reshape_montage(montage_file, output_folder, x_size=216, x_images=4)
 
-def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_images = 3, y_images = 10):
+        reshape_montage(montage_file, output_folder, x_size=x_sizes, y_size=y_sizes, x_images=x_image, y_images=y_image, buffer=buffer_size)
+
+def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_images = 3, y_images = 10, buffer=0):
     debug = False
     # open composite image
     img = skimage.io.imread(montage_file)
@@ -51,9 +56,9 @@ def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_i
     y_end = y_size - 1
     images = np.ndarray( shape=(x_size, y_size, x_images*y_images), dtype=np.int16)
     image_number = 0
-    while x_end < (x_size*x_images):
+    while x_end < (x_size*x_images + (x_images - 1) * buffer):
         # moving along columns until we get to the end of the column
-        while y_end < (y_size*y_images):
+        while y_end < (y_size*y_images + (y_images - 1) * buffer):
             if debug:
                 print("x_end: " + str(x_end))
                 print("y_end: " + str(y_end))
@@ -61,11 +66,11 @@ def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_i
                     (x_end-(x_size-1)):(x_end+1),
                     (y_end-(y_size-1)):(y_end+1)]
             image_number += 1
-            y_end += y_size
+            y_end += y_size + buffer
         # once we reach the end of a column, move to the beginning of the
         # next row, and continue
         y_end = y_size - 1
-        x_end += x_size
+        x_end += x_size + buffer
 
     # renumber the images so that the numbers are 1 to N
     labels = np.unique(images)

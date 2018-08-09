@@ -14,6 +14,7 @@ def run_celltk(newdir):
 	stream = open(fname, 'r')
 	data = yaml.load(stream)
 	lst_dir = os.listdir('./' + newdir + 'movie/')
+	lst_dir.remove('nuclear_movie_hela1_raw_same.npz')
 	print(lst_dir)
 	common_dir = input('Longest common string from index 0: ')
 	print(common_dir)
