@@ -34,33 +34,23 @@ PROP_SAVE = ['area', 'cell_id', 'convex_area', 'cv_intensity',
              'mean_intensity', 'median_intensity', 'min_intensity', 'orientation',
              'perimeter', 'solidity', 'std_intensity', 'total_intensity', 'x', 'y', 'parent', 'num_seg']
 
-
-def find_all_children(labels):
-    print(labels)
-    mask = binary_fill_holes(labels < 0)
-    mask[labels < 0] = False
-    print(labels[mask])
-
-    clabelnums = np.unique(labels[mask]).tolist()
-    if 0 in clabelnums:
-        clabelnums.remove(0)
-    return clabelnums
-
-
 def find_parent_label(labels, child_label):
-    mask = binary_dilation(labels == child_label)
-    mask[labels == child_label] = False
-    return max(set(labels[mask].tolist()), key=labels[mask].tolist().count)
+    for term in labels:
+        if term[1] == child_label:
+            return term[0]
 
 
 def add_parent(cells, labels):
-    children_labels = find_all_children(labels)
-    print(children_labels)
+    div = np.load('/home/HeLa_output/division.npz')
+    children_labels = []
+    for term in div['arr_0']:
+        children_labels.append(term[1])
+
     for cl in children_labels:
-        parent_label = find_parent_label(labels, cl)
+        parent_label = find_parent_label(div['arr_0'], cl)
         child = [cell for cell in cells if cell.label == cl]
         assert len(child) == 1
-        print(cl)
+        print('Child: ' + str(cl) + '; Parent: ' + str(abs(parent_label)))
         child[0].parent = abs(parent_label)
     return cells
 
@@ -117,7 +107,6 @@ def caller(inputs_list, inputs_labels_list, output, primary, secondary):
         for inputs_labels, obj in zip(inputs_labels_list, obj_names):
             logger.info("Channel {0}: {1} applied...".format(ch, obj))
             for frame, (path, pathl) in enumerate(zip(inputs, inputs_labels)):
-                print(path, pathl)
                 img, labels = imread(path), lbread(pathl, nonneg=False)
                 cells = regionprops(labels, img)
                 if (labels < 0).any():

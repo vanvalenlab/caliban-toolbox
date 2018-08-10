@@ -119,10 +119,9 @@ def detect_division(cells, DISPLACEMENT=50, maxgap=4, DIVISIONMASSERR=0.15):
             dis_cell = trhandler.disappeared()[disi]
             app_cell = trhandler.appeared()[appi]
             print(dis_cell.label, app_cell.label)
-            print(type(app_cell.parent))
             app_cell.parent = dis_cell.label
             # [parent, daughter]
-            npz_arr.append([dis_cell.label, app_cell.label])
+            npz_arr.append([int(dis_cell.label), int(app_cell.label)])
             # dis_cell.nxt = app_cell
 
     np.savez('/home/HeLa_output/division.npz', npz_arr)
