@@ -24,9 +24,13 @@ def fig_eight():
             data = upload_data(csv, copy_id, key)
             if data == -1:
                 return
+            updateq = str(input('Update job title now? (y/n) '))
+            if updateq == 'y':
+                title = str(input('New job title: '))
+                update_job_title(title, copy_id, key)
 
 
-def copy_job(id, key):
+def copy_job(title, id, key):
     url = 'https://api.figure-eight.com/v1/jobs/{job_id}/copy.json?key={api_key}'
     url = url.replace('job_id', str(id))
     url = url.replace('api_key', key)
@@ -55,6 +59,20 @@ def upload_data(csv, id, key):
         print('Data not uploaded successfully.')
         return -1
     print('Data uploaded successfully!')
+    return 0
+
+def update_job_title(title, id, key):
+    command = 'curl -X PUT --data-urlencode "job[title]={some_new_title}" https://api.figure-eight.com/v1/jobs/{job_id}.json?key={api_key}'
+    command.replace('some_new_title', title)
+    command.replace('job_id', id)
+    command.replace('api_key', key)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    dict = str(out)
+    if "error" in dict:
+        print('Title not changed successfully.')
+        return -1
+    print('Title changed successfully!')
     return 0
 
 if __name__ == "__main__":
