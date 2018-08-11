@@ -17,8 +17,6 @@ def downloader():
     #key = input('What is your Figure Eight api_key? ')
     #job_type = input('What type of report? ')
     id = input('What is the job id to download? ')
-
-
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
     key = 'B8rH7ALgZ9Q9NTksAxyh'
