@@ -3,12 +3,12 @@ from post_annotation_scripts.save_annotations import download_csv
 from post_annotation_scripts.relabel_annotations import relabel
 from post_annotation_scripts.reshape_annotations import reshape
 from post_annotation_scripts.rename_annotated import rename_annotated
-from movie_raw_generator import move
-from celltk_processes import run_celltk
+from post_annotation_scripts.movie_raw_generator import move
+# from post_annotation_scripts.celltk_processes import run_celltk
 import sys
 sys.path.append('../')
-from cut_raw_segments import cut_raw
-from make_training_data import training
+from post_annotation_scripts.cut_raw_segments import cut_raw
+from post_annotation_scripts.make_training_data import training
 #
 import os
 import shutil
