@@ -34,8 +34,6 @@ def get_image(file_name):
     """
     Read image from file and load into numpy array
     """
-
-    print(file_name)
     ext = os.path.splitext(file_name.lower())[-1]
     if ext == '.tif' or ext == '.tiff':
         return np.float32(TiffFile(file_name).asarray())
@@ -74,7 +72,6 @@ def get_images_from_directory(data_location, channel_names):
     for term in img_list_channels[0]:
         if '._' in term:
             img_list_channels[0].remove(term)
-    print(img_list_channels[0])
     img_temp = np.asarray(get_image(os.path.join(data_location, img_list_channels[0][1])))
 
     n_channels = len(channel_names)

@@ -17,3 +17,7 @@ COPY annotation_scripts /data-engineering/annotation_scripts
 
 # Change matplotlibrc file to use the Agg backend
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
+
+# Install necessary modules
+RUN  pip install requests
+RUN pip install pyyaml
