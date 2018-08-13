@@ -19,5 +19,8 @@ COPY annotation_scripts /data-engineering/annotation_scripts
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
 
 # Install necessary modules
-RUN  pip install requests
+RUN pip install requests
 RUN pip install pyyaml
+RUN pip install SimpleITK
+RUN pip install mahotas
+RUN pip install munkres

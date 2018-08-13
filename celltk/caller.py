@@ -69,10 +69,10 @@ def parse_operation(operation):
 
 
 def _retrieve_caller_based_on_function(function):
-    import preprocess, segment, track, postprocess, subdetect, apply
-    import preprocess_operation, segment_operation, track_operation, postprocess_operation, subdetect_operation
-    ops_modules = [preprocess_operation, segment_operation, track_operation, postprocess_operation, subdetect_operation, apply]
-    caller_modules = [preprocess, segment, track, postprocess, subdetect, apply]
+    import apply, postprocess
+    import postprocess_operation
+    ops_modules = [postprocess_operation, apply]
+    caller_modules = [postprocess, apply]
 
     module = [m for m, top in zip(caller_modules, ops_modules) if hasattr(top, function)][0]
     return getattr(module, "caller")
@@ -82,7 +82,8 @@ def run_operation(output_dir, operation):
     functions, params, images, labels, output = parse_operation(operation)
     inputs = prepare_path_list(images, output_dir)
     logger.info(inputs)
-
+    print(functions)
+    print(params)
     inputs_labels = prepare_path_list(labels, output_dir)
     output = join(output_dir, output) if output else output_dir
     caller = _retrieve_caller_based_on_function(functions[0])

@@ -2,7 +2,6 @@
 import sys
 import os
 import shutil
-# testinggggg
 
 def move(job_id):
     data_folder = './data/set0/stacked_raw/'

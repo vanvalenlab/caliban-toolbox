@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.ndimage import imread as imread0
-import tifffile as tiff
+from skimage.io import imread
 
 
 def imread_check_tiff(path):

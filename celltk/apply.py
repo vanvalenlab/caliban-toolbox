@@ -7,14 +7,14 @@ need to deal with parent id
 
 from utils.util import imread
 import argparse
-import tifffile as tiff
+#import tifffile as tiff
 from os.path import basename, join, dirname, abspath
 import numpy as np
 from utils.postprocess_utils import regionprops, Cell # set default parent and next as None
 try:
     from labeledarray import LabeledArray
 except:
-    from celltk.labeledarray import LabeledArray
+    from labeledarray.labeledarray.labeledarray import LabeledArray
 from os.path import exists
 from utils.file_io import make_dirs, lbread
 import pandas as pd

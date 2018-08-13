@@ -1,6 +1,6 @@
 import re
 import ast
-import __builtin__
+import builtins
 import ast
 import argparse
 
@@ -23,7 +23,7 @@ def split_params(inputs):
 
 class ParamParser(object):
     def __init__(self, param_args):
-        self.param_args = param_args    
+        self.param_args = param_args
 
     def run(self):
         if self.param_args is None:
@@ -48,7 +48,7 @@ class ParamParser(object):
                             temp.append(i)
                     dictargs[key] = temp
         return dictargs
-        
+
 
 class ParamParser1(object):
     def __init__(self, param_args):
@@ -103,7 +103,7 @@ class ParamParser1(object):
 
     def combine_list(self, param):
         if len(param) == 1:
-            return param        
+            return param
         itr = iter(param)
         ps = []
         while True:

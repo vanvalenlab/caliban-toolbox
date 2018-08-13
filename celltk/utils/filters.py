@@ -11,7 +11,7 @@ from scipy.ndimage.filters import maximum_filter
 from skimage.draw import line
 from scipy.ndimage.filters import gaussian_filter
 import SimpleITK as sitk
-from morphsnakes import MorphACWE, curvop
+from .morphsnakes import MorphACWE, curvop
 from mahotas.segmentation import gvoronoi
 from skimage.morphology import thin
 import pandas as pd

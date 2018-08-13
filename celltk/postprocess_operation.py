@@ -53,7 +53,7 @@ def cut_short_traces(cells, minframe=4):
 
     '''
     if max([i.frame for i in cells]) < minframe:
-        print "minframe set to the maximum"
+        #print "minframe set to the maximum"
         minframe = max([i.frame for i in cells])
 
     traces = construct_traces_based_on_next(cells)

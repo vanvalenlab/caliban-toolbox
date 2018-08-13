@@ -1,9 +1,8 @@
 import numpy as np
 from operator import attrgetter
 import copy
-from itertools import izip
 import sys
-from track_utils import calc_massdiff, calc_diff
+from .track_utils import calc_massdiff, calc_diff
 from scipy.spatial.distance import cdist
 from collections import deque
 
@@ -130,7 +129,7 @@ def connect_parent_daughters(traces):
         trace2 = [copy.copy(i) for i in trace]
         parent_traces = [trace, trace2]
         daughter_traces = [i for i in traces_without_parent if i[0].parent in trace]
-        for parent_trace, daughter_trace in izip(parent_traces, daughter_traces):
+        for parent_trace, daughter_trace in zip(parent_traces, daughter_traces):
             daughter_trace.extend(parent_trace)
             daughter_trace.sort(key=attrgetter('frame'))
     return traces_without_parent

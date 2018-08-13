@@ -1,9 +1,9 @@
 from skimage.measure._regionprops import _RegionProperties
 import numpy as np
 import scipy.ndimage as ndi
-from global_holder import holder
+from .global_holder import holder
 from math import sqrt
-from filters import label
+from .filters import label
 
 
 class _RegionProperties2(_RegionProperties):
@@ -109,7 +109,7 @@ class LCell(object):
 #             self._data[num] = getattr(regionprop, p)
 #         self.parent = None
 #         self.nxt =None
-    
+
 #     def __getattr__(self, name):
 #         if name in self._labels:
 #             return self._data[self._labels.index(name)]

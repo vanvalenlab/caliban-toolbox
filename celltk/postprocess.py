@@ -4,7 +4,6 @@ python celltk/postprocess.py -f gap_closing -i c0/img_00000000* -l c2/img_000000
 
 from scipy.ndimage import imread
 import argparse
-import tifffile as tiff
 from os.path import basename, join
 import numpy as np
 import postprocess_operation
@@ -57,7 +56,7 @@ def caller(inputs, inputs_labels, output, functions, params):
     store = []
 
     for frame, (path, pathl) in enumerate(zip(inputs, inputs_labels)):
-
+        print(path, pathl)
         img, labels = imread(path), lbread(pathl)
         cells = regionprops(labels, img)
         cells = [LCell(cell) for cell in cells]
@@ -91,7 +90,7 @@ def main():
     args = parser.parse_args()
 
     if args.functions is None:
-        print help(postprocess_operation)
+        #print help(postprocess_operation)
         return
 
     params = ParamParser(args.param).run()

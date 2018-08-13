@@ -4,7 +4,7 @@ TODO: check if labels is unique.
 """
 import numpy as np
 from collections import OrderedDict
-from utils import sort_labels_and_arr, uniform_list_length
+from .utils import sort_labels_and_arr, uniform_list_length
 
 
 class LabeledArray(np.ndarray):
@@ -14,8 +14,8 @@ class LabeledArray(np.ndarray):
 
     Examples:
         >> arr = np.arange(12).reshape((3, 2, 2))
-        >> labelarr = np.array([['a1' ,'b1', ''], 
-                                ['a1' ,'b2' , 'c1'], 
+        >> labelarr = np.array([['a1' ,'b1', ''],
+                                ['a1' ,'b2' , 'c1'],
                                 ['a1' ,'b2' , 'c2']], dtype=object)
         >> darr = DArray(arr, labelarr)
         >> assert darr['a1'].shape
@@ -123,8 +123,8 @@ class LabeledArray(np.ndarray):
 if __name__ == "__main__":
     # Check 2D.
     arr = np.random.rand(3, 100)
-    labelarr = np.array([['a1', 'b1', ''], 
-                        ['a1' ,'b2' , 'c1'], 
+    labelarr = np.array([['a1', 'b1', ''],
+                        ['a1' ,'b2' , 'c1'],
                         ['a1' ,'b2' , 'c2']], dtype=object)
     darr = LabeledArray(arr, labelarr)
     # stop
@@ -135,8 +135,8 @@ if __name__ == "__main__":
 
     # check 3D.
     arr = np.arange(12).reshape((3, 2, 2))
-    labelarr = np.array([['a1' ,'b1', ''], 
-                        ['a1' ,'b2' , 'c1'], 
+    labelarr = np.array([['a1' ,'b1', ''],
+                        ['a1' ,'b2' , 'c1'],
                         ['a1' ,'b2' , 'c2']], dtype=object)
     darr = LabeledArray(arr, labelarr)
     assert darr['a1'].shape == (3, 2, 2)
@@ -159,5 +159,3 @@ if __name__ == "__main__":
 
     assert darr.vstack(darr).shape == (2 * darr.shape[0], darr.shape[1], darr.shape[2])
     assert darr.hstack(darr).shape == (darr.shape[0], 2 * darr.shape[1], darr.shape[2])
-
-
