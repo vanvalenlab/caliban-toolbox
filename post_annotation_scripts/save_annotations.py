@@ -63,16 +63,12 @@ def download_csv():
             image_id = lst[0]
             if split_start == None:
                 print(image_id)
-                #split_start = int(input('Index of start? '))
-                split_start = 10
+                split_start = int(input('Index of start? '))
+                #split_start = 10
 
             if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
                 image_id = image_id[:split_start] + '0' + image_id[split_start:]
-            # image_id = image_url_split[-1][8:-4].zfill(4)
-            # lst = image_id.split('_')
-            # image_id = lst[0] + '_0' + lst[1]
-            # print(image_id)
-            # # annotated image location
+
             annotated_image_folder = output_path
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)

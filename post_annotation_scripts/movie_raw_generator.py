@@ -5,7 +5,7 @@ import shutil
 
 def move(job_id):
     data_folder = str(input('Relative path from deepcell-data-engineering directory to stacked_raw folder in raw data folder: '))
-    data_folder = './data/set0/stacked_raw/'
+    # data_folder = './data/set0/stacked_raw/'
     dir_list = os.listdir(data_folder)
     destination = './job_' + str(job_id) + '/movie/montage_'
     for term in dir_list:

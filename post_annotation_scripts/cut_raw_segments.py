@@ -9,18 +9,18 @@ import pdb
 
 def cut_raw():
 	# paths
-	# base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
-	# channel_names = str(input('What channels are there? '))
-    # channel_names = channel_names.split(', ')
+	base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
+	channel_names = str(input('What channels are there? '))
+    channel_names = channel_names.split(', ')
 	set_number = int(input('Set number: '))
 	part_num = int(input('Part number (if N/A, type -1):'))
-	set_number = 0
-	part_num = -1
+	# set_number = 0
+	# part_num = -1
 	if part_num != -1:
 		base_part = str(input('Part base name (e.g. montage_part_)'))
 	num_segs = int(input('Number of segments to make in x/y direction (i.e. 4 --> 4x4): '))
-	channel_names = ["Far-red"]
-	base_direc = "./data/"
+	# channel_names = ["Far-red"]
+	# base_direc = "./data/"
 	data_subdirec = "raw"
 	save_stack_subdirec = "stacked_raw"
 

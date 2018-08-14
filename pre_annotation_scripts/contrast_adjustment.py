@@ -28,8 +28,8 @@ def contrast():
     # save_directory = str(input('Directory where to save images: '))
     # channel_names = str(input('What channels are there? '))
     # channel_names = channel_names.split(', ')
-    directory = "/data/data/cells/HeLa/S3/set0/raw"
-    save_directory = os.path.join("/deepcell-tf/", "set0test2")
+    directory = "/data/set0/raw"
+    save_directory = os.path.join("/home/", "set0test2")
 
     if not os.path.isdir(save_directory):
         os.makedirs(save_directory)

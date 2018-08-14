@@ -43,7 +43,7 @@ def training():
 	direc_name = './movie'
 	output_directory = './'
 	training_data_name = str(input('Training data filename: '))
-	training_data_name = 'nuclear_movie_hela1_raw_same'
+	#training_data_name = 'nuclear_movie_hela1_raw_same'
 	file_name_save = os.path.join(output_directory, training_data_name + '.npz')
 	training_direcs = os.listdir(direc_name)
 	channel_names = ["set_0"]
