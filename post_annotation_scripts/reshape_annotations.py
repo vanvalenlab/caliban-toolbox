@@ -35,7 +35,6 @@ def reshape():
     buffer_size = int(input('Size of buffer? '))
     x_sizes = int((x_dim - ((x_image - 1) * buffer_size)) / x_image)
     y_sizes = int((y_dim - ((y_image - 1) * buffer_size)) / y_image)
-    print(x_sizes, y_sizes)
 
     for montage_name in list_of_montages:
         print(montage_name)

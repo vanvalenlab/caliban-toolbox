@@ -28,7 +28,6 @@ Load images from csv file
 def download_csv():
     output_path = './annotations/'
     # unzip the folder with .csv if .csv file does not exist
-    #if not os.path.isfile(csv_file):
     if not os.path.exists('./annotations/'):
         os.makedirs('./annotations')
     if not os.path.exists('./unzipped_csv/'):
@@ -62,9 +61,10 @@ def download_csv():
             image_id = image_url_split[-1]
             lst = image_id.split('.png')
             image_id = lst[0]
-            print(image_id)
             if split_start == None:
-                split_start = int(input('Index of start? '))
+                print(image_id)
+                #split_start = int(input('Index of start? '))
+                split_start = 10
 
             if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
                 image_id = image_id[:split_start] + '0' + image_id[split_start:]

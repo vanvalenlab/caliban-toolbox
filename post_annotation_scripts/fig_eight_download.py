@@ -2,11 +2,6 @@ import requests
 import subprocess
 import sys
 
-#key = ''
-# id = 1280335
-# output_filename = 'output'
-# job_type = 'full'
-
 def download(key, job_type, id):
 
     url = "https://api.figure-eight.com/v1/jobs/{job_id}.csv?type={type_job}&key={api_key}"

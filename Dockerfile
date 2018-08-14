@@ -24,3 +24,4 @@ RUN pip install pyyaml
 RUN pip install SimpleITK
 RUN pip install mahotas
 RUN pip install munkres
+RUN pip install requests
