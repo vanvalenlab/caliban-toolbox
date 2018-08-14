@@ -9,8 +9,8 @@ Code for adjusting the contrast of images to aid image annotaters
 """
 Import python packages
 """
-
-from io_utils import get_image, get_images_from_directory
+import sys
+from ..io_utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 import os
@@ -29,7 +29,7 @@ def contrast():
     # channel_names = str(input('What channels are there? '))
     # channel_names = channel_names.split(', ')
     directory = "/data/set0/raw"
-    save_directory = os.path.join("/home/", "set0test2")
+    save_directory = os.path.join("/home", "test_image_contrast")
 
     if not os.path.isdir(save_directory):
         os.makedirs(save_directory)

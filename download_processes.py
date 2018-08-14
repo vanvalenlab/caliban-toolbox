@@ -18,7 +18,7 @@ def downloader():
     id = input('What is the job id to download? ')
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
-    # key = ''
+    # key = 'B8rH7ALgZ9Q9NTksAxyh'
     # id = 1292126
     # job_type = 'full'
     newdir = 'job_' + str(id) + '/'
