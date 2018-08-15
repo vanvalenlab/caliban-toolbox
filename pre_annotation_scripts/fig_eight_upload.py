@@ -5,15 +5,12 @@ import os
 # Can copy an existing job to make a new one without data
 # Can upload new data to the newly created job
 
-# csv = 'source1282493.csv'
-# job = 1284341
 
 def fig_eight():
 
-    # key = str(input("Figure eight api key? "))
-    # job_to_copy = 1284341
+    key = str(input("Figure eight api key? "))
     job_to_copy = input("What job do you want to copy? ")
-    key = 'B8rH7ALgZ9Q9NTksAxyh'
+    key = ''
     for file in os.listdir('./csv/'):
         if file.endswith('.csv'):
             csv = './csv/' + file
@@ -24,13 +21,13 @@ def fig_eight():
             data = upload_data(csv, copy_id, key)
             if data == -1:
                 return
-            updateq = str(input('Update job title now? (y/n) '))
-            if updateq == 'y':
-                title = str(input('New job title: '))
-                update_job_title(title, copy_id, key)
+            # updateq = str(input('Update job title now? (y/n) '))
+            # if updateq == 'y':
+            #     title = str(input('New job title: '))
+            #     update_job_title(title, copy_id, key)
 
 
-def copy_job(title, id, key):
+def copy_job(id, key):
     url = 'https://api.figure-eight.com/v1/jobs/{job_id}/copy.json?key={api_key}'
     url = url.replace('job_id', str(id))
     url = url.replace('api_key', key)
@@ -71,9 +68,9 @@ def update_job_title(title, id, key):
     out, err = p.communicate()
     dict = str(out)
     if "error" in dict:
-        print('Title not changed successfully.')
+        print('Title not changed successfully. \n')
         return -1
-    print('Title changed successfully!')
+    print('Title changed successfully! \n')
     return 0
 
 if __name__ == "__main__":

@@ -25,3 +25,4 @@ RUN pip install SimpleITK
 RUN pip install mahotas
 RUN pip install munkres
 RUN pip install requests
+RUN pip install boto3
