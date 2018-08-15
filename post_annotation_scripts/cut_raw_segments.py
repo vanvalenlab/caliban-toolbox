@@ -11,7 +11,7 @@ def cut_raw():
 	# paths
 	base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
 	channel_names = str(input('What channels are there? '))
-    channel_names = channel_names.split(', ')
+	channel_names = channel_names.split(', ')
 	set_number = int(input('Set number: '))
 	part_num = int(input('Part number (if N/A, type -1):'))
 	# set_number = 0

@@ -63,8 +63,9 @@ def download_csv():
             image_id = lst[0]
             if split_start == None:
                 print(image_id)
-                split_start = int(input('Index of start? '))
+                #split_start = int(input('Index of start? '))
                 #split_start = 10
+                split_start = image_id[-1]
 
             if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
                 image_id = image_id[:split_start] + '0' + image_id[split_start:]

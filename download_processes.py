@@ -18,8 +18,8 @@ def downloader():
     id = input('What is the job id to download? ')
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
-    # key = 'B8rH7ALgZ9Q9NTksAxyh'
-    # id = 1292126
+    key = 'B8rH7ALgZ9Q9NTksAxyh'
+    id = 1292032
     # job_type = 'full'
     newdir = 'job_' + str(id) + '/'
     if not os.path.exists('./' + newdir):
@@ -39,16 +39,16 @@ def downloader():
         if montageq == 'y':
             print('Reshaping the annotation images... ')
             reshape()
-    print('----------------------------------------------------------------------------')
-    print('Cutting raw images and moving them to movie folder...')
-    data_path = str(input('Path to data folder with raw images: '))
-    os.chdir('../' + data_path)
-    cut_raw()
-    move(id)
-    os.chdir('./' + newdir)
-    print('----------------------------------------------------------------------------')
-    print('Making deepcell training data...')
-    training()
+        print('----------------------------------------------------------------------------')
+        print('Cutting raw images and moving them to movie folder...')
+        data_path = str(input('Path to data folder with raw images: '))
+        os.chdir('../' + data_path)
+        cut_raw()
+        move(id)
+        os.chdir('./' + newdir)
+        print('----------------------------------------------------------------------------')
+        print('Making deepcell training data...')
+        training()
     # print('----------------------------------------------------------------------------')
     # print('Running CellTK to detect divisions...')
     # run_celltk(newdir)
