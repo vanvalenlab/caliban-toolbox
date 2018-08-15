@@ -5,7 +5,9 @@ import logging
 import tempfile
 import shutil
 import urllib
-from skimage.io import imread, imsave
+from skimage.io import imsave as imsave2
+from scipy.ndimage import imread
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +30,13 @@ def imsave(img, output, path, dtype=np.float32):
             filename = join(output, basename(p).split('.')[0]+'.tif')
             logger.debug('Image (shape {0}) is saved at {1}'.format(img.shape, filename))
             if img.ndim == 2:
-                imsave(filename, img.astype(dtype))
+                imsave2(filename, img.astype(dtype))
                 break
-            imsave(filename, img[:, :, num].astype(dtype))
+            imsave2(filename, img[:, :, num].astype(dtype))
     else:
         filename = join(output, basename(path).split('.')[0]+'.tif')
         logger.debug('Image (shape {0}) is saved at {1}'.format(img.shape, filename))
-        imsave(filename, img.astype(dtype))
+        imsave2(filename, img.astype(dtype))
 
 
 def lbread(path, nonneg=True):
@@ -44,7 +46,6 @@ def lbread(path, nonneg=True):
         elif img.min() == 32768:
             return img - 32768
     img = imread(path)
-
     img = uint2int16(img).astype(np.int16)
     if nonneg:
         img[img < 0] = 0

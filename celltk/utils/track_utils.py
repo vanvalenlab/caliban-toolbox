@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from munkres import Munkres
+from munkres import munkres
 from scipy.spatial.distance import cdist
 
 
@@ -53,7 +53,7 @@ def prepare_costmat(cost, costDie, costBorn):
 
 def call_lap(cost, costDie, costBorn):
     costMat = prepare_costmat(cost, costDie, costBorn)
-    t = Munkres(costMat)
+    t = munkres(costMat)
     topleft = t[0:cost.shape[0], 0:cost.shape[1]]
     return topleft
 

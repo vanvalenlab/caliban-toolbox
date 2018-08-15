@@ -70,11 +70,8 @@ def construct_traces_based_on_next(storage):
     storage has to be sorted based on frame.
     '''
     traces = []
-    count = 0
     for cell in storage:
         cells = [cell]
-        if count == 0 and cell.nxt is not None:
-            count += 1
         while cell.nxt is not None:
             cell = cell.nxt
             cells.append(storage.pop(storage.index(cell)))
