@@ -28,9 +28,9 @@ RUN pip install boto3
 RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
 RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
 RUN pip install scikit_image==0.13.0
-RUN pip install --no-cache-dir pandas==0.18.1 \
-scipy==0.19.0 scikit_image==0.13.0 Pillow==3.3.1 \
-SimpleITK==0.10.0  ipywidgets==5.2.2 joblib==0.10.2 \
+RUN pip install --no-cache-dir pandas==0.18.1 PyWavelets==0.4.0 \
+scipy==0.19.0 simplejson==3.8.2 scikit_image==0.13.0 Pillow==3.3.1 \
+SimpleITK==0.10.0 centrosome==1.0.5 ipywidgets==5.2.2 joblib==0.10.2 \
 pypng==0.0.18 mahotas==1.4.1  opencv-python==3.2.0.7 \
 git+https://github.com/jfrelinger/cython-munkres-wrapper \
 jupyter
