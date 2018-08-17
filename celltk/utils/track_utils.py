@@ -8,7 +8,19 @@ def calc_ratiodiff(a, b):
     """calculate how much pairwise ratio of vector a to b.
     """
     a0, a1 = np.meshgrid(a, b)
-    return (a1.T - a0.T)/a0.T
+    a0shape = a0.shape
+    a0new = np.zeros((a0shape[0], a0shape[1]), dtype=float)
+    for i in range(a0shape[0]):
+        for j in range(a0shape[1]):
+            a0new[i][j] = np.float64(a0[i][j])
+
+    a1shape = a1.shape
+    a1new = np.zeros((a1shape[0], a1shape[1]), dtype=float)
+    for i in range(a1shape[0]):
+        for j in range(a1shape[1]):
+            a1new[i][j] = np.float64(a1[i][j])
+
+    return (a1new.T - a0new.T)/a0new.T
 
 
 def calc_diff(a, b):
@@ -19,7 +31,8 @@ def calc_diff(a, b):
 
 
 def calc_massdiff(cells0, cells1):
-    return calc_ratiodiff([i.total_intensity for i in cells0], [i.total_intensity for i in cells1])
+    x = calc_ratiodiff([i.total_intensity for i in cells0], [i.total_intensity for i in cells1])
+    return x
 
 
 def find_one_to_one_assign(cost):

@@ -4,13 +4,10 @@ from post_annotation_scripts.relabel_annotations import relabel
 from post_annotation_scripts.reshape_annotations import reshape
 from post_annotation_scripts.rename_annotated import rename_annotated
 from post_annotation_scripts.movie_raw_generator import move
-# from post_annotation_scripts.celltk_processes import run_celltk
-import sys
-sys.path.append('../')
+from post_annotation_scripts.prepare_divisions import celltk
 from post_annotation_scripts.cut_raw_segments import cut_raw
 from post_annotation_scripts.make_training_data import training
 import os
-import shutil
 
 def downloader():
     key = input('What is your Figure Eight api_key? ')
@@ -49,9 +46,20 @@ def downloader():
         print('----------------------------------------------------------------------------')
         print('Making deepcell training data...')
         training()
-    # print('----------------------------------------------------------------------------')
-    # print('Running CellTK to detect divisions...')
-    # run_celltk(newdir)
+        print('----------------------------------------------------------------------------')
+        print('Running CellTK to detect divisions...')
+        if not os.path.exists('./divisions_output/'):
+            os.makedirs('./divisions_output/')
+        movies = os.listdir('./movie/')
+        for movie in movies:
+            if not os.path.exists('./divisions_output/' + movie):
+                os.makedirs('./divisions_output/' + movie)
+            celltk('./movie/' + movie, './divisions_output/' + movie)
+            print(movie)
+
+
+
+        run_celltk(newdir)
     print('Success!')
 if __name__ == "__main__":
    downloader()
