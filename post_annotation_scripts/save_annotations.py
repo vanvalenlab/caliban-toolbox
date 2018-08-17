@@ -26,7 +26,7 @@ Load images from csv file
 """
 
 def download_csv():
-    output_path = './annotations/'
+    output_path = '/data/'
     # unzip the folder with .csv if .csv file does not exist
     if not os.path.exists('./annotations/'):
         os.makedirs('./annotations')
@@ -46,7 +46,7 @@ def download_csv():
     csv_file = os.path.join('./unzipped_csv/', file)
     df = pd.DataFrame.from_csv(csv_file)
 
-    urls = df.loc[:,['annotation', 'broken_link', 'image_url']]
+    urls = df.loc[:,['annotation', 'broken_link', 'image_url', 'set_number']]
     split_start = None
     # iterate through rows of .csv file
     for index, row in df.iterrows():
@@ -55,7 +55,7 @@ def download_csv():
             # Get image_name
             annotation_url = row['annotation'][8:-2]
             image_url = row['image_url']
-
+            img_set = row['set_number']
             # generate image id
             image_url_split = image_url.split("/")
             image_id = image_url_split[-1]
@@ -67,10 +67,10 @@ def download_csv():
                 #split_start = 10
                 split_start = image_id[-1]
 
-            if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
-                image_id = image_id[:split_start] + '0' + image_id[split_start:]
+            #if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
+            #    image_id = image_id[:split_start] + '0' + image_id[split_start:]
 
-            annotated_image_folder = output_path
+            annotated_image_folder = os.path.join(output_path, img_set, 'annotations')
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 

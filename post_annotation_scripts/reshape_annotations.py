@@ -25,9 +25,11 @@ import urllib.request, urllib.parse, urllib.error
 import pdb
 
 def reshape():
-    montage_path = './relabelled_annotations/'
-    output_path = './movie/'
-    list_of_montages = os.listdir(montage_path)
+    #montage_path = './relabelled_annotations/'
+    #output_path = './movie/'
+    montage_path = input('Path to set to reshape: ')
+    output_path = os.path.join(montage_path, 'movie')
+    list_of_montages = os.listdir(os.path.join(montage_path,'relabelled_annotations'))
     x_image = int(input('How many images down? '))
     y_image = int(input('How many images across? '))
     x_dim = int(input('X dim of montage: '))
@@ -40,7 +42,7 @@ def reshape():
         print(montage_name)
         if os.path.isdir(output_path) is False:
             os.makedirs(output_path)
-        montage_file = os.path.join(montage_path, montage_name)
+        montage_file = os.path.join(montage_path, 'relabelled_annotations', montage_name)
         subfolder = montage_name[14:-4]
         output_folder = os.path.join(output_path, subfolder)
 

@@ -19,7 +19,7 @@ def downloader():
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
     key = 'B8rH7ALgZ9Q9NTksAxyh'
-    id = 1292032
+    # id = 1292032
     # job_type = 'full'
     newdir = 'job_' + str(id) + '/'
     if not os.path.exists('./' + newdir):
@@ -27,18 +27,18 @@ def downloader():
     os.chdir('./' + newdir)
     print('----------------------------------------------------------------------------')
     print('Downloading the job report from Figure Eight...')
-    download(key, job_type, id)
+    #download(key, job_type, id)
     print('----------------------------------------------------------------------------')
     print('Downloading annotations from job report...')
-    download_csv()
+    #download_csv()
     print('----------------------------------------------------------------------------')
     if relabelq == 'y':
         print('Uniquely annotating the annotations...')
-        relabel()
+        #relabel()
         print('----------------------------------------------------------------------------')
         if montageq == 'y':
             print('Reshaping the annotation images... ')
-            reshape()
+            #reshape()
         print('----------------------------------------------------------------------------')
         print('Cutting raw images and moving them to movie folder...')
         data_path = str(input('Path to data folder with raw images: '))

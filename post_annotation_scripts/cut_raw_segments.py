@@ -29,11 +29,11 @@ def cut_raw():
 		#channel_names.remove('')
 
 		if part_num != -1:
-			path_image = 'set' + str(set_number) + '/' + base_part + str(part_num)
+			path_image = 'set' + str(set_number) + '/' + data_subdirec + '/part' + str(base_part) + '_'+ str(part_num)
 		else:
 			path_image = "set" + str(set_number)
 		direc = os.path.join(base_direc, path_image)
-		directory = os.path.join(direc, data_subdirec)
+		directory = os.path.join(direc)
 		print(directory, channel_name)
 		images = get_images_from_directory(str(directory), [channel_name[0]])
 
@@ -63,7 +63,7 @@ def cut_raw():
 						raw_image_name = 'set_' + str(set_number) + '_' + base_part + str(part_num)
 					else:
 						raw_image_name = 'set_' + str(set_number)
-					cropped_image_name = raw_image_name + '_x_' + str(i) + '_y_' + str(j) + '_slice_' + str(stack_number) + '.png'
+					cropped_image_name = raw_image_name + '_x_' + str(i) + '_y_' + str(j) + '_slice_' + str(stack_number).zfill(2) + '.png'
 					cropped_folder_name = os.path.join(direc, save_stack_subdirec, raw_image_name + '_x_' + str(i) + '_y_' + str(j))
 					# make directory if it does not exit
 					if os.path.isdir(cropped_folder_name) is False:

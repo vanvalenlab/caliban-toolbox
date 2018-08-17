@@ -11,17 +11,18 @@ import os
 from skimage.morphology import remove_small_holes, remove_small_objects
 
 def relabel():
-
-    montage_path = './annotations/'
-    list_of_montages = os.listdir(montage_path)
-    output_path = './relabelled_annotations/'
+    set_path = input('Path to set you want relabeled: ')
+    #montage_path = './annotations/'
+    #list_of_montages = os.listdir(montage_path)
+    #print(list_of_montages)
+    output_path = os.path.join(set_path, 'relabelled_annotations')
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
-
+    list_of_montages = os.listdir(os.path.join(set_path, 'annotations'))
     for montage_name in list_of_montages:
         # get the image segment
         save_ind = os.path.splitext(montage_name)[0][len("annotation_"):]
-        montage_file = os.path.join(montage_path, montage_name)
+        montage_file = os.path.join(set_path,'annotations', montage_name)
         img_array = imread(montage_file)[:,:,0]
         img_clean = clean_montage(img_array)
         seq_label = relabel_montage(img_clean)
@@ -55,12 +56,12 @@ def clean_montage(img):
                             # otherwise take the label of that pixel from the original img
                             #   output location & frame to for user reference
                             fixed_img[x,y] = img[x,y]
-                            print("x, y: ", (x, y), "   frame: ", (((x//216)-1)*10+y//256))
+                            print("x, y: ", (x, y))
                     else:
                         # otherwise take the label of that pixel from the original img
                         #   output location & frame to for user reference
                         fixed_img[x,y] = img[x,y]
-                        print("x, y: ", (x, y), "   frame: ", (((x//216)-1)*10+y//256))
+                        print("x, y: ", (x, y))
                 else: # if there are possible values, take the most common
                     pixel_val = np.argmax(np.bincount(ball))
                     fixed_img[x, y] = pixel_val
