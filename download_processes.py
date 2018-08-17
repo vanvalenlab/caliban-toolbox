@@ -1,5 +1,5 @@
 from post_annotation_scripts.fig_eight_download import download
-from post_annotation_scripts.save_annotations import download_csv
+from post_annotation_scripts.save_test import download_csv
 from post_annotation_scripts.relabel_annotations import relabel
 from post_annotation_scripts.reshape_annotations import reshape
 from post_annotation_scripts.rename_annotated import rename_annotated
@@ -10,14 +10,14 @@ from post_annotation_scripts.make_training_data import training
 import os
 
 def downloader():
-    key = input('What is your Figure Eight api_key? ')
-    job_type = input('What type of report? ')
-    id = input('What is the job id to download? ')
+    # key = input('What is your Figure Eight api_key? ')
+    # job_type = input('What type of report? ')
+    # id = input('What is the job id to download? ')
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
     key = 'B8rH7ALgZ9Q9NTksAxyh'
-    id = 1292032
-    # job_type = 'full'
+    id = 1292126
+    job_type = 'full'
     newdir = 'job_' + str(id) + '/'
     if not os.path.exists('./' + newdir):
         os.makedirs('./' + newdir)
