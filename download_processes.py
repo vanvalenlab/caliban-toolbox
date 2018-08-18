@@ -3,7 +3,8 @@ from post_annotation_scripts.save_annotations import download_csv
 from post_annotation_scripts.relabel_annotations import relabel
 from post_annotation_scripts.reshape_annotations import reshape
 from post_annotation_scripts.rename_annotated import rename_annotated
-from post_annotation_scripts.movie_raw_generator import move
+#from post_annotation_scripts.movie_raw_generator import move
+from post_annotation_scripts.move_raw_parts import move_raw
 # from post_annotation_scripts.celltk_processes import run_celltk
 import sys
 sys.path.append('../')
@@ -27,25 +28,25 @@ def downloader():
     os.chdir('./' + newdir)
     print('----------------------------------------------------------------------------')
     print('Downloading the job report from Figure Eight...')
-    #download(key, job_type, id)
+    download(key, job_type, id)
     print('----------------------------------------------------------------------------')
     print('Downloading annotations from job report...')
-    #download_csv()
+    download_csv()
     print('----------------------------------------------------------------------------')
     if relabelq == 'y':
         print('Uniquely annotating the annotations...')
-        #relabel()
+        relabel()
         print('----------------------------------------------------------------------------')
         if montageq == 'y':
             print('Reshaping the annotation images... ')
-            #reshape()
+            reshape()
         print('----------------------------------------------------------------------------')
         print('Cutting raw images and moving them to movie folder...')
-        data_path = str(input('Path to data folder with raw images: '))
-        os.chdir('../' + data_path)
+        #data_path = str(input('Path to data folder with raw images: '))
+        #os.chdir('../' + data_path)
+        move_raw()
         cut_raw()
-        move(id)
-        os.chdir('./' + newdir)
+        #os.chdir('./' + newdir)
         print('----------------------------------------------------------------------------')
         print('Making deepcell training data...')
         training()

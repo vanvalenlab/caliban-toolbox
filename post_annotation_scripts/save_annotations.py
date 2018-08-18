@@ -66,11 +66,11 @@ def download_csv():
                 #split_start = int(input('Index of start? '))
                 #split_start = 10
                 split_start = image_id[-1]
-
+            part = (image_url.split('montage_part_')[1]).split('/')[0]
             #if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
             #    image_id = image_id[:split_start] + '0' + image_id[split_start:]
 
-            annotated_image_folder = os.path.join(output_path, img_set, 'annotations')
+            annotated_image_folder = os.path.join(output_path, img_set,'part_'+part, 'annotations')
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 

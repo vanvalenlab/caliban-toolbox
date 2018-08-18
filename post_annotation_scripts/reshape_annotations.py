@@ -43,7 +43,9 @@ def reshape():
         if os.path.isdir(output_path) is False:
             os.makedirs(output_path)
         montage_file = os.path.join(montage_path, 'relabelled_annotations', montage_name)
-        subfolder = montage_name[14:-4]
+        #subfolder = montage_name[14:-4]
+        parts = (montage_name.split('montage_')[1]).split('_')
+        subfolder = parts[0].zfill(2)+'_'+parts[1].split('.')[0].zfill(2)
         output_folder = os.path.join(output_path, subfolder)
 
         reshape_montage(montage_file, output_folder, x_size=x_sizes, y_size=y_sizes, x_images=x_image, y_images=y_image, buffer=buffer_size)
