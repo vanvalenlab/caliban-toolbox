@@ -16,7 +16,7 @@ def maker():
     sets_lst = os.listdir('./')
     channel_names = [str(input("nuclear or cytoplasm? "))]
     segmenter = int(input("Number of segments per row/column (e.g. 4 cuts up the image into 4 by 4 pieces): "))
-    #base_direc = str(input("Base directory (e.g. /data/data/cells/3T3/): "))
+    base_direc = str(input("Base directory (e.g. /data/data/cells/3T3/): "))
 
     # time_segments = 1
     # number_of_frames = 38
@@ -26,8 +26,8 @@ def maker():
     # segmenter = 5
     # base_direc = '/deepcell_tf/data/'
 
-    base_direc = './'
-    data_subdirec = "processed"
+    #base_direc = './'
+    data_subdirec = ""
     save_stack_subdirec = "stacked_processed"
 
     # load images

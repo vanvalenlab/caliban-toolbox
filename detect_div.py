@@ -46,6 +46,7 @@ def detect_division(cells, DISPLACEMENT=50, maxgap=4, DIVISIONMASSERR=0.55, outp
         '''
         '''
         print('detect_division')
+        print(output_dir)
 
         traces = construct_traces_based_on_next(cells)
         trhandler = TracesController(traces)

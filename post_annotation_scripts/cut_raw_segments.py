@@ -9,26 +9,27 @@ import pdb
 
 def cut_raw():
 	# paths
-	base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
+	base_direc = str(input('Directory to data folder from deepcell-data-engineering (e.g. ./data/): '))
 	channel_names = str(input('What channels are there? '))
 	channel_names = channel_names.split(', ')
 	set_number = int(input('Set number: '))
-	part_num = int(input('Part number (if N/A, type -1):'))
+	part_num = int(input('Part number: '))
 	# set_number = 0
-	# part_num = -1
-	if part_num != -1:
+	# part_num = 0
+	if part_num != 0:
 		base_part = str(input('Part base name (e.g. montage_part_)'))
 	num_segs = int(input('Number of segments to make in x/y direction (i.e. 4 --> 4x4): '))
 	# channel_names = ["Far-red"]
 	# base_direc = "./data/"
 	data_subdirec = "raw"
 	save_stack_subdirec = "stacked_raw"
+	ret_dir = ''
 
 	# load images
 	for channel_name in zip(channel_names):
 		#channel_names.remove('')
 
-		if part_num != -1:
+		if part_num != 0:
 			path_image = 'set' + str(set_number) + '/' + base_part + str(part_num)
 		else:
 			path_image = "set" + str(set_number)
@@ -46,8 +47,11 @@ def cut_raw():
 
 		# make directory for stacks of cropped images if it does not exist
 		stacked_direc = os.path.join(direc, save_stack_subdirec)
+		ret_dir = stacked_direc
+		print(ret_dir)
 		if os.path.isdir(stacked_direc) is False:
 			os.mkdir(stacked_direc)
+
 
 		# crop images
 		for i in range(num_segs):
@@ -59,7 +63,7 @@ def cut_raw():
 
 					raw_image_name = ''
 
-					if part_num != -1:
+					if part_num != 0:
 						raw_image_name = 'set_' + str(set_number) + '_' + base_part + str(part_num)
 					else:
 						raw_image_name = 'set_' + str(set_number)
@@ -71,6 +75,9 @@ def cut_raw():
 					# save stack of a segment over time
 					cropped_image_name = os.path.join(cropped_folder_name, cropped_image_name)
 					scipy.misc.imsave(cropped_image_name, cropped_image)
+	print('hi')
+	print(ret_dir)
+	return ret_dir
 
 if __name__ == "__main__":
     cut_raw()

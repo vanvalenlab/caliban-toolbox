@@ -7,6 +7,7 @@ RUN pip install --upgrade pip
 
 # Set working directory
 WORKDIR /data-engineering
+COPY /data-engineering /home/dn/newcelltk
 
 # Copy the requirements.txt and install the dependencies
 COPY requirements.txt /data-engineering
@@ -34,3 +35,5 @@ SimpleITK==0.10.0 centrosome==1.0.5 ipywidgets==5.2.2 joblib==0.10.2 \
 pypng==0.0.18 mahotas==1.4.1  opencv-python==3.2.0.7 \
 git+https://github.com/jfrelinger/cython-munkres-wrapper \
 jupyter
+
+EXPOSE 80

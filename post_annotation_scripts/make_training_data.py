@@ -38,15 +38,19 @@ from annotation_scripts.data_utils import make_training_data
 def training():
 	# Define maximum number of training examples
 	window_size = 30
-
+	if not os.path.exists('./final/'):
+		os.makedirs('./final')
+	set = int(input('Set number: '))
+	channel_names = ['set_' + str(set)]
 	# Load data
 	direc_name = './movie'
-	output_directory = './'
-	training_data_name = str(input('Training data filename: '))
+	output_directory = './final/'
+	training_data_name = 'training_data'
 	#training_data_name = 'nuclear_movie_hela1_raw_same'
 	file_name_save = os.path.join(output_directory, training_data_name + '.npz')
 	training_direcs = os.listdir(direc_name)
-	channel_names = ["set_0"]
+	training_direcs.sort()
+	
 
 	# Create output ditrectory, if necessary
 	pathlib.Path( output_directory ).mkdir( parents=True, exist_ok=True )

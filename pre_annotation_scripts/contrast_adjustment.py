@@ -29,7 +29,7 @@ def contrast():
     if directory[-1]!= '/':
         directory += '/'
 
-    sets_lst = str(input("What sets (e.g. 1, 3, 5)? "))
+    sets_lst = str(input("What set (e.g. 1, 3, 5)? "))
     sets_lst = sets_lst.split(', ')
     save_directory = './'
     channel_names = str(input('What channels are there? '))
