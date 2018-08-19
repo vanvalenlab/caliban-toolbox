@@ -9,28 +9,39 @@ from skimage.io import imsave, imread
 import matplotlib.pyplot as plt
 import os
 from skimage.morphology import remove_small_holes, remove_small_objects
+import logging
 
 def relabel():
-    set_path = input('Path to set you want relabeled: ')
+    set_path = input('Path to set (part) you want relabeled: ')
     #montage_path = './annotations/'
     #list_of_montages = os.listdir(montage_path)
     #print(list_of_montages)
+    
+    # create log for output for manual confirmation later
+    file_name = input("set and part (name on log): ")
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(os.path.join(set_path, file_name+'_relabel_output.log'))
+    fh.setLevel(logging.INFO)
+    logger.addHandler(fh)
+
     output_path = os.path.join(set_path, 'relabelled_annotations')
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
     list_of_montages = os.listdir(os.path.join(set_path, 'annotations'))
     for montage_name in list_of_montages:
+        logger.info(str(montage_name))
         # get the image segment
         save_ind = os.path.splitext(montage_name)[0][len("annotation_"):]
         montage_file = os.path.join(set_path,'annotations', montage_name)
         img_array = imread(montage_file)[:,:,0]
-        img_clean = clean_montage(img_array)
+        img_clean = clean_montage(img_array, logger)
         seq_label = relabel_montage(img_clean)
         seq_img = "seq_annotation" + save_ind + ".tif"
         image_path = os.path.join(output_path, seq_img)
         imsave(image_path, seq_label.astype(np.uint8))
 
-def clean_montage(img):
+def clean_montage(img, log):
     clean_img = remove_small_holes(img, connectivity=1,in_place=False)
     clean_img = remove_small_objects(clean_img, min_size=10, connectivity=1, in_place=False)
     fixed_img = np.zeros(img.shape, dtype=np.uint8)
@@ -56,12 +67,14 @@ def clean_montage(img):
                             # otherwise take the label of that pixel from the original img
                             #   output location & frame to for user reference
                             fixed_img[x,y] = img[x,y]
-                            print("x, y: ", (x, y))
+                            #print("x, y: ", (x, y))
+                            log.info("x, y: " + str((x, y)))
                     else:
                         # otherwise take the label of that pixel from the original img
                         #   output location & frame to for user reference
                         fixed_img[x,y] = img[x,y]
-                        print("x, y: ", (x, y))
+                        log.info("x, y: " + str((x, y)))
+                        #print("x, y: ", (x, y))
                 else: # if there are possible values, take the most common
                     pixel_val = np.argmax(np.bincount(ball))
                     fixed_img[x, y] = pixel_val
