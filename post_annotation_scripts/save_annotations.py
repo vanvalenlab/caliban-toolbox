@@ -75,7 +75,7 @@ def download_csv():
                 os.makedirs(annotated_image_folder)
 
 
-            annotated_image_name = "annotation_" + image_id
+            annotated_image_name = "annotation_" + image_id + ".png"
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)
 
             # Download annotated image
