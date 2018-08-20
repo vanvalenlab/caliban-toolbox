@@ -1,3 +1,4 @@
+import logging
 from post_annotation_scripts.fig_eight_download import download
 from post_annotation_scripts.save_annotations import download_csv
 from post_annotation_scripts.relabel_annotations import relabel
@@ -31,11 +32,22 @@ def downloader():
     download(key, job_type, id)
     print('----------------------------------------------------------------------------')
     print('Downloading annotations from job report...')
-    download_csv()
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    downloads = logging.FileHandler("./missing_annotations.log")
+    downloads.setLevel(logging.INFO)
+    logger.addHandler(downloads)
+    download_csv(logger)
+    path = "./"+newdir
+    print("sets in job: ", os.listdir(path))
+    name = input("set and part (name on relabel log): ")
+    relabels = logging.FileHandler(os.path.join(path, name+'_relabel_output.log'))
+    logger.addHandler(relabels)
+    logger.removeHandler(downloads)
     print('----------------------------------------------------------------------------')
     if relabelq == 'y':
         print('Uniquely annotating the annotations...')
-        relabel()
+        relabel(logger)
         print('----------------------------------------------------------------------------')
         if montageq == 'y':
             print('Reshaping the annotation images... ')
@@ -44,7 +56,9 @@ def downloader():
         print('Cutting raw images and moving them to movie folder...')
         #data_path = str(input('Path to data folder with raw images: '))
         #os.chdir('../' + data_path)
-        move_raw()
+        full = str(input('Did you reshape a full set (y/n)?'))
+        if full != 'y':
+            move_raw()
         cut_raw()
         #os.chdir('./' + newdir)
         print('----------------------------------------------------------------------------')
