@@ -11,20 +11,20 @@ import os
 from skimage.morphology import remove_small_holes, remove_small_objects
 import logging
 
-def relabel():
+def relabel(logger):
     set_path = input('Path to set (part) you want relabeled: ')
     #montage_path = './annotations/'
     #list_of_montages = os.listdir(montage_path)
     #print(list_of_montages)
     
     # create log for output for manual confirmation later
-    file_name = input("set and part (name on log): ")
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    fh = logging.FileHandler(os.path.join(set_path, file_name+'_relabel_output.log'))
-    fh.setLevel(logging.INFO)
-    logger.addHandler(fh)
-
+    #file_name = input("set and part (name on log): ")
+    #logger = logging.getLogger()
+    #logger.setLevel(logging.INFO)
+    #fh = logging.FileHandler(os.path.join(set_path, file_name+'_relabel_output.log'))
+    #fh.setLevel(logging.INFO)
+    #logger.addHandler(fh)
+    #logger.removeHandler(missing)
     output_path = os.path.join(set_path, 'relabelled_annotations')
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
