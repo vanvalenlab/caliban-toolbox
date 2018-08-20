@@ -9,7 +9,7 @@ import pdb
 
 def cut_raw():
 	# paths
-	base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
+	base_direc = str(input('Directory to job folder (e.g. . /job#######) '))
 	channel_names = str(input('What channels are there? (separate multiple with comma & space) '))
 	channel_names = channel_names.split(', ')
 	set_number = int(input('Set number: '))

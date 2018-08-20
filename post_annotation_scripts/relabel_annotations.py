@@ -12,7 +12,7 @@ from skimage.morphology import remove_small_holes, remove_small_objects
 import logging
 
 def relabel(logger):
-    set_path = input('Path to set (part) you want relabeled: ')
+    set_path = input('Path to set (part) you want relabeled (./job_#######/set0): ')
     #montage_path = './annotations/'
     #list_of_montages = os.listdir(montage_path)
     #print(list_of_montages)
