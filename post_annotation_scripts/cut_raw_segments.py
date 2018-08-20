@@ -10,10 +10,10 @@ import pdb
 def cut_raw():
 	# paths
 	base_direc = str(input('Directory to data folder (e.g. /data/data/cells/HeLa/S3)'))
-	channel_names = str(input('What channels are there? '))
+	channel_names = str(input('What channels are there? (separate multiple with comma & space) '))
 	channel_names = channel_names.split(', ')
 	set_number = int(input('Set number: '))
-	part_num = int(input('Part number (if N/A, type -1):'))
+	part_num = int(input('Number of parts (if full set, type -1):'))
 	movie_path = os.path.join(base_direc, 'set'+str(set_number), 'movie')
 	# set_number = 0
 	# part_num = -1
@@ -40,8 +40,10 @@ def cut_raw():
 		print(direc, channel_name)
 		images = get_images_from_directory(str(direc), [channel_name[0]])
 
-		number_of_images = len(images)
-
+		if part_num != -1:
+			number_of_images = len(images)
+		else:
+                        number_of_images = int(input("Number of frames in a montage: "))
 		image_size = images[0].shape
 
 		crop_size_x = image_size[1]//num_segs
@@ -69,12 +71,12 @@ def cut_raw():
 					#	raw_image_name = 'set_' + str(set_number)
 					
 					#cropped_image_name = raw_image_name + '_x_' + str(i) + '_y_' + str(j) + '_slice_' + str(stack_number).zfill(2) + '.png'
-					cropped_image_name = str(stack_number).zfill(2) + '.png'
+					cropped_image_name = str(channel_name[0]) + '_' + str(stack_number).zfill(2) + '.png'
 					cropped_folder_name = os.path.join(stacked_direc, segment)
 					# make directory if it does not exit
 					if os.path.isdir(cropped_folder_name) is False:
 						#os.mkdir(cropped_folder_name)
-						print(cropped_folder_name, "missing montage")
+						#print(cropped_folder_name, "missing montage")
 						continue
 					elif os.path.isdir(os.path.join(cropped_folder_name, 'raw')) is False:
 						os.mkdir(os.path.join(cropped_folder_name,'raw'))
