@@ -1,3 +1,7 @@
+'''
+Cuts raw images up and makes stacked_raw directory of cropped images.
+'''
+
 from annotation_scripts.utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
@@ -13,7 +17,6 @@ def cut_all():
     for term in setlst:
         if 'set' in term:
             all_sets.append(term)
-
 
     for set in all_sets:
         temp = os.listdir(os.path.join('.', set, ))
@@ -34,8 +37,8 @@ def cut_raw(direc, set, part=-1):
 	channel_names = str(input('What channels are there? '))
 	channel_names = channel_names.split(', ')
 	num_segs = int(input('Number of segments to make in x/y direction (i.e. 4 --> 4x4): '))
-	data_subdirec = "raw"
-	save_stack_subdirec = "stacked_raw1"
+	data_subdirec = 'raw'
+	save_stack_subdirec = 'stacked_raw'
 
 	# load images
 	for channel_name in zip(channel_names):
@@ -81,5 +84,5 @@ def cut_raw(direc, set, part=-1):
 					scipy.misc.imsave(cropped_image_name, cropped_image)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     cut_raw()

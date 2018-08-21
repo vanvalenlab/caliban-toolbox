@@ -1,3 +1,7 @@
+'''
+Code for using Figure Eight API to download job report and saving as output.zip.
+'''
+
 import requests
 import subprocess
 import sys
@@ -25,5 +29,5 @@ def download(key, job_type, id):
     out, err = p.communicate()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
    download(sys.argv[1:])

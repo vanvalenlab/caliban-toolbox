@@ -1,23 +1,12 @@
-"""
-reshape_montage_universal.py
-
-Code for turning montages into movies (chronologically in segment directories)
-
-@author: David Van Valen
-
-run once for every base directory (cell type), runs on full sets
-"""
-
-"""
-Import python packages
-"""
+'''
+Converts montages into movies.
+'''
 
 from subprocess import call
 import skimage.io
 import skimage.measure
 import scipy.misc
 import numpy as np
-
 import warnings
 import pathlib
 import os
@@ -86,8 +75,8 @@ def reshape_montage(montage_file, output_folder, x_size = 256, y_size = 256, x_i
         # moving along columns until we get to the end of the column
         while y_end < (y_size*y_images + (y_images - 1) * buffer):
             if debug:
-                print("x_end: " + str(x_end))
-                print("y_end: " + str(y_end))
+                print('x_end: ' + str(x_end))
+                print('y_end: ' + str(y_end))
             images[:,:,image_number] = img[
                     (x_end-(x_size-1)):(x_end+1),
                     (y_end-(y_size-1)):(y_end+1)]

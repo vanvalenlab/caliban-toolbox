@@ -1,10 +1,12 @@
-# move stacked raw to movie raw appropriately.
+'''
+Moves cut up raw images into the appropriate movie folder in current job directory
+'''
+
 import sys
 import os
 import shutil
 
 def move_all():
-    print('move')
     setlst = os.listdir('./')
     all_sets = []
     for term in setlst:
@@ -27,8 +29,6 @@ def move_all():
                 move(datadirec, moviedirec)
 
 def move(datadir, moviedir):
-    #data_folder = str(input('Path from deepcell-data-engineering directory to stacked_raw folder (./data/set1/stacked_raw/): '))
-    # data_folder = './data/set0/stacked_raw/'
     print(datadir)
     data_folder = datadir
     if data_folder[-1] != '/':
@@ -49,5 +49,5 @@ def move(datadir, moviedir):
 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     move()

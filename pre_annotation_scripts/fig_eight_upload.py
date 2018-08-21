@@ -7,7 +7,6 @@ import os
 
 
 def fig_eight():
-
     key = str(input("Figure eight api key? "))
     job_to_copy = input("What job do you want to copy? ")
     for file in os.listdir('./csv/'):

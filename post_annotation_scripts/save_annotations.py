@@ -1,13 +1,6 @@
-"""
-save_annotations_HeLa.py
-
-Code for saving image annotations from figure eight .csv
-
-"""
-
-"""
-Import python packages
-"""
+'''
+Script for unzipping csv job report from Figure Eight and downloading the images from the csv.
+'''
 
 from subprocess import call
 import skimage.io
@@ -20,15 +13,16 @@ import pathlib
 import os
 import urllib.request, urllib.parse, urllib.error
 import pdb
+import logging
 
-"""
+'''
 Load images from csv file
-"""
+'''
 
-def download_csv():
+def download_csv(logger):
     if not os.path.exists('./unzipped_csv/'):
         os.makedirs('./unzipped_csv')
-    call([ "unzip", "output.zip", '-d', './unzipped_csv'])
+    call([ 'unzip', 'output.zip', '-d', './unzipped_csv'])
     dir_path = './unzipped_csv'
     dirs = os.listdir(dir_path)
     csv = ''
@@ -36,7 +30,7 @@ def download_csv():
         if '.csv' in file:
             csv = file
     if csv == '':
-        print('No csv found in /unzipped_csv/')
+        print('No csv found in ./unzipped_csv/')
         return
 
     csv_file = os.path.join('./unzipped_csv/', file)
@@ -44,6 +38,8 @@ def download_csv():
 
     urls = df.loc[:,['annotation', 'broken_link', 'image_url']]
     split_start = None
+    count = 0
+
     # iterate through rows of .csv file
     for index, row in df.iterrows():
 
@@ -58,7 +54,7 @@ def download_csv():
             if 'part' in row:
                 part_num = row['part']
             # generate image id
-            image_url_split = image_url.split("/")
+            image_url_split = image_url.split('/')
             image_id = image_url_split[-1]
             lst = image_id.split('.png')
             image_id = lst[0]
@@ -80,16 +76,20 @@ def download_csv():
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
 
-            annotated_image_name = "annotation_" + image_id
+            annotated_image_name = 'annotation_' + image_id
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)
 
             # Download annotated image
             annotated_image = urllib.request.URLopener()
             annotated_image.retrieve(annotation_url, annotated_image_path)
+        else:
+            set = row['set']
+            image_id = (row['image_url'].split('/')[-1]).split('.png')[0]
+            count += 1
+            # logger.info('Broken Link: ' + set + ' ' image_id)
 
+    print('Missing', count, ' image annotations from current job.')
 
 if __name__ == '__main__':
-    # output path is the directory for annotated montages
-
     # download annotated montages from .csv
-    download_csv()
+    download_csv(logger)

@@ -1,6 +1,6 @@
-"""
-python celltk/postprocess.py -f gap_closing -i c0/img_00000000* -l c2/img_00000000*  -o c3 -p DISPLACEMENT=30
-"""
+'''
+Script for running detect_div.py which will find divisions in movies.
+'''
 
 from scipy.ndimage import imread
 from os.path import basename, join
@@ -22,16 +22,14 @@ def cells2labels(cells, frame, labels):
         template[labels == cell._original_label] = cell.label
         if cell.parent is not None:
             outline = labels2outlines(binary_dilation(template == cell.label))
-            # outline = labels2outlines(template == cell.label)
             template[outline > 0] = -cell.parent
     return template
 
-
+# Calls detect_division in detect_div.py.
 def caller(inputs, inputs_labels, output, functions, params, output_dir):
     make_dirs(output)
 
     # Make cells. cells are a list of regionproperties or subclasses.
-    #logger.info('Postprocess.\tcollecting cells...')
     store = []
     for frame, (path, pathl) in enumerate(zip(inputs, inputs_labels)):
         img, labels = imread(path), lbread(pathl)
@@ -111,6 +109,6 @@ def celltknew(direc, output_direc):
     caller(inputslst, inputs_labelslst, output, functions, params, dir)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     celltknew()

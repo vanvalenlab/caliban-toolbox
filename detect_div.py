@@ -1,3 +1,8 @@
+'''
+Script for analyzing cells that have appeared and disappeared in close proximity
+to each other in frames, mass, and distance to determine if a division has occurred.
+'''
+
 from celltk.utils.traces import construct_traces_based_on_next, convert_traces_to_storage, label_traces
 import numpy as np
 from celltk.utils.traces import TracesController
@@ -46,17 +51,13 @@ def detect_division(cells, DISPLACEMENT=50, maxgap=4, DIVISIONMASSERR=0.55, outp
         '''
         '''
         print('detect_division')
-        print(output_dir)
-
         traces = construct_traces_based_on_next(cells)
         trhandler = TracesController(traces)
-
         store_singleframe = []
         for trace in trhandler.traces[:]:
             if len(trace) < 2:
                 trhandler.traces.remove(trace)
                 store_singleframe.append(trace)
-
 
         dist = trhandler.pairwise_dist()
         massdiff = trhandler.pairwise_mass()
@@ -85,17 +86,13 @@ def detect_division(cells, DISPLACEMENT=50, maxgap=4, DIVISIONMASSERR=0.55, outp
                     parents[dis_cell.label].append(app_cell.label)
                 else:
                     parents[dis_cell.label] = [app_cell.label]
-                # [parent, daughter]
-
-                # dis_cell.nxt = app_cell
-        # 31 is arbitrary num
+        # 31 is arbitrary number representing max number of labels
         npz_arr = []
         for i in range(31):
             npz_arr.append(np.array([]))
         for key in parents.keys():
             ind = int(key)
             npz_arr[ind] = np.array(parents[ind])
-
 
         np.savez(os.path.join(output_dir, 'division.npz'), npz_arr)
 

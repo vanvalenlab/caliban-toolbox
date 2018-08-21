@@ -1,4 +1,4 @@
-"""
+'''
 make_training_data.py
 
 Executing functions for creating npz files containing the training data
@@ -11,11 +11,8 @@ Files should be placed in training directories with each separate
 dataset getting its own folder
 
 @author: David Van Valen
-"""
+'''
 
-"""
-Import packages
-"""
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -28,7 +25,6 @@ from scipy import ndimage
 from skimage import feature
 from sklearn.utils import class_weight
 from annotation_scripts.utils import get_image
-# from deepcell import format_coord as cf
 from skimage import morphology as morph
 import matplotlib.pyplot as plt
 from skimage.transform import resize
@@ -85,16 +81,16 @@ def training(direc_name, output_directory, set):
 		training_direcs = training_direcs,
 		channel_names = channel_names,
 		dimensionality = 3,
-		annotation_name = "",
-		raw_image_direc = "raw",
-		annotation_direc = "annotated",
-		border_mode = "same",
-	    output_mode = "conv",
+		annotation_name = '',
+		raw_image_direc = 'raw',
+		annotation_direc = 'annotated',
+		border_mode = 'same',
+	    output_mode = 'conv',
 		num_frames = 40,
 		reshape_size = None,
 		display = False,
 		num_of_frames_to_display = 5,
 		verbose = True)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     training()

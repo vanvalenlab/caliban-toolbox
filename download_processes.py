@@ -1,3 +1,7 @@
+'''
+Script for running post-annotation processes.
+'''
+
 from post_annotation_scripts.fig_eight_download import download
 from post_annotation_scripts.save_annotations import download_csv
 from post_annotation_scripts.relabel_annotations import relabel_all
@@ -11,12 +15,16 @@ import os
 import logging
 
 def downloader():
-    key = input('What is your Figure Eight api_key? ')
-    job_type = input('What type of report? ')
-    id = input('What is the job id to download? ')
-    relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
-    montageq = str(input('Is this a montage? (y/n) ' ))
-
+    # key = input('What is your Figure Eight api_key? ')
+    # job_type = input('What type of report? ')
+    # id = input('What is the job id to download? ')
+    # relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
+    # montageq = str(input('Is this a montage? (y/n) ' ))
+    relabelq = 'y'
+    montageq = 'y'
+    key = 'B8rH7ALgZ9Q9NTksAxyh'
+    id = 1292126
+    job_type = 'full'
     newdir = 'job_' + str(id) + '/'
     if not os.path.exists('./' + newdir):
         os.makedirs('./' + newdir)
@@ -25,9 +33,16 @@ def downloader():
     print('----------------------------------------------------------------------------')
     print('Downloading the job report from Figure Eight...')
     download(key, job_type, id)
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    downloads = logging.FileHandler('./missing_annotations.log')
+    downloads.setLevel(logging.INFO)
+    logger.addHandler(downloads)
     print('----------------------------------------------------------------------------')
     print('Downloading annotations from job report...')
-    download_csv()
+    download_csv(logger)
+
     if relabelq == 'y':
         print('----------------------------------------------------------------------------')
         print('Uniquely annotating the annotations...')
@@ -58,5 +73,5 @@ def downloader():
     combine_all()
 
     print('Success!')
-if __name__ == "__main__":
+if __name__ == '__main__':
    downloader()

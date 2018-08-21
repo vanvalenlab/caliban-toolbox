@@ -1,8 +1,6 @@
-"""
-clean_relabel_montage_universal.py
+'''
 Code for cleaning and sequentially relabelling figure eight annotations (universal)
-run once for every base directory (cell type), runs on full sets
-"""
+'''
 # Import python packages
 import numpy as np
 from skimage.io import imsave, imread
@@ -16,7 +14,6 @@ def relabel_all():
     for term in setlst:
         if 'set' in term:
             all_sets.append(term)
-
 
     for set in all_sets:
         temp = os.listdir(os.path.join('.', set, ))
@@ -37,20 +34,18 @@ def relabel_all():
 
 
 def relabel(montage_path, output_path):
-    #montage_path = './annotations/'
     list_of_montages = os.listdir(montage_path)
-    #output_path = './relabelled_annotations/'
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
 
     for montage_name in list_of_montages:
         # get the image segment
-        save_ind = os.path.splitext(montage_name)[0][len("annotation_"):]
+        save_ind = os.path.splitext(montage_name)[0][len('annotation_'):]
         montage_file = os.path.join(montage_path, montage_name)
         img_array = imread(montage_file)[:,:,0]
         img_clean = clean_montage(img_array)
         seq_label = relabel_montage(img_clean)
-        seq_img = "seq_annotation" + save_ind + ".tif"
+        seq_img = 'seq_annotation' + save_ind + '.tif'
         image_path = os.path.join(output_path, seq_img)
         imsave(image_path, seq_label.astype(np.uint8))
 
@@ -80,12 +75,12 @@ def clean_montage(img):
                             # otherwise take the label of that pixel from the original img
                             #   output location & frame to for user reference
                             fixed_img[x,y] = img[x,y]
-                            print("x, y: ", (x, y), "   frame: ", (((x//216)-1)*10+y//256))
+                            print('x, y: ', (x, y), '   frame: ', (((x//216)-1)*10+y//256))
                     else:
                         # otherwise take the label of that pixel from the original img
                         #   output location & frame to for user reference
                         fixed_img[x,y] = img[x,y]
-                        print("x, y: ", (x, y), "   frame: ", (((x//216)-1)*10+y//256))
+                        print('x, y: ', (x, y), '   frame: ', (((x//216)-1)*10+y//256))
                 else: # if there are possible values, take the most common
                     pixel_val = np.argmax(np.bincount(ball))
                     fixed_img[x, y] = pixel_val

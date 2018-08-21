@@ -1,3 +1,7 @@
+'''
+Script for combining all division npz files into one for training use in Deep Cell.
+'''
+
 import numpy as np
 import os
 
