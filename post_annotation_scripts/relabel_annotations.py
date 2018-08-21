@@ -10,11 +10,36 @@ import matplotlib.pyplot as plt
 import os
 from skimage.morphology import remove_small_holes, remove_small_objects
 
-def relabel():
+def relabel_all():
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
 
-    montage_path = './annotations/'
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        montage_path = os.path.join('.', set, 'annotations')
+        output_path = os.path.join('.', set, 'relabelled_annotations')
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        print(partslst)
+        if len(partslst) == 0:
+            print(montage_path, output_path)
+            relabel(montage_path, output_path)
+        else:
+            for part in partslst:
+                montage_path = os.path.join('.', set, part,  'annotations')
+                output_path = os.path.join('.', set, part, 'relabelled_annotations')
+                relabel(montage_path, output_path)
+
+
+def relabel(montage_path, output_path):
+    #montage_path = './annotations/'
     list_of_montages = os.listdir(montage_path)
-    output_path = './relabelled_annotations/'
+    #output_path = './relabelled_annotations/'
     if os.path.isdir(output_path) is False:
         os.makedirs(output_path)
 

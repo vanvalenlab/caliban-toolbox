@@ -24,9 +24,32 @@ import os
 import urllib.request, urllib.parse, urllib.error
 import pdb
 
-def reshape():
-    montage_path = './relabelled_annotations/'
-    output_path = './movie/'
+def reshape_all():
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        montage_path = os.path.join('.', set, 'relabelled_annotations')
+        output_path = os.path.join('.', set, 'movie')
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        print(partslst)
+        if len(partslst) == 0:
+            print(montage_path, output_path)
+            reshape(montage_path, output_path)
+        else:
+            for part in partslst:
+                montage_path = os.path.join('.', set, part, 'relabelled_annotations')
+                output_path = os.path.join('.', set, part, 'movie')
+                reshape(montage_path, output_path)
+
+
+def reshape(montage_path, output_path):
     list_of_montages = os.listdir(montage_path)
     x_image = int(input('How many images down? '))
     y_image = int(input('How many images across? '))

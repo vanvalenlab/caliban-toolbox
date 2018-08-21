@@ -7,33 +7,38 @@ import scipy
 import argparse
 import pdb
 
-def cut_raw():
+def cut_all():
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
+
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        print(partslst)
+        if len(partslst) == 0:
+            direc = str(input('Path to raw data folder for ' + set + '(e.g. /data/set1/): '))
+            cut_raw(direc, set)
+        else:
+            for part in partslst:
+                direc = str(input('Path to raw data folder for ' + set + part + '(e.g. /data/set1/part1/): '))
+                cut_raw(direc, set, part)
+
+def cut_raw(direc, set, part=-1):
 	# paths
-	base_direc = str(input('Directory to data folder from deepcell-data-engineering (e.g. ./data/): '))
 	channel_names = str(input('What channels are there? '))
 	channel_names = channel_names.split(', ')
-	set_number = int(input('Set number: '))
-	part_num = int(input('Part number: '))
-	# set_number = 0
-	# part_num = 0
-	if part_num != 0:
-		base_part = str(input('Part base name (e.g. montage_part_)'))
 	num_segs = int(input('Number of segments to make in x/y direction (i.e. 4 --> 4x4): '))
-	# channel_names = ["Far-red"]
-	# base_direc = "./data/"
 	data_subdirec = "raw"
-	save_stack_subdirec = "stacked_raw"
-	ret_dir = ''
+	save_stack_subdirec = "stacked_raw1"
 
 	# load images
 	for channel_name in zip(channel_names):
-		#channel_names.remove('')
-
-		if part_num != 0:
-			path_image = 'set' + str(set_number) + '/' + base_part + str(part_num)
-		else:
-			path_image = "set" + str(set_number)
-		direc = os.path.join(base_direc, path_image)
 		directory = os.path.join(direc, data_subdirec)
 		print(directory, channel_name)
 		images = get_images_from_directory(str(directory), [channel_name[0]])
@@ -47,8 +52,7 @@ def cut_raw():
 
 		# make directory for stacks of cropped images if it does not exist
 		stacked_direc = os.path.join(direc, save_stack_subdirec)
-		ret_dir = stacked_direc
-		print(ret_dir)
+
 		if os.path.isdir(stacked_direc) is False:
 			os.mkdir(stacked_direc)
 
@@ -63,10 +67,10 @@ def cut_raw():
 
 					raw_image_name = ''
 
-					if part_num != 0:
-						raw_image_name = 'set_' + str(set_number) + '_' + base_part + str(part_num)
+					if part != -1:
+						raw_image_name = str(set) + '_' + str(part)
 					else:
-						raw_image_name = 'set_' + str(set_number)
+						raw_image_name = str(set)
 					cropped_image_name = raw_image_name + '_x_' + str(i) + '_y_' + str(j) + '_slice_' + str(stack_number) + '.png'
 					cropped_folder_name = os.path.join(direc, save_stack_subdirec, raw_image_name + '_x_' + str(i) + '_y_' + str(j))
 					# make directory if it does not exit
@@ -75,9 +79,7 @@ def cut_raw():
 					# save stack of a segment over time
 					cropped_image_name = os.path.join(cropped_folder_name, cropped_image_name)
 					scipy.misc.imsave(cropped_image_name, cropped_image)
-	print('hi')
-	print(ret_dir)
-	return ret_dir
+
 
 if __name__ == "__main__":
     cut_raw()

@@ -26,10 +26,6 @@ Load images from csv file
 """
 
 def download_csv():
-    output_path = './annotations/'
-    # unzip the folder with .csv if .csv file does not exist
-    if not os.path.exists('./annotations/'):
-        os.makedirs('./annotations')
     if not os.path.exists('./unzipped_csv/'):
         os.makedirs('./unzipped_csv')
     call([ "unzip", "output.zip", '-d', './unzipped_csv'])
@@ -55,23 +51,34 @@ def download_csv():
             # Get image_name
             annotation_url = row['annotation'][8:-2]
             image_url = row['image_url']
-
+            set_num = row['set_number']
+            if 'set' in set_num:
+                set_num = set_num.split('set')[1]
+            part_num = -1
+            if 'part' in row:
+                part_num = row['part']
             # generate image id
             image_url_split = image_url.split("/")
             image_id = image_url_split[-1]
             lst = image_id.split('.png')
             image_id = lst[0]
             if split_start == None:
-                print(image_id)
                 split_start = len(image_id) - 1
 
             if int(image_id[split_start:]) <= 9 and len(image_id[split_start:]) == 1:
                 image_id = image_id[:split_start] + '0' + image_id[split_start:]
 
-            annotated_image_folder = output_path
+            output_path = os.path.join('.', 'set' + str(set_num))
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            if part_num != -1:
+                output_path = os.path.join('.', 'set' + str(set_num), 'part' + str(part_num))
+                if not os.path.exists(output_path):
+                    os.makedirs(output_path)
+
+            annotated_image_folder = os.path.join(output_path, 'annotations')
             if not os.path.exists(annotated_image_folder):
                 os.makedirs(annotated_image_folder)
-
 
             annotated_image_name = "annotation_" + image_id
             annotated_image_path = os.path.join(annotated_image_folder, annotated_image_name)

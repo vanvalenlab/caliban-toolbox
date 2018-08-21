@@ -1,14 +1,14 @@
 from post_annotation_scripts.fig_eight_download import download
 from post_annotation_scripts.save_annotations import download_csv
-from post_annotation_scripts.relabel_annotations import relabel
-from post_annotation_scripts.reshape_annotations import reshape
-from post_annotation_scripts.rename_annotated import rename_annotated
-from post_annotation_scripts.movie_raw_generator import move
-from prepare_divisions import celltknew
-from post_annotation_scripts.cut_raw_segments import cut_raw
-from post_annotation_scripts.make_training_data import training
-from post_annotation_scripts.combine_npz import combine
+from post_annotation_scripts.relabel_annotations import relabel_all
+from post_annotation_scripts.reshape_annotations import reshape_all
+from post_annotation_scripts.movie_raw_generator import move_all
+from prepare_divisions import division_all
+from post_annotation_scripts.cut_raw_segments import cut_all
+from post_annotation_scripts.make_training_data import train_all
+from post_annotation_scripts.combine_npz import combine_all
 import os
+import logging
 
 def downloader():
     key = input('What is your Figure Eight api_key? ')
@@ -16,13 +16,12 @@ def downloader():
     id = input('What is the job id to download? ')
     relabelq = str(input('Do you want to uniquely annotate? (y/n) '))
     montageq = str(input('Is this a montage? (y/n) ' ))
-    key = 'B8rH7ALgZ9Q9NTksAxyh'
-    id = 1282484
-    job_type = 'full'
+
     newdir = 'job_' + str(id) + '/'
     if not os.path.exists('./' + newdir):
         os.makedirs('./' + newdir)
     os.chdir('./' + newdir)
+
     print('----------------------------------------------------------------------------')
     print('Downloading the job report from Figure Eight...')
     download(key, job_type, id)
@@ -32,38 +31,31 @@ def downloader():
     if relabelq == 'y':
         print('----------------------------------------------------------------------------')
         print('Uniquely annotating the annotations...')
-        relabel()
+        relabel_all()
     else:
         print('Success!')
         return
     if montageq == 'y':
         print('----------------------------------------------------------------------------')
         print('Reshaping the annotation images... ')
-        reshape()
+        reshape_all()
     else:
         print('Success!')
         return
     print('----------------------------------------------------------------------------')
     print('Cutting raw images and moving them to movie folder...')
-    data_path = str(input('Path to data folder with raw images: '))
-    os.chdir('../' + data_path)
-    datadir = cut_raw()
-
-    move(id, datadir)
-    os.chdir('./' + newdir)
+    cwd = os.getcwd()
+    cut_all()
+    move_all()
     print('----------------------------------------------------------------------------')
     print('Making deepcell training data...')
-    training()
+    train_all()
     print('----------------------------------------------------------------------------')
     print('Running CellTK to detect divisions...')
-    movies = os.listdir('./movie/')
-    movies.sort()
-    for movie in movies:
-        celltknew('./movie/' + movie, './divisions_output/' + movie)
-        print(movie)
+    division_all()
     print('----------------------------------------------------------------------------')
     print('Combining npz to make division training data...')
-    combine()
+    combine_all()
 
     print('Success!')
 if __name__ == "__main__":

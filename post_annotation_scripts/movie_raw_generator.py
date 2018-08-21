@@ -3,7 +3,30 @@ import sys
 import os
 import shutil
 
-def move(job_id, datadir):
+def move_all():
+    print('move')
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        if len(partslst) == 0:
+            datadirec = str(input('Path to stacked raw data folder for ' + set + ' (e.g. /data/set1/stacked_raw/): '))
+            moviedirec = os.path.join('.', set, 'movie', 'montage_')
+            move(datadirec, moviedirec)
+        else:
+            for part in partslst:
+                datadirec = str(input('Path to stacked raw data folder for ' + set + part +  ' (e.g. /data/set1/stacked_raw/): '))
+                moviedirec = os.path.join('.', set, part,  'movie', 'montage_')
+                move(datadirec, moviedirec)
+
+def move(datadir, moviedir):
     #data_folder = str(input('Path from deepcell-data-engineering directory to stacked_raw folder (./data/set1/stacked_raw/): '))
     # data_folder = './data/set0/stacked_raw/'
     print(datadir)
@@ -11,7 +34,7 @@ def move(job_id, datadir):
     if data_folder[-1] != '/':
         data_folder += '/'
     dir_list = os.listdir(data_folder)
-    destination = './job_' + str(job_id) + '/movie/montage_'
+    destination = moviedir
     for term in dir_list:
         i = term.split('x_')[1][0]
         j = term.split('y_')[1][0]
@@ -27,4 +50,4 @@ def move(job_id, datadir):
 
 
 if __name__ == "__main__":
-    move(job_id)
+    move()

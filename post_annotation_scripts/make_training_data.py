@@ -35,22 +35,44 @@ from skimage.transform import resize
 
 from annotation_scripts.data_utils import make_training_data
 
-def training():
+def train_all():
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        direc_name = os.path.join('.', set, 'movie')
+        output_path = os.path.join('.', set, 'final')
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        print(partslst)
+        if len(partslst) == 0:
+            training(direc_name, output_path, set)
+        else:
+            for part in partslst:
+                direc_name = os.path.join('.', set, part, 'movie')
+                output_path = os.path.join('.', set, part, 'final')
+                training(direc_name, output_path, set)
+
+
+def training(direc_name, output_directory, set):
 	# Define maximum number of training examples
 	window_size = 30
-	if not os.path.exists('./final/'):
-		os.makedirs('./final')
-	set = int(input('Set number: '))
-	channel_names = ['set_' + str(set)]
+	if not os.path.exists(output_directory):
+		os.makedirs(output_directory)
+	#set = int(input('Set number: '))
+	channel_names = ['set']
 	# Load data
-	direc_name = './movie'
-	output_directory = './final/'
 	training_data_name = 'training_data'
 	#training_data_name = 'nuclear_movie_hela1_raw_same'
 	file_name_save = os.path.join(output_directory, training_data_name + '.npz')
 	training_direcs = os.listdir(direc_name)
 	training_direcs.sort()
-	
+
 
 	# Create output ditrectory, if necessary
 	pathlib.Path( output_directory ).mkdir( parents=True, exist_ok=True )

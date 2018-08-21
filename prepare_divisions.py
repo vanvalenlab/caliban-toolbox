@@ -56,6 +56,41 @@ def caller(inputs, inputs_labels, output, functions, params, output_dir):
         imsave(labels, output, path, dtype=np.int16)
 
 
+def division_all():
+    setlst = os.listdir('./')
+    all_sets = []
+    for term in setlst:
+        if 'set' in term:
+            all_sets.append(term)
+
+    for set in all_sets:
+        temp = os.listdir(os.path.join('.', set, ))
+        direc_name = os.path.join('.', set, 'movie')
+        output_path = os.path.join('.', set, 'divisions_output')
+        partslst = []
+        if not 'annotations' in temp:
+            partslst = os.listdir(os.path.join('.', set))
+        print(partslst)
+        if len(partslst) == 0:
+            movies = os.listdir(direc_name)
+            movies.sort()
+            for movie in movies:
+                movie_direc = os.path.join(direc_name, movie)
+                movie_out = os.path.join(output_path, movie)
+                celltknew(movie_direc, movie_out)
+        else:
+            for part in partslst:
+                direc_name = os.path.join('.', set, part, 'movie')
+                output_path = os.path.join('.', set, part, 'divisions_output')
+                movies = os.listdir(direc_name)
+                movies.sort()
+                for movie in movies:
+                    movie_direc = os.path.join(direc_name, movie)
+                    movie_out = os.path.join(output_path, movie)
+                    celltknew(movie_direc, movie_out)
+
+
+
 def celltknew(direc, output_direc):
     dir = direc
     inputs = os.listdir(dir + '/raw/')

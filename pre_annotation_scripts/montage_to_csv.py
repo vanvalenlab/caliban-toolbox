@@ -47,9 +47,9 @@ def csv_maker(set_num, bucket_name, aws_folder, number_of_segs, cell_type, part=
             list_of_urls += [os.path.join(base_direc, img_name)]
     data = {}
     if parts_folder_name != '':
-        data = {'image_url': list_of_urls, 'cell_type': cell_type, 'set_number': set_number, 'part' : part}
+        data = {'image_url': list_of_urls, 'cell_type': cell_type, 'set_number': str(set_num), 'part' : part}
     else:
-        data = {'image_url': list_of_urls, 'cell_type': cell_type, 'set_number': set_number}
+        data = {'image_url': list_of_urls, 'cell_type': cell_type, 'set_number': str(set_num)}
     dataframe = pd.DataFrame(data=data)
     direc = './csv' #change this to where you want it saved
 
