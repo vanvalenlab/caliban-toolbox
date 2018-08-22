@@ -8,6 +8,10 @@ RUN pip install --upgrade pip
 # Set working directory
 WORKDIR /data-engineering
 
+# Install necessary modules
+RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
+RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
+
 # Copy the requirements.txt and install the dependencies
 COPY requirements.txt /data-engineering
 RUN pip install -r /data-engineering/requirements.txt
@@ -17,3 +21,7 @@ COPY annotation_scripts /data-engineering/annotation_scripts
 
 # Change matplotlibrc file to use the Agg backend
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
+
+
+
+EXPOSE 80
