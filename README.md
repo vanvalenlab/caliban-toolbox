@@ -3,7 +3,7 @@ Data Engineering tools to prepare data for annotation by the crowd
 
 ![flow](./docs/flowchart.png)
 
-To build docker image: 
+To build docker image:
 ```bash
 docker build -t data_engineering .
 ```
@@ -25,3 +25,6 @@ NV_GPU='2' nvidia-docker run -i -t \
 data_engineering \
 notebook --allow-root --ip=0.0.0.0
 ```
+
+Run pre-annotation by running upload_processes.py
+Run post-annotation by running download_processes.py

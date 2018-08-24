@@ -47,7 +47,7 @@ def download_csv(logger):
             # Get image_name
             annotation_url = row['annotation'][8:-2]
             image_url = row['image_url']
-            set_num = row['set_number']
+            set_num = row['set']
             if 'set' in set_num:
                 set_num = set_num.split('set')[1]
             part_num = -1
@@ -68,7 +68,8 @@ def download_csv(logger):
             if not os.path.exists(output_path):
                 os.makedirs(output_path)
             if part_num != -1:
-                output_path = os.path.join('.', 'set' + str(set_num), 'part' + str(part_num))
+                print(part_num)
+                output_path = os.path.join('.', 'set' + str(set_num), str(part_num))
                 if not os.path.exists(output_path):
                     os.makedirs(output_path)
 

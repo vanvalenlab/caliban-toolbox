@@ -24,7 +24,7 @@ def move_all():
             move(datadirec, moviedirec)
         else:
             for part in partslst:
-                datadirec = str(input('Path to stacked raw data folder for ' + set + part +  ' (e.g. /data/set1/stacked_raw/): '))
+                datadirec = str(input('Path to stacked raw data folder for ' + set + ' ' + part +  ' (e.g. /data/set1/stacked_raw/): '))
                 moviedirec = os.path.join('.', set, part,  'movie', 'montage_')
                 move(datadirec, moviedirec)
 

@@ -29,7 +29,7 @@ def cut_all():
             cut_raw(direc, set)
         else:
             for part in partslst:
-                direc = str(input('Path to raw data folder for ' + set + part + '(e.g. /data/set1/part1/): '))
+                direc = str(input('Path to raw data folder for ' + set + ' ' + part + '(e.g. /data/set1/part1/): '))
                 cut_raw(direc, set, part)
 
 def cut_raw(direc, set, part=-1):
