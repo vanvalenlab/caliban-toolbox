@@ -47,7 +47,14 @@ def download_csv(logger):
             # Get image_name
             annotation_url = row['annotation'][8:-2]
             image_url = row['image_url']
-            set_num = row['set']
+            set_num = ''
+            if 'set' in row:
+                set_num = row['set']
+            elif 'set_number' in row:
+                set_num = row['set_number']
+            else:
+                print('ERROR')
+                return
             if 'set' in set_num:
                 set_num = set_num.split('set')[1]
             part_num = -1
