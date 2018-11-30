@@ -1,27 +1,35 @@
-# Use the nvidia tensorflow:18.04-py3 image as the parent image
-FROM nvcr.io/vvlab/tensorflow:18.04-py3
+# Use tensorflow/tensorflow as the base image
+# Change the build arg to edit the tensorflow version.
+# Only supporting python3.
+ARG TF_VERSION=1.9.0-gpu
+FROM tensorflow/tensorflow:${TF_VERSION}-py3
+
+RUN mkdir /notebooks/intro_to_tensorflow && \
+mv BUILD LICENSE /notebooks/*.ipynb intro_to_tensorflow/
 
 # System maintenance
-RUN apt update && apt-get install -y python3-tk
-RUN pip install --upgrade pip
-
-# Set working directory
-WORKDIR /data-engineering
+RUN apt-get update && apt-get install -y \
+        git \
+        python3-tk \
+        libsm6 && \
+    rm -rf /var/lib/apt/lists/* && \
+    /usr/local/bin/pip install --upgrade pip
 
 # Install necessary modules
 RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
 RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
 
 # Copy the requirements.txt and install the dependencies
-COPY requirements.txt /data-engineering
-RUN pip install -r /data-engineering/requirements.txt
+COPY requirements.txt opt/data-engineering
+RUN pip install -r /opt/data-engineering/requirements.txt
 
 # Copy the annotation tools
-COPY annotation_scripts /data-engineering/annotation_scripts
+COPY annotation_scripts /opt/data-engineering/annotation_scripts
+
+# Set working directory
+WORKDIR /
 
 # Change matplotlibrc file to use the Agg backend
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
 
 
-
-EXPOSE 80
