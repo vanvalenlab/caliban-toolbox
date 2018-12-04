@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
 RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
 
 # Copy the requirements.txt and install the dependencies
-COPY requirements.txt opt/data-engineering
+COPY requirements.txt /opt/data-engineering/
 RUN pip install -r /opt/data-engineering/requirements.txt
 
 # Copy the annotation tools
