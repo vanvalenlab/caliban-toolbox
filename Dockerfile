@@ -20,27 +20,17 @@ RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
 RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
 
 # Copy the requirements.txt and install the dependencies
-COPY requirements.txt /opt/data-engineering/
-RUN pip install -r /opt/data-engineering/requirements.txt
-
-
-
-# Copy the annotation tools
-COPY annotation_scripts /opt/data-engineering/annotation_scripts
-
-
+COPY requirements.txt /opt/deepcell-data-engineering/
+RUN pip install -r /opt/deepcell-data-engineering/requirements.txt
 
 # Copy the rest of the package code and its scripts
-COPY deepcell /opt/deepcell-tf/deepcell
+COPY dcde /opt/deepcell-data-engineering/dcde
 
 # Install deepcell via setup.py
-RUN pip install /opt/deepcell-tf
+RUN pip install /opt/deepcell-data-engineering
 
 # Copy over deepcell notebooks
-COPY scripts/ /notebooks/
-
-
-
+COPY notebooks/ /notebooks/
 
 # Change matplotlibrc file to use the Agg backend
 RUN echo "backend : Agg" > /usr/local/lib/python3.5/dist-packages/matplotlib/mpl-data/matplotlibrc
