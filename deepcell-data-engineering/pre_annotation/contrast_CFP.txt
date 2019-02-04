@@ -1,0 +1,18 @@
+'''Contrasts raw CFP images'''
+
+direc = getDirectory("Choose a Directory")
+for (i=0; i<=5; i++)	{
+	image_number = i;
+	file_path = direc + '/cytoplasm_' + image_number + '.png';
+	open(file_path);
+	run("Enhance Contrast", "saturated=0.3");
+	run("Invert");
+	run("Enhance Contrast", "saturated=1");
+	run("8-bit");
+
+	save_path = direc + '/edited' + '/cytoplasm_' + image_number + '.png';
+	saveAs('png', save_path);
+	close();
+	}
+
+run('Close All')
