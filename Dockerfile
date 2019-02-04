@@ -25,10 +25,9 @@ RUN pip install -r /opt/data-engineering/requirements.txt
 
 
 
-
-
 # Copy the annotation tools
 COPY annotation_scripts /opt/data-engineering/annotation_scripts
+
 
 
 # Copy the rest of the package code and its scripts
@@ -39,13 +38,6 @@ RUN pip install /opt/deepcell-tf
 
 # Copy over deepcell notebooks
 COPY scripts/ /notebooks/
-
-
-
-
-
-
-
 
 
 
