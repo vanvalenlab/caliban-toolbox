@@ -1,9 +1,9 @@
-# DeepCell Data Engineering: Annotation and Crowdsourcing Tools for Single Cell Analysis with Deep Learning
+# DeepCell Data Engineering: Annotation and Crowdsourcing Tools for Single Cell Analysis
 
 [![Build Status](https://travis-ci.org/vanvalenlab/deepcell-tf.svg?branch=master)](https://travis-ci.org/vanvalenlab/deepcell-tf)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/deepcell-tf/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/deepcell-tf?branch=master)
 
-DeepCell Data Engineering is a collection of tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for DeepCell. 
+DeepCell Data Engineering is a collection of tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for [DeepCell](https://github.com/vanvalenlab/deepcell-tf). 
 
 The process is as follows:
 ![flow](./docs/flowchart.png)
