@@ -6,8 +6,6 @@ scikit-learn>=0.19.1,<1
 tensorflow-gpu==1.11.0
 jupyter>=1.0.0,<2
 nbformat>=4.4.0,<5
-keras-preprocessing==1.0.5
-
 
 requests
 pyyaml
@@ -16,7 +14,7 @@ mahotas==1.4.1
 boto3
 PyWavelets==0.4.0
 simplejson==3.8.2
-Pillow==3.3.1
+Pillow>=4.3.0
 centrosome==1.0.5
 ipywidgets==5.2.2
 joblib==0.10.2
