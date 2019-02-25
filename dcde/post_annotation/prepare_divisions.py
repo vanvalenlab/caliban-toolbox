@@ -5,7 +5,7 @@ Script for running detect_div.py which will find divisions in movies.
 from scipy.ndimage import imread
 from os.path import basename, join
 import numpy as np
-import detect_div
+from dcde.post_annotation import detect_div
 from celltk.utils.postprocess_utils import regionprops, LCell # set default parent and next as None
 from celltk.utils.file_io import make_dirs, imsave, lbread
 from celltk.utils.filters import labels2outlines

@@ -14,7 +14,7 @@ from skimage.external import tifffile as tiff
 from scipy import ndimage
 import scipy
 
-from utils import get_image, get_images_from_directory
+from dcde.utils.utils import get_image, get_images_from_directory
 
 """
 Load images

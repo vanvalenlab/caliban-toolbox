@@ -2,7 +2,7 @@
 Makes montages from processed images.
 '''
 
-from .io_utils import get_image, get_images_from_directory
+from dcde.utils.io_utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 import os

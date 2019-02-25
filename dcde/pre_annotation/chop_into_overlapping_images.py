@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 from skimage.io import imread, imshow
 from skimage.external.tifffile import TiffFile, imsave
 
-from pre_annotation_scripts.misc_utils import sorted_nicely
+from dcde.pre_annotation.misc_utils import sorted_nicely
 
 
 class chop_into_overlap_img():
@@ -101,7 +101,7 @@ class chop_into_overlap_img():
                 continue
             elif start_flag == "n":
                 print("Making input 2D")
-                test_img = np.squeeze(test_img_temp, axis=0)
+                test_img = np.squeeze(test_img_temp, axis=None)
                 test_img_size = test_img.shape
                 img_squeeze = True
                 print("New Image Size: ", test_img.shape)
@@ -160,7 +160,7 @@ class chop_into_overlap_img():
                 if img_squeeze == False:
                     img = self.get_image(file_path)
                 else:
-                    img = np.squeeze(self.get_image(file_path), axis=0)
+                    img = np.squeeze(self.get_image(file_path), axis=None)
                 # pad image
                 padded_img = np.pad(img, ((overlapping_y_pix, overlapping_y_pix), (overlapping_x_pix, overlapping_x_pix)), mode='constant', constant_values=0)
                 # save sub images in correct directory
@@ -175,66 +175,69 @@ class chop_into_overlap_img():
                         imsave(sub_img_path, sub_img)
 
             print("Cropped files saved to {}".format(self.output_direc))
+
+
+ 
       
        
- #        for i in range(self.num_x):
- #            for j in range(self.num_y):
- #                list_of_cropped_images = []
+#          for i in range(self.num_x):
+#              for j in range(self.num_y):
+#                  list_of_cropped_images = []
                 
- #                #crops images accounting for overlap
- #                cropped_image = img[int(i*crop_size_x-i*overlap_x):int((i+1)*crop_size_x-i*overlap_x), 
- #                                          int(j*crop_size_y-j*overlap_y):int((j+1)*crop_size_y-j*overlap_y)]
+#                  #crops images accounting for overlap
+#                  cropped_image = img[int(i*crop_size_x-i*overlap_x):int((i+1)*crop_size_x-i*overlap_x), 
+#                                            int(j*crop_size_y-j*overlap_y):int((j+1)*crop_size_y-j*overlap_y)]
                 
- #                #names file
- #                cropped_image_name = 'set_' + str(set_number) + '_' + image_first_name + str(image_number) + '_x_' + str(i) + '_y_' + str(j) + '.png'
- #                cropped_folder_name = os.path.join(direc, save_stack_subdirec)
+#                  #names file
+#                  cropped_image_name = 'set_' + str(set_number) + '_' + image_first_name + str(image_number) + '_x_' + str(i) + '_y_' + str(j) + '.png'
+#                  cropped_folder_name = os.path.join(direc, save_stack_subdirec)
 
- #                
+                 
 
- #                # save cropped images
- #                cropped_image_name = os.path.join(cropped_folder_name, cropped_image_name)
- #                scipy.misc.imsave(cropped_image_name, cropped_image)    
+#                  # save cropped images
+#                  cropped_image_name = os.path.join(cropped_folder_name, cropped_image_name)
+#                  scipy.misc.imsave(cropped_image_name, cropped_image)    
 
 
 
-# input information
-#number_of_sets = int(input("Number of sets: "))
-#segmenter = int(input("Number of segments per row/column (e.g. 4 cuts up the image into 4 by 4 pieces): "))
-#base_direc = str(input("Base directory (e.g. /data/data/cells/3T3/): "))
-#data_subdirec = str(input("Subdirectory (where images are kept, e.g. 'processed'): "))
-#save_stack_subdirec = 'cropped_overlapping'
-#image_first_name = str(input("Name of image before numbers (e.g. 'nuclear_'): "))
-#images_per_set = int(input('Number of images per set: '))
+#  input information
+# number_of_sets = int(input("Number of sets: "))
+# segmenter = int(input("Number of segments per row/column (e.g. 4 cuts up the image into 4 by 4 pieces): "))
+# base_direc = str(input("Base directory (e.g. /data/data/cells/3T3/): "))
+# data_subdirec = str(input("Subdirectory (where images are kept, e.g. 'processed'): "))
+# save_stack_subdirec = 'cropped_overlapping'
+# image_first_name = str(input("Name of image before numbers (e.g. 'nuclear_'): "))
+# images_per_set = int(input('Number of images per set: '))
 
-#direc = os.path.join(base_direc, 'set' + str(set_number), data_subdirec)
-#directory = os.path.join(direc, image_first_name + str(image_number) + '.png')
+# direc = os.path.join(base_direc, 'set' + str(set_number), data_subdirec)
+# directory = os.path.join(direc, image_first_name + str(image_number) + '.png')
 
-        # crop_size_x = image_size[0]//segmenter
-        # crop_size_y = image_size[1]//segmenter
+#          crop_size_x = image_size[0]//segmenter
+#          crop_size_y = image_size[1]//segmenter
         
-        # option_list = []
+#          option_list = []
         
-        # #finds percentage overlaps (m) between 0% and 50% 
-        # for y in range(segmenter, segmenter*2):
-        #     m = (segmenter-y)/(1-y)
-        #     option_list.append(m)
+#          #finds percentage overlaps (m) between 0% and 50% 
+#          for y in range(segmenter, segmenter*2):
+#              m = (segmenter-y)/(1-y)
+#              option_list.append(m)
         
-        # #finds median percentage overlap
-        # if len(option_list)%2 ==0:
-        #     x_overlap_percent = float(median(option_list[:-1]))
-        # else:
-        #     x_overlap_percent = float(median(option_list))
+#          #finds median percentage overlap
+#          if len(option_list)%2 ==0:
+#              x_overlap_percent = float(median(option_list[:-1]))
+#          else:
+#              x_overlap_percent = float(median(option_list))
         
-        # #determines images per row/column based on the percentage overlap
-        # images_per_row = int(round((segmenter-x_overlap_percent)*(1/(1-x_overlap_percent))))
-        # images_per_column = images_per_row
+#          #determines images per row/column based on the percentage overlap
+#          images_per_row = int(round((segmenter-x_overlap_percent)*(1/(1-x_overlap_percent))))
+#          images_per_column = images_per_row
         
-        # y_overlap_percent = x_overlap_percent
+#          y_overlap_percent = x_overlap_percent
 
-        # #determines the size of the overlap 
-        # overlap_x = crop_size_x*x_overlap_percent
-        # overlap_y = crop_size_y*y_overlap_percent
+#          #determines the size of the overlap 
+#          overlap_x = crop_size_x*x_overlap_percent
+#          overlap_y = crop_size_y*y_overlap_percent
 
 
-#if __name__ == "__main__":
-#   overlapping_cropper(number_of_sets, segmenter, base_direc, data_subdirec, save_stack_subdirec, image_first_name, images_per_set)
+# if __name__ == "__main__":
+#    overlapping_cropper(number_of_sets, segmenter, base_direc, data_subdirec, save_stack_subdirec, image_first_name, images_per_set)

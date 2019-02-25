@@ -24,12 +24,12 @@ import scipy as sp
 from scipy import ndimage
 from skimage import feature
 from sklearn.utils import class_weight
-from annotation_scripts.utils import get_image
+from dcde.utils.utils import get_image
 from skimage import morphology as morph
 import matplotlib.pyplot as plt
 from skimage.transform import resize
 
-from annotation_scripts.data_utils import make_training_data
+from dcde.utils.data_utils import make_training_data
 
 def train_all():
     setlst = os.listdir('./')
