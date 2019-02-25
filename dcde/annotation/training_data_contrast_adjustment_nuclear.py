@@ -17,7 +17,7 @@ from skimage.external import tifffile as tiff
 from scipy import ndimage
 import scipy
 
-from utils import get_image, get_images_from_directory
+from dcde.utils.utils import get_image, get_images_from_directory
 
 """
 Load images
@@ -40,7 +40,7 @@ save_subdirec = "Processed"
 data_subdirec = "RawImages"
 
 for cell_type, number_of_sets, channel_name in zip(cell_types, list_of_number_of_sets, channel_names):
-    for set_number in xrange(number_of_sets):
+    for set_number in range(number_of_sets):
         direc = os.path.join(base_direc, cell_type, "set" + str(set_number))
         save_direc = os.path.join(direc, save_subdirec)
         directory = os.path.join(direc, data_subdirec)

@@ -13,11 +13,11 @@ Import python packages
 import numpy as np
 import skimage as sk
 import os
-import tifffile as tiff
+# import tifffile as tiff
 from scipy import ndimage
 import scipy
 
-from utils import get_image, get_images_from_directory
+from dcde.utils.utils import get_image, get_images_from_directory
 
 """
 Load images

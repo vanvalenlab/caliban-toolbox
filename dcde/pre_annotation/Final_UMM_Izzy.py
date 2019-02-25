@@ -6,11 +6,11 @@ Code for creating buffered montages of images. Takes images from 'processed' fol
 
 #import python packages
 
-from deepcell import get_image, get_images_from_directory
+from dcde.utils.io_utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 import os
-import tifffile as tiff
+# import tifffile as tiff
 from scipy import ndimage
 import scipy
 import math

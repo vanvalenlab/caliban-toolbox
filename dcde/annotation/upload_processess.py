@@ -1,8 +1,8 @@
-from pre_annotation_scripts.universalmontagemaker import maker
-from pre_annotation_scripts.aws_upload import aws_upload
-from pre_annotation_scripts.montage_to_csv import montage_creator
-from pre_annotation_scripts.fig_eight_upload import fig_eight
-from pre_annotation_scripts.contrast_adjustment import contrast
+from dcde.pre_annotation.universalmontagemaker import maker
+from dcde.pre_annotation.aws_upload import aws_upload
+from dcde.pre_annotation.montage_to_csv import montage_creator
+from dcde.pre_annotation.fig_eight_upload import fig_eight
+from dcde.pre_annotation.contrast_adjustment import contrast
 import sys
 import shutil
 import os

@@ -27,10 +27,10 @@ def detect_missed(arr, file):
                 csv_rows.extend([{title[i]: row[title[i]] for i in range(len(title)) if title[i] != 'object'
                                  and title[i] != 'prop' and title[i] != 'ch'and title[i] != 'frame'}])
  
-        for term in arr:
-            print(term[0])
-            for dic in csv_rows[0]:
-                if str(float(term[0]))
+        # for term in arr:
+        #     print(term[0])
+        #     for dic in csv_rows[0]:
+        #         if str(float(term[0]))
 
 
 

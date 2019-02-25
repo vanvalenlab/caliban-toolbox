@@ -12,7 +12,7 @@ import numpy as np
 import skimage as sk
 from tensorflow.contrib.keras import backend as K
 
-from utils import get_images_from_directory
+from dcde.utils.utils import get_images_from_directory
 
 """
 Load images

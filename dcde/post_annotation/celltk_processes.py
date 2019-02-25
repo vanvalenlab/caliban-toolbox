@@ -3,7 +3,7 @@ import sys
 import yaml
 import fileinput
 import os
-from csvtonpz import npz_runner
+from dcde.post_annotation.csvtonpz import npz_runner
 
 
 

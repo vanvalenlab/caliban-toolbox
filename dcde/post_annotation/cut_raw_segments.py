@@ -2,7 +2,7 @@
 Cuts raw images up and makes stacked_raw directory of cropped images.
 '''
 
-from annotation_scripts.utils import get_image, get_images_from_directory
+from dcde.utils.utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 import os

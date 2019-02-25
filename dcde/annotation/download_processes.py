@@ -2,15 +2,15 @@
 Script for running post-annotation processes.
 '''
 
-from post_annotation_scripts.fig_eight_download import download
-from post_annotation_scripts.save_annotations import download_csv
-from post_annotation_scripts.relabel_annotations import relabel_all
-from post_annotation_scripts.reshape_annotations import reshape_all
-from post_annotation_scripts.movie_raw_generator import move_all
-from prepare_divisions import division_all
-from post_annotation_scripts.cut_raw_segments import cut_all
-from post_annotation_scripts.make_training_data import train_all
-from post_annotation_scripts.combine_npz import combine_all
+from dcde.post_annotation.fig_eight_download import download
+from dcde.post_annotation.save_annotations import download_csv
+from dcde.post_annotation.relabel_annotations import relabel_all
+from dcde.post_annotation.reshape_annotations import reshape_all
+from dcde.post_annotation.movie_raw_generator import move_all
+from dcde.post_annotation.prepare_divisions import division_all
+from dcde.post_annotation.cut_raw_segments import cut_all
+from dcde.post_annotation.make_training_data import train_all
+from dcde.post_annotation.combine_npz import combine_all
 import os
 import logging
 
