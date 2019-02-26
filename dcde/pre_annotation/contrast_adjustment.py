@@ -3,7 +3,7 @@ Code for adjusting the contrast of images to aid image annotaters
 '''
 
 import sys
-from .io_utils import get_image, get_images_from_directory
+from dcde.utils.io_utils import get_image, get_images_from_directory
 import numpy as np
 import skimage as sk
 from skimage import filters

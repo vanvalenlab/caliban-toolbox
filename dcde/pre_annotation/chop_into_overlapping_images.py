@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 from skimage.io import imread, imshow
 from skimage.external.tifffile import TiffFile, imsave
 
-from dcde.pre_annotation.misc_utils import sorted_nicely
+from dcde.utils.misc_utils import sorted_nicely
 
 
 class chop_into_overlap_img():
