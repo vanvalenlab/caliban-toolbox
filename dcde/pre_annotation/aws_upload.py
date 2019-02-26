@@ -1,7 +1,40 @@
+# Copyright 2016-2019 David Van Valen at California Institute of Technology
+# (Caltech), with support from the Paul Allen Family Foundation, Google,
+# & National Institutes of Health (NIH) under Grant U24CA224309-01.
+# All rights reserved.
+#
+# Licensed under a modified Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.github.com/vanvalenlab/deepcell-data-engineering/LICENSE
+#
+# The Work provided may be used for non-commercial academic purposes only.
+# For any other use of the Work, including commercial use, please contact:
+# vanvalenlab@gmail.com
+#
+# Neither the name of Caltech nor the names of its contributors may be used
+# to endorse or promote products derived from this software without specific
+# prior written permission.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+'''
+Upload image files to AWS bucket
+'''
+#geneva
+
 import sys
 import boto3
 import os
 import threading
+from getpass import getpass
+
+from dcde.utils.io_utils import get_img_names
 
 # Taken from AWS Documentation
 class ProgressPercentage(object):
@@ -20,38 +53,55 @@ class ProgressPercentage(object):
                     percentage))
             sys.stdout.flush()
 
-def aws_upload():
-    ret_lst = []
-    AWS_ACCESS_KEY_ID = input('What is your AWS access key id? ')
-    AWS_SECRET_ACCESS_KEY = input('What is your AWS secret access key id? ')
+def aws_upload(bucket_name, aws_folder, folder_to_upload):
+    '''
+    folder_to_save = location in bucket where files will be put, used to make keys
+    bucket_name = name of bucket, "figure-eight-deepcell" by default
+    folder_to_upload = string, path to folder where images to be uploaded are, usually .../montages
+    '''
+    ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
+    ##might replace with a "create_session" function for user input of access keys, then run upload separately
+    AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
+    AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
 
     session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
     print('Connected to AWS')
     s3 = session.client('s3')
-    bucket_name = str(input('What is bucket called? '))
-    folder_to_save = str(input('What folder in bucket to save in? (e.g. HeLa/) '))
-    ret_lst.append(bucket_name)
-    ret_lst.append(folder_to_save)
-    set = os.listdir(os.path.join('.', 'montages'))[0]
-    partslst = os.listdir(os.path.join('.', 'montages', set))
-    if '.png' in partslst[0]:
-        partslst = ['']
-    for part in partslst:
-        upload(s3, folder_to_save, bucket_name, set, part)
-    return ret_lst
 
-def upload(s3, folder_to_save, bucket_name, set, part):
-    folder = os.path.join(folder_to_save, set, part)
-    file_location = os.path.join('.', 'montages', set, part)
-    files = []
+    uploaded_montages = upload(s3, bucket_name, aws_folder, folder_to_upload)
+    return uploaded_montages
 
-    for file in os.listdir(file_location):
-        if file.endswith('.png'):
-            files.append(file)
 
-    for file in files:
-        s3.upload_file(os.path.join(file_location, file), bucket_name, os.path.join(folder, file), Callback=ProgressPercentage(os.path.join(file_location, file)), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': file_location + file}})
+def upload(s3, bucket_name, aws_folder, folder_to_upload):
+    '''
+    s3 = boto3.Session client allows script to upload to the user's AWS acct
+    folder_to_save = string, location in bucket where files will be put, used to make keys
+    bucket_name = string, name of bucket
+    folder_to_upload = string, path to folder where images to be uploaded are
+    '''
+    #load the images from specified folder but not the json log file
+    imgs_to_upload = get_img_names(folder_to_upload)
+    
+    #create list of montages that were uploaded to pass to csv maker
+    uploaded_montages = []
+    
+    #upload each image from that folder
+    for img in imgs_to_upload:
+        
+        #set full path to image
+        img_path = os.path.join(folder_to_upload, img)
+        
+        #set destination path
+        img_key = os.path.join(aws_folder, img)
+        
+        #upload
+        s3.upload_file(img_path, bucket_name, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
-
-if __name__ == '__main__':
-    aws_upload()
+        
+        #add uploaded montage url to list
+        uploaded_montages.append(os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, img_key))
+        
+    return uploaded_montages
+        
+#if __name__ == '__main__':
+#    aws_upload()

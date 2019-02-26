@@ -5,6 +5,7 @@ utility functions for reading/writing files
 
 @author: David Van Valen
 """
+#geneva
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -16,7 +17,7 @@ from skimage.io import imread
 from skimage.external.tifffile import TiffFile
 from tensorflow.python.keras import backend as K
 
-from .misc_utils import sorted_nicely
+from dcde.utils.misc_utils import sorted_nicely
 
 
 def get_immediate_subdirs(directory):
@@ -38,6 +39,15 @@ def get_image(file_name):
     if ext == '.tif' or ext == '.tiff':
         return np.float32(TiffFile(file_name).asarray())
     return np.float32(imread(file_name))
+
+def get_img_names(direc_name):
+    """
+    Return all image filenames in direc_name
+    """
+    imglist = os.listdir(direc_name)
+    imgfiles = [i for i in imglist if ".tif" in i or ".png" in i]
+    imgfiles = sorted_nicely(imgfiles)
+    return imgfiles
 
 
 def nikon_getfiles(direc_name, channel_name):
