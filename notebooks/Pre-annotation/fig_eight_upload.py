@@ -30,16 +30,6 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
     #add data from csv to job you just made
     csv_name = os.path.join(csv_direc, identifier + '.csv')
     data = upload_data(csv_name, new_job_id, key)
-    if data == -1:
-        return
-    print("Added data")
-
-    print("Head over to the Figure Eight website to change the name of the job, review it, then contact the success manager so they can launch this job.")
-#    print("Original job title: ", original_job.json()['title'])
-#    updateq = str(input('Update job title now? (y/n) '))
-#    if updateq == 'y':
-#        new_title = str(input('New job title: '))
-#        update_job_title(new_title, new_job_id, key)
 
 
 def copy_job(id, key):
@@ -69,22 +59,11 @@ def upload_data(csv_name, id, key):
     add_data = requests.put(url, data = csv_data, headers = headers)
     if add_data.status_code != 200:
         print("upload_data not successful. Status code: ", new_job.status_code)
-        
+    else:
+        print("Added data")
 
-def update_job_title(title, id, key):
-    url = "https://api.figure-eight.com/v1/jobs/{job_id}.json?key={api_key}"
-    url = url.replace('{job_id}', str(id))
-    url = url.replace('{api_key}', key)
-
-    command = 'curl -X PUT --data-urlencode "job[title]={' +  title + '}" ' + url
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    dict = str(out)
-    if "error" in dict:
-        print('Title not changed successfully. \n')
-        return -1
-    print('Title changed successfully! \n')
-    return 0
-
-if __name__ == "__main__":
-    fig_eight()
+        print("Now that the data is added, you should go to the Figure Eight website to: /n" +
+            "-change the job title /n" +
+            "-review the job design /n" + 
+            "-confirm pricing /n" +
+            "-launch the job (or contact success manager)")
