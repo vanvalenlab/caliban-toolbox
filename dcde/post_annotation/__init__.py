@@ -32,6 +32,9 @@ from dcde.post_annotation import celltk_processes
 from dcde.post_annotation import combine_npz
 from dcde.post_annotation import csvtonpz
 from dcde.post_annotation import cut_raw_segments
+from dcde.post_annotation import clean_montages
+from dcde.post_annotation import download_csv
+from dcde.post_annotation import montages_to_movies
 # from dcde.post_annotation import detect_div
 from dcde.post_annotation import detect_missed_divisions
 from dcde.post_annotation import fig_eight_download

@@ -34,12 +34,14 @@ from dcde import post_annotation
 from dcde import pre_annotation
 #from dcde import tracking
 from dcde import utils
+from dcde import utils_test
 
 from dcde.annotation import *
 from dcde.post_annotation import *
 from dcde.pre_annotation import *
 #from dcde.tracking import *
 from dcde.utils import *
+from dcde.utils_test import *
 
 del absolute_import
 del print_function

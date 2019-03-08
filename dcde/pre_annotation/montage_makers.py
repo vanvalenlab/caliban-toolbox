@@ -78,6 +78,7 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
             for column in range(row_length):
             
                 #read img
+                #this works because the img_stack is sorted_nicely
                 slice_num = (montage * montage_len) + (row * row_length) + column
                 current_slice_name = img_stack[slice_num]
                 current_slice = imread(os.path.join(stack_direc, current_slice_name))
@@ -92,8 +93,10 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
         #save montage
         imsave(montage_name, montage_img)
         
+    return num_montages
         
-def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_segments, num_y_segments, row_length, x_buffer, y_buffer):
+        
+def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_segments, num_y_segments, row_length, x_buffer, y_buffer, log_direc):
     '''
     montage_len = integer number of frames you want to be in the montage
     direc = string, path to folder containing subfolders, each containing a cropped movie
@@ -121,7 +124,7 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
             stack_direc = os.path.join(direc, identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2))
             
             print("Now montaging images from: " + identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2))
-            montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer)
+            num_montages = montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer)
             
             #logged_name = identifier + "_x_" + str(x_pos) + "_y_" + str(y_pos)
             #montage_list.append(logged_name)
@@ -137,10 +140,14 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
     log_data['row_length'] = row_length
     log_data['x_buffer'] = x_buffer
     log_data['y_buffer'] = y_buffer
+    log_data['montages_in_pos'] = num_montages
     
     
     #save log in JSON format
-    log_path = os.path.join(save_direc, "montage_maker_log.json")
+    #save with identifier; should be saved in "log" folder
+    if not os.path.isdir(log_direc):
+        os.makedirs(log_direc)
+    log_path = os.path.join(log_direc, identifier + "_montage_maker_log.json")
     
     with open(log_path, "w") as write_file:
         json.dump(log_data, write_file)

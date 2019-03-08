@@ -21,14 +21,14 @@ from sklearn.model_selection import train_test_split
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.utils import to_categorical
 
-from .io_utils import get_image
-from .io_utils import get_image_sizes
-from .io_utils import nikon_getfiles
-from .io_utils import get_immediate_subdirs
-from .misc_utils import sorted_nicely
-from .plot_utils import plot_training_data_2d
-from .plot_utils import plot_training_data_3d
-from .transform_utils import distance_transform_2d
+from dcde.utils.io_utils import get_image
+from dcde.utils.io_utils import get_image_sizes
+from dcde.utils.io_utils import nikon_getfiles
+from dcde.utils.io_utils import get_immediate_subdirs
+from dcde.utils.misc_utils import sorted_nicely
+from dcde.utils.plot_utils import plot_training_data_2d
+from dcde.utils.plot_utils import plot_training_data_3d
+from dcde.utils.transform_utils import distance_transform_2d
 
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'

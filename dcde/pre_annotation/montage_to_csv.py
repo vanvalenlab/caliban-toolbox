@@ -3,20 +3,6 @@
 import os
 import pandas as pd
 
-def montage_creator(ret_lst):
-    cell_types = [str(input('Type of cells: '))]
-    set = os.listdir(os.path.join('.', 'montages'))[0]
-    partslst = os.listdir(os.path.join('.', 'montages', set))
-    if '.png' in partslst[0]:
-        partslst = ['']
-    number_of_segs = int(input('Number of segments in x/y direction: '))
-    bucket_name = ret_lst[0]
-    aws_folder = ret_lst[1]
-
-    for part in partslst:
-        csv_maker(set, part, bucket_name, aws_folder, number_of_segs, cell_types[0])
-
-
 
 def csv_maker(uploaded_montages, identifier, csv_direc):
     
@@ -31,6 +17,25 @@ def csv_maker(uploaded_montages, identifier, csv_direc):
     
     #save csv file
     dataframe.to_csv(csv_name, index = False)
+
+    
+
+#added back for now - import errors without it; will figure out what's depending 
+#on it later
+def montage_creator(ret_lst):
+    cell_types = [str(input('Type of cells: '))]
+    set = os.listdir(os.path.join('.', 'montages'))[0]
+    partslst = os.listdir(os.path.join('.', 'montages', set))
+    if '.png' in partslst[0]:
+        partslst = ['']
+    number_of_segs = int(input('Number of segments in x/y direction: '))
+    bucket_name = ret_lst[0]
+    aws_folder = ret_lst[1]
+
+    for part in partslst:
+        csv_maker(set, part, bucket_name, aws_folder, number_of_segs, cell_types[0])
+
+
 
 
 #if __name__ == "__main__":
