@@ -3,8 +3,7 @@ Code for adjusting the contrast of images to aid image annotaters
 '''
 
 import sys
-from dcde.utils.io_utils import get_image, get_images_from_directory
-from io_utils import get_img_names, get_image
+from dcde.utils.io_utils import get_image, get_images_from_directory, get_img_names
 import numpy as np
 import skimage as sk
 from skimage import filters
@@ -12,7 +11,7 @@ import os
 from scipy import ndimage
 import scipy
 
-def contrast(base_dir, raw_folder, identifier):
+def contrast(base_dir, raw_folder, identifier, gaussian_sigma, hist, adapthist):
     '''
     adjusts the contrast of raw images - does not overwrite raw images
     adjusted images are easier to crowdsource annotations
@@ -59,13 +58,19 @@ def contrast(base_dir, raw_folder, identifier):
         nuclear_image = image
         
         # Blur
-        nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, .7)
+        nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, sigma)
 
         # Find edges
         nuclear_image += 100 * sk.filters.sobel(nuclear_image)
 
         # Invert
         nuclear_image = sk.util.invert(nuclear_image)
+
+        if(hist):
+            nuclear_image = sk.exposure.equalize_hist(nuclear_image, nbins=256, mask=None)
+        if(adapthist):
+            nuclear_image = sk.exposure.equalize_adapthist(nuclear_image, kernel_size=None, clip_limit=0.01, nbins=256)
+        
 
         # Rescale intensity
         nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = np.uint16)
