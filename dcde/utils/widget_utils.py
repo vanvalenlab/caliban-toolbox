@@ -36,21 +36,23 @@ def arr2img(arr):
         out = buffer.getvalue()
     return Image(out)
 
-def choose_img(name):
+def choose_img(name, dirpath):
     """Used to choose which image we want to use for the widget tester"""
     global img
     filepath = os.path.join(dirpath, name)
     img = img_as_uint(imread(filepath))
     return arr2img(img)
 
-def edit_image(image, sigma=1.0, equalize_hist=False, equalize_adapthist=False):
+def edit_image(image, sigma=1.0, equalize_hist=False, equalize_adapthist=False, gamma_adjust = 1.0):
     """Used to edit the image using the widget tester"""
     global hist
     global adapthist
     global gaussian_sigma
+    global gamma
     
     new_image = filters.gaussian(image, sigma=sigma, multichannel=False)
     new_image += 1000*sk.filters.sobel(new_image)
+    new_image = sk.exposure.adjust_gamma(new_image, gamma_adjust, gain = 1)
     new_image[:] = -1.0*new_image[:]
     new_image=sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = 'float')
     
@@ -61,11 +63,13 @@ def edit_image(image, sigma=1.0, equalize_hist=False, equalize_adapthist=False):
     if(equalize_adapthist == True):
         new_image = sk.exposure.equalize_adapthist(new_image, kernel_size=None, clip_limit=0.01, nbins=256)
      
+    new_image = sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = np.uint8)
+    new_image = new_image.astype(np.uint8)
     
     hist = equalize_hist
     adapthist = equalize_adapthist
     gaussian_sigma = sigma
-        
+    gamma = gamma_adjust
+
     
     return arr2img(new_image)
-

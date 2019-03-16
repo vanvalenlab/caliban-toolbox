@@ -10,8 +10,9 @@ from skimage import filters
 import os
 from scipy import ndimage
 import scipy
+from imageio import imread, imwrite
 
-def contrast(base_dir, raw_folder, identifier, gaussian_sigma, hist, adapthist):
+def contrast(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
     '''
     adjusts the contrast of raw images - does not overwrite raw images
     adjusted images are easier to crowdsource annotations
@@ -50,7 +51,8 @@ def contrast(base_dir, raw_folder, identifier, gaussian_sigma, hist, adapthist):
         print ( 'Processing image ' + str(j+1) + ' of ' + str(number_of_images))
         
         img_path = os.path.join(raw_dir, img_list[j])
-        image = get_image(img_path)
+        image = get_image(img_path) #np.float32
+
         if len(image.shape) > 2:
             print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
             return
@@ -61,29 +63,32 @@ def contrast(base_dir, raw_folder, identifier, gaussian_sigma, hist, adapthist):
         nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, sigma)
 
         # Find edges
-        nuclear_image += 100 * sk.filters.sobel(nuclear_image)
+        if sobel_option:
+            nuclear_image += sobel * sk.filters.sobel(nuclear_image)
+        
+        # Adjust gamma
+        nuclear_image = sk.exposure.adjust_gamma(nuclear_image, gamma, gain = 1)
 
         # Invert
-        nuclear_image = sk.util.invert(nuclear_image)
-
+        if invert:
+            nuclear_image = sk.util.invert(nuclear_image)
+        
         if(hist):
             nuclear_image = sk.exposure.equalize_hist(nuclear_image, nbins=256, mask=None)
+        
         if(adapthist):
+            nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = 'float')
             nuclear_image = sk.exposure.equalize_adapthist(nuclear_image, kernel_size=None, clip_limit=0.01, nbins=256)
         
 
         # Rescale intensity
-        nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = np.uint16)
+        nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = np.uint8)
+        nuclear_image = nuclear_image.astype(np.uint8)
+        #okay to lose precision in these images--they don't get used in training data, just annotation
         
         '''
         Save processed image
         '''
             
         nuclear_name = os.path.join(process_dir, identifier + "_adjusted_" + str(j).zfill(3) + '.png')
-        scipy.misc.imsave(nuclear_name, nuclear_image)
-        
-
-
-if __name__ == '__main__':
-    contrast()
-
+        imwrite(nuclear_name, nuclear_image)
