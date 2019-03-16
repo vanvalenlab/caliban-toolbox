@@ -62,9 +62,9 @@ def upload_data(csv_name, id, key):
     else:
         print("Added data")
 
-        print("Now that the data is added, you should go to the Figure Eight website to: /n" +
-            "-change the job title /n" +
-            "-review the job design /n" + 
-            "-confirm pricing /n" +
+        print("Now that the data is added, you should go to the Figure Eight website to: \n" +
+            "-change the job title \n" +
+            "-review the job design \n" + 
+            "-confirm pricing \n" +
             "-launch the job (or contact success manager)")
 
