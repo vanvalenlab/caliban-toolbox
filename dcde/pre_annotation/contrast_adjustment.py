@@ -2,7 +2,7 @@
 Code for adjusting the contrast of images to aid image annotaters
 '''
 
-import sys
+#import sys
 from dcde.utils.io_utils import get_image, get_images_from_directory, get_img_names
 import numpy as np
 import skimage as sk
@@ -12,7 +12,45 @@ from scipy import ndimage
 import scipy
 from imageio import imread, imwrite
 
-def contrast(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
+def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
+    '''takes image and image adjustment settings, returns adjusted image array'''
+            
+    if len(image.shape) > 2:
+        print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
+        return
+        
+    # Blur
+    image = filters.gaussian(image, sigma, multichannel=False)
+    #nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, sigma)
+
+    # Find edges
+    if sobel_option:
+        image = sk.exposure.rescale_intensity(image, in_range = 'image', out_range = 'float')
+        image += sobel * sk.filters.sobel(image)
+        
+    # Adjust gamma
+    image = sk.exposure.adjust_gamma(image, gamma, gain = 1)
+
+    # Invert
+    if invert:
+        image = sk.util.invert(image)
+        
+    if(hist):
+        image = sk.exposure.equalize_hist(image, nbins=256, mask=None)
+        
+    if(adapthist):
+        image = sk.exposure.rescale_intensity(image, in_range = 'image', out_range = 'float')
+        image = sk.exposure.equalize_adapthist(image, kernel_size=None, clip_limit=0.01, nbins=256)
+        
+
+    # Rescale intensity
+    image = sk.exposure.rescale_intensity(image, in_range = 'image', out_range = np.uint8)
+    image = image.astype(np.uint8)
+    #okay to lose precision in these images--they don't get used in training data, just annotation
+    
+    return image
+
+def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
     '''
     adjusts the contrast of raw images - does not overwrite raw images
     adjusted images are easier to crowdsource annotations
@@ -41,9 +79,8 @@ def contrast(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, so
     
     number_of_images = len(img_list)
     
-    '''
-    Adjust contrast
-    '''
+    #Adjust contrast
+  
     print('Processed data will be located at ' + process_dir )
 
     for j in range(number_of_images):
@@ -52,43 +89,89 @@ def contrast(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, so
         
         img_path = os.path.join(raw_dir, img_list[j])
         image = get_image(img_path) #np.float32
+        adjusted_image = contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert)
 
-        if len(image.shape) > 2:
-            print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
-            return
-        
-        nuclear_image = image
-        
-        # Blur
-        nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, sigma)
-
-        # Find edges
-        if sobel_option:
-            nuclear_image += sobel * sk.filters.sobel(nuclear_image)
-        
-        # Adjust gamma
-        nuclear_image = sk.exposure.adjust_gamma(nuclear_image, gamma, gain = 1)
-
-        # Invert
-        if invert:
-            nuclear_image = sk.util.invert(nuclear_image)
-        
-        if(hist):
-            nuclear_image = sk.exposure.equalize_hist(nuclear_image, nbins=256, mask=None)
-        
-        if(adapthist):
-            nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = 'float')
-            nuclear_image = sk.exposure.equalize_adapthist(nuclear_image, kernel_size=None, clip_limit=0.01, nbins=256)
-        
-
-        # Rescale intensity
-        nuclear_image = sk.exposure.rescale_intensity(nuclear_image, in_range = 'image', out_range = np.uint8)
-        nuclear_image = nuclear_image.astype(np.uint8)
-        #okay to lose precision in these images--they don't get used in training data, just annotation
-        
-        '''
-        Save processed image
-        '''
+        #Save processed image
             
         nuclear_name = os.path.join(process_dir, identifier + "_adjusted_" + str(j).zfill(3) + '.png')
-        imwrite(nuclear_name, nuclear_image)
+        imwrite(nuclear_name, adjusted_image)
+
+
+def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings):
+
+    #directory management
+    
+    save_folder = raw_folder + "_overlay_" + overlay_folder
+    save_dir = os.path.join(base_dir, save_folder)
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+    raw_dir = os.path.join(base_dir, raw_folder)
+    overlay_dir = os.path.join(base_dir, overlay_folder)
+    
+    #extract variables from settings dictionaries
+    
+    raw_sigma = raw_settings['blur']
+    raw_eq_adapthist = raw_settings['equalize_adapthist']
+    raw_eq_hist = raw_settings['equalize_hist']
+    raw_gamma = raw_settings['gamma_adjust']
+    raw_invert = raw_settings['invert_img']
+    raw_sobel_factor = raw_settings['sobel_factor']
+    raw_sobel_toggle = raw_settings['sobel_toggle']
+    
+    overlay_sigma = overlay_settings['blur']
+    overlay_eq_adapthist = overlay_settings['equalize_adapthist']
+    overlay_eq_hist = overlay_settings['equalize_hist']
+    overlay_gamma = overlay_settings['gamma_adjust']
+    overlay_invert = overlay_settings['invert_img']
+    overlay_sobel_factor = overlay_settings['sobel_factor']
+    overlay_sobel_toggle = overlay_settings['sobel_toggle']
+    
+    prop_raw = combined_settings['prop_raw']
+    v_min = combined_settings['v_min']
+    v_max = combined_settings['v_max']
+    
+    #go image by image through dataset
+    
+    img_list = get_img_names(raw_dir)
+    for frame in range(len(img_list)):
+        
+        #contrast adjust raw
+        
+        raw_img_name = get_img_names(raw_dir)[frame]
+        raw_img_path = os.path.join(raw_dir, raw_img_name)
+        raw_img = imread(raw_img_path)
+        raw_adjusted = contrast(raw_img, raw_sigma, raw_eq_hist, raw_eq_adapthist, raw_gamma, raw_sobel_toggle, raw_sobel_factor, raw_invert)
+        
+        #contrast adjust overlay
+        
+        overlay_img_name = get_img_names(overlay_dir)[frame]
+        overlay_img_path = os.path.join(overlay_dir, overlay_img_name)
+        overlay_img = imread(overlay_img_path)
+        overlay_adjusted = contrast(overlay_img, overlay_sigma, overlay_eq_hist, overlay_eq_adapthist, overlay_gamma, overlay_sobel_toggle, overlay_sobel_factor, overlay_invert)
+        
+        #combine images
+        
+        prop_overlay = 1.0 - prop_raw
+        mod_img = overlay_adjusted * prop_overlay + raw_adjusted * prop_raw
+        mod_img = sk.exposure.rescale_intensity(mod_img, in_range = 'image', out_range = 'uint8')
+        mod_img = mod_img.astype(np.uint8)            
+        mod_img = sk.exposure.equalize_adapthist(mod_img, kernel_size=None, clip_limit=0.01, nbins=256)
+    
+        #equalize_adapthist outputs float64 image
+        #rescale image to (0,255) before changing to uint8 dtype
+        mod_img = sk.exposure.rescale_intensity(mod_img, in_range = "image", out_range = np.uint8)
+        mod_img = mod_img.astype(np.uint8)
+    
+        #rescale brightness to user-defined range
+        mod_img = sk.exposure.rescale_intensity(mod_img, in_range=(v_min, v_max))    
+        
+        #name file
+        
+        adjusted_img_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_" + str(frame).zfill(3) + ".png"
+        adjusted_img_path = os.path.join(save_dir, adjusted_img_name)        
+        
+        #save image in new folder
+        
+        imwrite(adjusted_img_path, mod_img)
+        print("Saved " + adjusted_img_name + "; image " + str(frame) + " of " + str(len(img_list)))
+
