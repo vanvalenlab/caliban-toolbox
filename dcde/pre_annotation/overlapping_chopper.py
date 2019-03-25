@@ -2,8 +2,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import os
+import datetime
+import json
 import numpy as np
+import os
 
 from skimage.io import imsave
 from skimage.external import tifffile
@@ -11,6 +13,37 @@ from dcde.utils.io_utils import get_image, get_img_names
 from dcde.utils.misc_utils import sorted_nicely
 
 #geneva
+
+def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc):
+    
+    img_size = img.shape
+    
+    start_y = img_size[0]//num_y_segments
+    overlapping_y_pix = int(start_y*(overlap_perc/100))
+    new_y = int(start_y+2*overlapping_y_pix)
+
+    start_x = img_size[1]//num_x_segments
+    overlapping_x_pix = int(start_x*(overlap_perc/100))
+    new_x = int(start_x+2*overlapping_x_pix)
+    
+    
+    # pad full-size image
+    padded_img = np.pad(img, ((overlapping_y_pix, overlapping_y_pix), (overlapping_x_pix, overlapping_x_pix)), mode='constant', constant_values=0)
+            
+    # make chopped images
+    for i in range(num_x_segments):
+        for j in range(num_y_segments):
+            #take piece of full image and put in sub_img
+            sub_img = padded_img[int(j*start_y):int(((j+1) * start_y) + (2 * overlapping_y_pix)), 
+                                             int(i*start_x):int(((i+1) * start_x) + (2 * overlapping_x_pix))]
+                    
+            # save sub image                    
+            sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + '.tif'
+            subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
+            sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
+            #import pdb; pdb.set_trace()
+            imsave(sub_img_path, sub_img)
+    
 
 def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc):
     '''
@@ -22,9 +55,14 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     #directories
     base_dir = os.path.dirname(raw_direc)
     unprocessed_name = os.path.basename(raw_direc)
+    
     save_dir = os.path.join(base_dir, unprocessed_name + "_chopped_" + str(num_x_segments) + "_" + str(num_y_segments))
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+    
+    log_dir = os.path.join(base_dir, "json_logs")
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
         
     # pick a file to calculate neccesary information from
     img_stack = get_img_names(raw_direc)
@@ -63,7 +101,8 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     start_x = test_img_size[1]//num_x_segments
     overlapping_x_pix = int(start_x*(overlap_perc/100))
     new_x = int(start_x+2*overlapping_x_pix)
-
+    
+    print("Your new images will be ", new_x, " pixels by ", new_y, " pixels big.")
         
     print("Processing...")
     # check if directories exist for each movie/montage - if not, create them
@@ -84,21 +123,26 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
             img = get_image(file_path)
         else:
             img = np.squeeze(get_image(file_path), axis=0)
-        # pad full-size image
-        padded_img = np.pad(img, ((overlapping_y_pix, overlapping_y_pix), (overlapping_x_pix, overlapping_x_pix)), mode='constant', constant_values=0)
-            
-        # make chopped images
-        for i in range(num_x_segments):
-            for j in range(num_y_segments):
-                #take piece of full image and put in sub_img
-                sub_img = padded_img[int(j*start_y):int(((j+1) * start_y) + (2 * overlapping_y_pix)), 
-                                             int(i*start_x):int(((i+1) * start_x) + (2 * overlapping_x_pix))]
-                    
-                # save sub image                    
-                sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + '.tif'
-                subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
-                sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
-                #import pdb; pdb.set_trace()
-                imsave(sub_img_path, sub_img)
+
+        #each frame of the movie will be chopped into x by y smaller frames and saved
+        overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc)
+
+    #log in json for post-annotation use
+    
+    log_data = {}
+    log_data['date'] = str(datetime.datetime.now())
+    log_data['num_x_segments'] = num_x_segments
+    log_data['num_y_segments'] = num_y_segments
+    log_data['overlap_perc'] = overlap_perc
+    log_data['identifier'] = identifier
+    
+    #save log in JSON format
+    #save with identifier; should be saved in "log" folder
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+    log_path = os.path.join(log_dir, identifier + "_overlapping_chopper_log.json")
+    
+    with open(log_path, "w") as write_file:
+        json.dump(log_data, write_file)
 
     print("Cropped files saved to {}".format(save_dir))
