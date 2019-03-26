@@ -29,13 +29,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-from dcde import annotation
+#from dcde import annotation
 from dcde import post_annotation
 from dcde import pre_annotation
 #from dcde import tracking
 from dcde import utils
 
-from dcde.annotation import *
+#from dcde.annotation import *
 from dcde.post_annotation import *
 from dcde.pre_annotation import *
 #from dcde.tracking import *

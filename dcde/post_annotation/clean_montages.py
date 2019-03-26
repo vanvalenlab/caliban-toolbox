@@ -5,7 +5,7 @@ import warnings
 from skimage.morphology import remove_small_holes, remove_small_objects
 from imageio import imread, imwrite
 
-from io_utils import get_img_names
+from dcde.utils.io_utils import get_img_names
 
 
 

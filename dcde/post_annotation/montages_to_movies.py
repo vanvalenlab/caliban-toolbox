@@ -8,7 +8,7 @@ import warnings
 
 from skimage.io import imsave
 from imageio import imread
-from io_utils import get_img_names
+from dcde.utils.io_utils import get_img_names
 
 
 
