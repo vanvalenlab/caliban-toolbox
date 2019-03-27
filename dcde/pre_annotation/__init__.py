@@ -32,12 +32,9 @@ from dcde.pre_annotation import aws_upload
 # from dcde.pre_annotation import chop_into_overlapping_images
 from dcde.pre_annotation import contrast_adjustment
 from dcde.pre_annotation import fig_eight_upload
-#from dcde.pre_annotation import Final_UMM_Izzy
-
+from dcde.pre_annotation import montage_makers
 from dcde.pre_annotation import montage_to_csv
-# from dcde.pre_annotation import overlapping_cropper
 from dcde.pre_annotation import overlapping_chopper
-#from dcde.pre_annotation import universalmontagemaker
 
 
 del absolute_import

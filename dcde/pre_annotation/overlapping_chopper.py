@@ -146,4 +146,3 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
         json.dump(log_data, write_file)
 
     print("Cropped files saved to {}".format(save_dir))
-    

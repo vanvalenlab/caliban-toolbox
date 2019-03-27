@@ -19,7 +19,6 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
     url = url.replace('{job_id}', str(job_id_to_copy))
     API_key = {"key" : key}
     original_job = requests.get(url, params=API_key)
-    print(original_job.status_code)
 
     #copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
@@ -67,4 +66,5 @@ def upload_data(csv_name, id, key):
             "-review the job design \n" + 
             "-confirm pricing \n" +
             "-launch the job (or contact success manager)")
+
 
