@@ -1,7 +1,7 @@
 # DeepCell Toolbox: Data Engineering Tools for Single Cell Analysis
 
-[![Build Status](https://travis-ci.org/vanvalenlab/deepcell-tf.svg?branch=master)](https://travis-ci.org/vanvalenlab/deepcell-tf)
-[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/deepcell-tf/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/deepcell-tf?branch=master)
+[![Build Status](https://travis-ci.com/vanvalenlab/deepcell-toolbox.svg?branch=master)](https://travis-ci.com/vanvalenlab/deepcell-toolbox)
+[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/deepcell-toolbox/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/deepcell-toolbox?branch=master)
 
 DeepCell Toolbox is a collection of data engineering tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for [DeepCell](https://github.com/vanvalenlab/deepcell-tf). 
 
