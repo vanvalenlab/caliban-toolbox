@@ -23,34 +23,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for io_utils"""
+"""Tests for train_utils"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 from tensorflow.python.platform import test
 
-from deepcell.utils import plot_utils
+#from dcde.utils.train_utils import rate_scheduler
 
 
-class PlotUtilsTest(test.TestCase):
-    def test_cf(self):
-        img_w, img_h = 300, 300
-        bias = np.random.rand(img_w, img_h) * 64
-        variance = np.random.rand(img_w, img_h) * (255 - 64)
-        img = np.random.rand(img_w, img_h) * variance + bias
-
-        # values are hard-coded for test image
-        shape = img.shape
-        # test coordinates outside of test_img dimensions
-        label = plot_utils.cf(shape[0] + 1, shape[1] + 1, img)
-        self.assertEqual(label, 'x=301.0000, y=301.0000')
-        label = plot_utils.cf(-1 * shape[0], -1 * shape[1], img)
-        self.assertEqual(label, 'x=-300.0000, y=-300.0000')
-        # test coordinates inside test_img dimensions
-        label = plot_utils.cf(shape[0] / 2, shape[1] / 2, img)
-        self.assertEqual(label, 'x=150.0000, y=150.0000, z=93.0260')
+class TrainUtilsTest(test.TestCase):
+    def test_rate_scheduler(self):
+        # if decay is small, learning rate should decrease as epochs increase
+        rs = rate_scheduler(lr=.001, decay=.95)
+        self.assertGreater(rs(1), rs(2))
+        # if decay is large, learning rate should increase as epochs increase
+        rs = rate_scheduler(lr=.001, decay=1.05)
+        self.assertLess(rs(1), rs(2))
+        # if decay is 1, learning rate should not change
+        rs = rate_scheduler(lr=.001, decay=1)
+        self.assertEqual(rs(1), rs(2))
 
 if __name__ == '__main__':
     test.main()

@@ -23,15 +23,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Custom Layers"""
+"""Tests for tracking_utils"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from dcde.post_annotation import clean_montages
-from dcde.post_annotation import download_csv
-from dcde.post_annotation import montages_to_movies
+import numpy as np
+from tensorflow.python.platform import test
 
-del absolute_import
-del division
-del print_function
+#from dcde.utils import tracking_utils
+
+
+def _get_image(img_h=300, img_w=300):
+    bias = np.random.rand(img_w, img_h) * 64
+    variance = np.random.rand(img_w, img_h) * (255 - 64)
+    img = np.random.rand(img_w, img_h) * variance + bias
+    return img
+
+
+class TrackingUtilsTests(test.TestCase):
+
+    def test_count_pairs(self):
+        batches = 1
+        frames = 2
+        classes = 4
+        prob = 0.5
+        expected = batches * frames * classes * (classes + 1) / prob
+
+        # channels_last
+        y = np.random.randint(low=0, high=classes + 1,
+                              size=(batches, frames, 30, 30, 1))
+        pairs = tracking_utils.count_pairs(y, same_probability=prob)
+        self.assertEqual(pairs, expected)
+
+        # channels_first
+        y = np.random.randint(low=0, high=classes + 1,
+                              size=(batches, 1, frames, 30, 30))
+        pairs = tracking_utils.count_pairs(
+            y, same_probability=prob, data_format='channels_first')
+        self.assertEqual(pairs, expected)

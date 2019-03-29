@@ -23,7 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for tracking_utils"""
+"""Tests for io_utils"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -31,34 +31,26 @@ from __future__ import print_function
 import numpy as np
 from tensorflow.python.platform import test
 
-from deepcell.utils import tracking_utils
+from dcde.utils import plot_utils
 
 
-def _get_image(img_h=300, img_w=300):
-    bias = np.random.rand(img_w, img_h) * 64
-    variance = np.random.rand(img_w, img_h) * (255 - 64)
-    img = np.random.rand(img_w, img_h) * variance + bias
-    return img
+class PlotUtilsTest(test.TestCase):
+    def test_cf(self):
+        img_w, img_h = 300, 300
+        bias = np.random.rand(img_w, img_h) * 64
+        variance = np.random.rand(img_w, img_h) * (255 - 64)
+        img = np.random.rand(img_w, img_h) * variance + bias
 
+        # values are hard-coded for test image
+        shape = img.shape
+        # test coordinates outside of test_img dimensions
+        label = plot_utils.cf(shape[0] + 1, shape[1] + 1, img)
+        self.assertEqual(label, 'x=301.0000, y=301.0000')
+        label = plot_utils.cf(-1 * shape[0], -1 * shape[1], img)
+        self.assertEqual(label, 'x=-300.0000, y=-300.0000')
+        # test coordinates inside test_img dimensions
+        label = plot_utils.cf(shape[0] / 2, shape[1] / 2, img)
+        self.assertEqual(label, 'x=150.0000, y=150.0000, z=93.0260')
 
-class TrackingUtilsTests(test.TestCase):
-
-    def test_count_pairs(self):
-        batches = 1
-        frames = 2
-        classes = 4
-        prob = 0.5
-        expected = batches * frames * classes * (classes + 1) / prob
-
-        # channels_last
-        y = np.random.randint(low=0, high=classes + 1,
-                              size=(batches, frames, 30, 30, 1))
-        pairs = tracking_utils.count_pairs(y, same_probability=prob)
-        self.assertEqual(pairs, expected)
-
-        # channels_first
-        y = np.random.randint(low=0, high=classes + 1,
-                              size=(batches, 1, frames, 30, 30))
-        pairs = tracking_utils.count_pairs(
-            y, same_probability=prob, data_format='channels_first')
-        self.assertEqual(pairs, expected)
+if __name__ == '__main__':
+    test.main()

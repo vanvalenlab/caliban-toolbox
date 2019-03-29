@@ -33,7 +33,7 @@ from skimage.measure import label
 from tensorflow.python.platform import test
 from tensorflow.python.keras import backend as K
 
-from deepcell.utils import transform_utils
+#from dcde.utils import transform_utils
 
 
 def _get_image(img_h=300, img_w=300):

@@ -30,7 +30,7 @@ from __future__ import print_function
 
 from tensorflow.python.platform import test
 
-from deepcell.utils import misc_utils
+from dcde.utils import misc_utils
 
 
 class MiscUtilsTest(test.TestCase):

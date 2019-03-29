@@ -33,9 +33,9 @@ from __future__ import print_function
 
 # from dcde.annotation import download_processes
 
-from dcde.annotation import make_deepcell_annotations
-from dcde.annotation import reorganize_tripartite_annotations
-from dcde.annotation import save_annotations_mouse_brain
+# from dcde.annotation import make_deepcell_annotations
+# from dcde.annotation import reorganize_tripartite_annotations
+# from dcde.annotation import save_annotations_mouse_brain
 # from dcde.annotation import save_annotations
 # from dcde.annotation import save_image_urls_no_split
 # from dcde.annotation import save_image_urls
@@ -43,7 +43,7 @@ from dcde.annotation import save_annotations_mouse_brain
 # from dcde.annotation import training_data_contrast_adjustment_no_split
 # from dcde.annotation import training_data_contrast_adjustment_nuclear
 # from dcde.annotation import training_data_contrast_adjustment
-from dcde.annotation import upload_processess
+# from dcde.annotation import upload_processess
 
 del absolute_import
 del division

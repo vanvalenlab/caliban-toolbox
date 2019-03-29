@@ -23,27 +23,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for train_utils"""
+"""Custom Layers"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorflow.python.platform import test
+from dcde.utils_test import data_utils_test
+from dcde.utils_test import io_utils_test
+from dcde.utils_test import misc_utils_test
+from dcde.utils_test import plot_utils_test
+from dcde.utils_test import tracking_utils_test
+from dcde.utils_test import train_utils_test
+from dcde.utils_test import transform_utils_test
 
-from deepcell.utils.train_utils import rate_scheduler
-
-
-class TrainUtilsTest(test.TestCase):
-    def test_rate_scheduler(self):
-        # if decay is small, learning rate should decrease as epochs increase
-        rs = rate_scheduler(lr=.001, decay=.95)
-        self.assertGreater(rs(1), rs(2))
-        # if decay is large, learning rate should increase as epochs increase
-        rs = rate_scheduler(lr=.001, decay=1.05)
-        self.assertLess(rs(1), rs(2))
-        # if decay is 1, learning rate should not change
-        rs = rate_scheduler(lr=.001, decay=1)
-        self.assertEqual(rs(1), rs(2))
-
-if __name__ == '__main__':
-    test.main()
+del absolute_import
+del division
+del print_function
