@@ -20,7 +20,7 @@ except Exception:
     install_reqs = []
 
 setup(
-    name='DCDE',
+    name='deepcell_toolbox',
     version='0.1',
     packages=find_packages(),
     install_requires=install_reqs,
