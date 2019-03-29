@@ -40,7 +40,7 @@ import skimage as sk
 import os
 from imageio import imread
 
-from dcde.utils.io_utils import get_img_names
+from deepcell_toolbox.utils.io_utils import get_img_names
 
 def choose_img(name, dirpath):
     filepath = os.path.join(dirpath, name)

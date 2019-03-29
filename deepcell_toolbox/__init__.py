@@ -32,12 +32,10 @@ from __future__ import division
 from deepcell_toolbox import post_annotation
 from deepcell_toolbox import pre_annotation
 from deepcell_toolbox import utils
-from deepcell_toolbox import utils_test
 
 from deepcell_toolbox.post_annotation import *
 from deepcell_toolbox.pre_annotation import *
 from deepcell_toolbox.utils import *
-from deepcell_toolbox.utils_test import *
 
 del absolute_import
 del print_function
