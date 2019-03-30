@@ -34,6 +34,7 @@ from deepcell_toolbox.utils import io_utils
 from deepcell_toolbox.utils import misc_utils
 from deepcell_toolbox.utils import transform_utils
 from deepcell_toolbox.utils import utils
+from deepcell_toolbox.utils import widget_utils
 
 del absolute_import
 del division
