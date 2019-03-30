@@ -32,7 +32,6 @@ from __future__ import print_function
 from deepcell_toolbox.utils import data_utils
 from deepcell_toolbox.utils import io_utils
 from deepcell_toolbox.utils import misc_utils
-from deepcell_toolbox.utils import plot_utils
 from deepcell_toolbox.utils import transform_utils
 from deepcell_toolbox.utils import utils
 

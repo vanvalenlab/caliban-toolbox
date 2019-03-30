@@ -48,8 +48,6 @@ from deepcell_toolbox.utils.io_utils import get_image_sizes
 from deepcell_toolbox.utils.io_utils import nikon_getfiles
 from deepcell_toolbox.utils.io_utils import get_immediate_subdirs
 from deepcell_toolbox.utils.misc_utils import sorted_nicely
-from deepcell_toolbox.utils.plot_utils import plot_training_data_2d
-from deepcell_toolbox.utils.plot_utils import plot_training_data_3d
 from deepcell_toolbox.utils.transform_utils import distance_transform_2d
 
 
@@ -470,8 +468,6 @@ def make_training_data_2d(direc_name, file_name_save, channel_names,
                           window_size_y=30,
                           edge_feature=[1, 0, 0],
                           dilation_radius=1,
-                          display=False,
-                          max_plotted=5,
                           verbose=False,
                           reshape_size=None,
                           border_mode='valid',
@@ -493,8 +489,6 @@ def make_training_data_2d(direc_name, file_name_save, channel_names,
         window_size_x: number of pixels to +/- x direction to be sampled in sample mode
         window_size_y: number of pixels to +/- y direction to be sampled in sample mode
         dilation_radius: radius for dilating cell edges
-        display: whether or not to plot the training data
-        max_plotted: how many points to plot if display is True
         verbose:  print more output to screen, similar to DEBUG mode
         reshape_size: If provided, will reshape the images to the given size
         border_mode:  'valid' or 'same'
@@ -615,15 +609,6 @@ def make_training_data_2d(direc_name, file_name_save, channel_names,
         print('Number of training data points: {}'.format(len(feature_label)))
         print('Class weights: {}'.format(weights))
 
-    if display:
-        if output_mode == 'conv':
-            display_mask = y_sample
-        elif output_mode == 'disc':
-            display_mask = y_label
-        else:
-            display_mask = y
-        plot_training_data_2d(X, display_mask, max_plotted=max_plotted)
-
 
 def load_training_images_3d(direc_name, training_direcs, channel_names, raw_image_direc,
                             image_size, num_frames, montage_mode=False):
@@ -728,8 +713,6 @@ def make_training_data_3d(direc_name, file_name_save, channel_names,
                           output_mode='disc',
                           reshape_size=None,
                           num_frames=50,
-                          display=True,
-                          num_of_frames_to_display=5,
                           montage_mode=True,
                           verbose=True):
     """
@@ -762,8 +745,6 @@ def make_training_data_3d(direc_name, file_name_save, channel_names,
         verbose:  print more output to screen, similar to DEBUG mode.
         num_frames:
         sub_sample: whether or not to subsamble the training data
-        display: whether or not to plot the training data
-        num_of_frames_to_display:
         montage_mode: data is broken into several "montage"
                       sub-directories for easier annoation
     """
@@ -817,9 +798,6 @@ def make_training_data_3d(direc_name, file_name_save, channel_names,
     # Save training data in npz format
     np.savez(file_name_save, X=X, y=y, win_x=window_size_x, win_y=window_size_y)
 
-    if display:
-        plot_training_data_3d(X, y, len(training_direcs), num_of_frames_to_display)
-
     return None
 
 
@@ -834,7 +812,6 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                        annotation_direc='annotated',
                        verbose=False,
                        reshape_size=None,
-                       display=False,
                        **kwargs):
     """
     Wrapper function for other make_training_data functions (2d, 3d)
@@ -871,7 +848,6 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                               edge_feature=edge_feature,
                               distance_transform=kwargs.get('distance_transform', False),
                               distance_bins=kwargs.get('distance_bins', 4),
-                              display=display,
                               verbose=verbose,
                               reshape_size=reshape_size,
                               border_mode=border_mode,
@@ -879,7 +855,6 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                               raw_image_direc=raw_image_direc,
                               annotation_direc=annotation_direc,
                               dilation_radius=kwargs.get('dilation_radius', 1),
-                              max_plotted=kwargs.get('max_plotted', 5),
                               max_training_examples=kwargs.get('max_training_examples', 1e7))
 
     elif dimensionality == 3:
@@ -894,10 +869,8 @@ def make_training_data(direc_name, file_name_save, channel_names, dimensionality
                               output_mode=output_mode,
                               reshape_size=reshape_size,
                               verbose=verbose,
-                              display=display,
                               montage_mode=kwargs.get('montage_mode', False),
-                              num_frames=kwargs.get('num_frames', 50),
-                              num_of_frames_to_display=kwargs.get('num_of_frames_to_display', 5))
+                              num_frames=kwargs.get('num_frames', 50))
 
     else:
         raise NotImplementedError('make_training_data is not implemented for '
