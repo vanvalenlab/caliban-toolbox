@@ -222,7 +222,7 @@ def trks_stats(trks_file_name):
         num_cells_in_frame = []
         for frame in y[batch]:
             cells_in_frame = len(np.unique(frame))-1 # unique returns 0 (BKGD)
-            num_cells_in_frame.append(cells_in_frame) 
+            num_cells_in_frame.append(cells_in_frame)
         avg_cells_in_frame.append(np.average(num_cells_in_frame))
     avg_cells_per_sq_pixel = np.average(avg_cells_in_frame)/frame_area
 

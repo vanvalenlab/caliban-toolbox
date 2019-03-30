@@ -40,4 +40,3 @@ from deepcell_toolbox.utils import *
 del absolute_import
 del print_function
 del division
-

@@ -36,7 +36,6 @@ from deepcell_toolbox.utils import plot_utils
 from deepcell_toolbox.utils import transform_utils
 from deepcell_toolbox.utils import utils
 
-
 del absolute_import
 del division
 del print_function

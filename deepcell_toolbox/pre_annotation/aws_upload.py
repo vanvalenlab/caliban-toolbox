@@ -80,27 +80,27 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload):
     '''
     #load the images from specified folder but not the json log file
     imgs_to_upload = get_img_names(folder_to_upload)
-    
+
     #create list of montages that were uploaded to pass to csv maker
     uploaded_montages = []
-    
+
     #upload each image from that folder
     for img in imgs_to_upload:
-        
+
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
-        
+
         #set destination path
         img_key = os.path.join(aws_folder, img)
-        
+
         #upload
         s3.upload_file(img_path, bucket_name, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
-        
+
         #add uploaded montage url to list
         uploaded_montages.append(os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, img_key))
-        
+
     return uploaded_montages
-        
+
 #if __name__ == '__main__':
 #    aws_upload()

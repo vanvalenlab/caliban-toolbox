@@ -24,9 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 """
-
 Utils functions from deepcell
-
 """
 
 import os
