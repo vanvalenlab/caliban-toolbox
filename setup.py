@@ -26,6 +26,7 @@ setup(
     install_requires=install_reqs,
     extras_require={
         'tests': ['pytest',
+                  'pytest-pep8',
                   'pytest-cov'],
     },
     license='LICENSE',
