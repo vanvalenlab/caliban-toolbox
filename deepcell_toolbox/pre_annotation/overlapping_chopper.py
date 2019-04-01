@@ -41,7 +41,7 @@ from skimage.external import tifffile
 from deepcell_toolbox.utils.io_utils import get_image, get_img_names
 from deepcell_toolbox.utils.misc_utils import sorted_nicely
 
-def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc):
+def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D):
 
     img_size = img.shape
 
@@ -66,13 +66,16 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
 
             # save sub image
             sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + '.tif'
-            subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
-            sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
-            #import pdb; pdb.set_trace()
+            if not is_2D:
+                #save image in subfolder
+                subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
+                sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
+            else:
+                sub_img_path = os.path.join(save_dir, sub_img_name)
             imsave(sub_img_path, sub_img)
 
 
-def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc):
+def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc, is_2D = False):
     '''
     raw_direc = string, path to folder containing movie slices that will be cropped. likely ".../processed". passed to chopper
     num_x_segments = integer number of columns the movie will be chopped up into
@@ -103,7 +106,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
 
     print("Current Image Size: ", test_img_size)
     while True:
-        start_flag = str(input("Correct? (y/n): "))
+        start_flag = str(input("Correct dimensionality? (y/n): "))
         if start_flag != "y" and start_flag != "n":
             print("Please type y for 'yes' or n for 'no'")
             continue
@@ -118,9 +121,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
             test_img = test_img_temp
             break   # input correct end loop
 
-        #import pdb; pdb.set_trace()
-
-        # determine number of pixels required to achieve correct overlap
+    # determine number of pixels required to achieve correct overlap
     start_y = test_img_size[0]//num_y_segments
     overlapping_y_pix = int(start_y*(overlap_perc/100))
     new_y = int(start_y+2*overlapping_y_pix)
@@ -129,11 +130,13 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     overlapping_x_pix = int(start_x*(overlap_perc/100))
     new_x = int(start_x+2*overlapping_x_pix)
 
-    print("Your new images will be ", new_x, " pixels by ", new_y, " pixels big.")
+    print("Your new images will be ", new_x, " pixels by ", new_y, " pixels in size.")
 
     print("Processing...")
-    # check if directories exist for each movie/montage - if not, create them
-    for i in range(num_x_segments):
+    # make directories, if needed, to save chopped images in
+    if not is_2D:
+        #if making chopped movies, important to save to different subfolder for later montage creation
+        for i in range(num_x_segments):
             for j in range(num_y_segments):
                 subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
                 montage_dir = os.path.join(save_dir, subdir_name)
