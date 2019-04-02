@@ -35,13 +35,14 @@ import datetime
 import json
 import numpy as np
 import os
+import skimage as sk
 
 from skimage.io import imsave
 from skimage.external import tifffile
 from deepcell_toolbox.utils.io_utils import get_image, get_img_names
 from deepcell_toolbox.utils.misc_utils import sorted_nicely
 
-def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D):
+def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D, file_ext):
 
     img_size = img.shape
 
@@ -64,14 +65,22 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
             sub_img = padded_img[int(j*start_y):int(((j+1) * start_y) + (2 * overlapping_y_pix)),
                                              int(i*start_x):int(((i+1) * start_x) + (2 * overlapping_x_pix))]
 
-            # save sub image
-            sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + '.tif'
-            if not is_2D:
-                #save image in subfolder
+            #save image in subfolder, different naming conventions for 2D vs 3D
+            if is_2D:
+                sub_img_name = identifier + "_img_" + str(frame).zfill(2)+ "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + file_ext
+                sub_img_path = os.path.join(save_dir, sub_img_name)
+
+            else:
+                sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + file_ext
                 subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
                 sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
-            else:
-                sub_img_path = os.path.join(save_dir, sub_img_name)
+                
+            #no need to save as .tif if original file isn't .tif,
+            #and need to change intensities if saving as png    
+            if file_ext == ".png":
+                sub_img = sk.exposure.rescale_intensity(sub_img, in_range = 'image', out_range = np.uint8)
+                sub_img = sub_img.astype(np.uint8)
+            
             imsave(sub_img_path, sub_img)
 
 
@@ -99,6 +108,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
 
     #load test image
     test_img_name = os.path.join(raw_direc, img_stack[0])
+    file_ext = os.path.splitext(img_stack[0])[1]
 
     test_img_temp = get_image(test_img_name)
     test_img_size = test_img_temp.shape
@@ -155,7 +165,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
             img = np.squeeze(get_image(file_path), axis=0)
 
         #each frame of the movie will be chopped into x by y smaller frames and saved
-        overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc)
+        overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D, file_ext)
 
     #log in json for post-annotation use
 
