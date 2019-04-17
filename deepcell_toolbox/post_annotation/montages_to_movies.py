@@ -130,7 +130,7 @@ def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_se
             #save image
             imsave(current_frame_path, current_frame)
 
-def all_montages_chopper(base_folder, identifier):
+def all_montages_chopper(base_folder, annotation_folder, identifier):
     '''
     calls read_json_params so it can pass correct information to montage_chopper
     calls montage_chopper on all of the montages in given folder
@@ -150,7 +150,7 @@ def all_montages_chopper(base_folder, identifier):
     y_buffer = json_params[5]
     num_montages = json_params[6]
 
-    montage_folder = os.path.join(base_folder, "annotations") #where to find the montages
+    montage_folder = os.path.join(base_folder, annotation_folder) #where to find the montages
 
     movie_folder = os.path.join(base_folder, "movies")
     for part_num in range(num_montages):
