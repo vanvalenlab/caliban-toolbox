@@ -30,6 +30,8 @@
 #imports
 import json
 import os
+import stat
+import sys
 import pandas as pd
 import requests
 import zipfile
@@ -42,6 +44,9 @@ def download_report(job_id, save_folder, report_type):
     #make folder to save job stuff in if needed
     if not os.path.isdir(save_folder):
         os.path.makedirs(save_folder)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(save_folder, mode)
     file_name = "job_" + str(job_id) + "_" + report_type + "_report.zip"
     save_path = os.path.join(save_folder, file_name)
 
@@ -75,6 +80,9 @@ def unzip_report(path_to_zip):
 
     if not os.path.isdir(extract_loc):
         os.path.makedirs(extract_loc)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(extract_loc, mode)
 
     with zipfile.ZipFile(path_to_zip,"r") as zip_ref:
         filenames_in_zip = zip_ref.namelist() #get filename so can rename later
@@ -97,6 +105,10 @@ def save_annotations_from_csv(csv_path, annotations_folder):
     #make save folder if doesn't exist
     if not os.path.isdir(annotations_folder):
         os.makedirs(annotations_folder)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(annotations_folder, mode)
+
 
     #load csv with pandas
     csv_data = pd.read_csv(csv_path)

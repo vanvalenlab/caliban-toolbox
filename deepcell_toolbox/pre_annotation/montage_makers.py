@@ -32,6 +32,8 @@ from __future__ import print_function
 from __future__ import division
 
 import os
+import stat
+import sys
 import json
 import math
 import datetime
@@ -140,6 +142,9 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
     #go to direc with cropped movie folders
     if not os.path.isdir(save_direc):
         os.makedirs(save_direc)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(save_direc, mode)
 
     #list of montages processed for logging purposes
     #montage_list = []
@@ -175,6 +180,9 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
     #save with identifier; should be saved in "log" folder
     if not os.path.isdir(log_direc):
         os.makedirs(log_direc)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_direc, mode)
     log_path = os.path.join(log_direc, identifier + "_montage_maker_log.json")
 
     with open(log_path, "w") as write_file:

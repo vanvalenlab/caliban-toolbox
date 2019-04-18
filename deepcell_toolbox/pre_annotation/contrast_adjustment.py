@@ -32,6 +32,8 @@ import numpy as np
 import skimage as sk
 from skimage import filters
 import os
+import stat
+import sys
 from scipy import ndimage
 import scipy
 from imageio import imread, imwrite
@@ -90,14 +92,15 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
 
     #directory specification, creating dirs when needed
     raw_dir = os.path.join(base_dir, raw_folder)
-    if not os.path.isdir(raw_dir):
-        os.makedirs(raw_dir)
+
     #where will we save the processed files
     process_folder = raw_folder + "_contrast_adjusted"
     process_dir = os.path.join(base_dir, process_folder)
     if not os.path.isdir(process_dir):
         os.makedirs(process_dir)
-
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(process_dir, mode)
     # Sorted list of image names from raw directory
     img_list = get_img_names(raw_dir)
 
@@ -126,9 +129,14 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
     #directory management
 
     save_folder = raw_folder + "_overlay_" + overlay_folder
+
     save_dir = os.path.join(base_dir, save_folder)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(save_dir, mode)
+
     raw_dir = os.path.join(base_dir, raw_folder)
     overlay_dir = os.path.join(base_dir, overlay_folder)
 
@@ -197,4 +205,6 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         #save image in new folder
 
         imwrite(adjusted_img_path, mod_img)
-        print("Saved " + adjusted_img_name + "; image " + str(frame) + " of " + str(len(img_list)))
+        print("Saved " + adjusted_img_name + "; image " + str(frame + 1) + " of " + str(len(img_list)))
+
+    print("Adjusted images have been saved in folder: " + save_folder)

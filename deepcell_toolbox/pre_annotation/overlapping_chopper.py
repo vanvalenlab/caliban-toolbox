@@ -35,6 +35,8 @@ import datetime
 import json
 import numpy as np
 import os
+import stat
+import sys
 import skimage as sk
 
 from skimage.io import imsave
@@ -98,10 +100,16 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     save_dir = os.path.join(base_dir, unprocessed_name + "_chopped_" + str(num_x_segments) + "_" + str(num_y_segments))
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(save_dir, mode)
 
     log_dir = os.path.join(base_dir, "json_logs")
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
 
     # pick a file to calculate neccesary information from
     img_stack = get_img_names(raw_direc)
@@ -152,6 +160,9 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
                 montage_dir = os.path.join(save_dir, subdir_name)
                 if not os.path.isdir(montage_dir):
                     os.makedirs(montage_dir)
+                    #add folder modification permissions to deal with files from file explorer
+                    mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                    os.chmod(montage_dir, mode)
 
     files = os.listdir(raw_direc)
     files_sorted = sorted_nicely(files)
@@ -178,8 +189,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
 
     #save log in JSON format
     #save with identifier; should be saved in "log" folder
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
+
     log_path = os.path.join(log_dir, identifier + "_overlapping_chopper_log.json")
 
     with open(log_path, "w") as write_file:

@@ -33,6 +33,8 @@ import json
 import math
 import numpy as np
 import os
+import stat
+import sys
 import warnings
 
 from skimage.io import imsave
@@ -165,6 +167,10 @@ def all_montages_chopper(base_folder, annotation_folder, identifier):
                 annotations_folder = os.path.join(position_folder, "annotated") #where to save the frames
                 if not os.path.isdir(annotations_folder):
                     os.makedirs(annotations_folder)
+                    #add folder modification permissions to deal with files from file explorer
+                    mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                    os.chmod(annotations_folder, mode)
+
 
                 #all montages for that position should get chopped into that folder
 
@@ -233,6 +239,9 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
     movies_dir = os.path.join(base_dir, "movies")
     if not os.path.isdir(movies_dir):
         os.makedirs(movies_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(movies_dir, mode)
 
     #find json data in folder log was saved to; "json_logs" by default
     json_folder = os.path.join(base_dir, "json_logs")
@@ -259,6 +268,10 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
             part_folder = os.path.join(movies_dir, "part" + str(part)) #zero based indexing for part folders
             if not os.path.isdir(part_folder):
                 os.makedirs(part_folder)
+                #add folder modification permissions to deal with files from file explorer
+                mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                os.chmod(part_folder, mode)
+
             for x_seg in range(num_x_segments):
                 for y_seg in range(num_y_segments):
 
@@ -267,6 +280,10 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
                     raw_subfolder = os.path.join(position_folder, "raw")
                     if not os.path.isdir(raw_subfolder):
                         os.makedirs(raw_subfolder)
+                        #add folder modification permissions to deal with files from file explorer
+                        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                        os.chmod(raw_subfolder, mode)
+
 
         #sorting of raw movies into appropriate parts folders happens here
         total_frames = num_montages * montage_len

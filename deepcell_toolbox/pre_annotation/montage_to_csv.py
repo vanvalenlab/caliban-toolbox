@@ -28,6 +28,8 @@
 '''
 
 import os
+import stat
+import sys
 import pandas as pd
 
 
@@ -40,6 +42,9 @@ def csv_maker(uploaded_montages, identifier, csv_direc):
     #create file location, name file
     if not os.path.isdir(csv_direc):
         os.makedirs(csv_direc)
+            #add folder modification permissions to deal with files from file explorer
+            mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+            os.chmod(csv_direc, mode)
     csv_name = os.path.join(csv_direc, identifier + '.csv')
 
     #save csv file
