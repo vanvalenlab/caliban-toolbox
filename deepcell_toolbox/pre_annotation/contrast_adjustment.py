@@ -76,7 +76,7 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
 
     return image
 
-def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
+def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, is_2D):
     '''
     adjusts the contrast of raw images - does not overwrite raw images
     adjusted images are easier to crowdsource annotations
@@ -101,6 +101,7 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(process_dir, mode)
+        
     # Sorted list of image names from raw directory
     img_list = get_img_names(raw_dir)
 
@@ -108,23 +109,24 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
 
     #Adjust contrast
 
-    print('Processed data will be located at ' + process_dir )
-
     for j in range(number_of_images):
-
-        print ( 'Processing image ' + str(j+1) + ' of ' + str(number_of_images))
 
         img_path = os.path.join(raw_dir, img_list[j])
         image = get_image(img_path) #np.float32
         adjusted_image = contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert)
 
         #Save processed image
+        if is_2D:
+            adjusted_name = os.path.join(process_dir, identifier + "_adjusted_img_" + str(j).zfill(3) + ".png")
+        else:
+            adjusted_name = os.path.join(process_dir, identifier + "_adjusted_frame_" + str(j).zfill(3) + ".png")
+            
+        imwrite(adjusted_name, adjusted_image)
+        print("Saved " + adjusted_name + "; image " + str(j + 1) + " of " + str(number_of_images))
+    
+    print('Adjusted images have been saved in folder: ' + process_dir )
 
-        nuclear_name = os.path.join(process_dir, identifier + "_adjusted_" + str(j).zfill(3) + '.png')
-        imwrite(nuclear_name, adjusted_image)
-
-
-def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings):
+def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings, is_2D):
 
     #directory management
 
@@ -198,13 +200,16 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         mod_img = sk.exposure.rescale_intensity(mod_img, in_range=(v_min, v_max))
 
         #name file
-
-        adjusted_img_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_" + str(frame).zfill(3) + ".png"
-        adjusted_img_path = os.path.join(save_dir, adjusted_img_name)
+        if is_2D:
+            adjusted_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_img_" + str(frame).zfill(3) + ".png"
+        else:
+            adjusted_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_frame_" + str(frame).zfill(3) + ".png"
+        
+        adjusted_img_path = os.path.join(save_dir, adjusted_name)
 
         #save image in new folder
 
         imwrite(adjusted_img_path, mod_img)
-        print("Saved " + adjusted_img_name + "; image " + str(frame + 1) + " of " + str(len(img_list)))
+        print("Saved " + adjusted_name + "; image " + str(frame + 1) + " of " + str(len(img_list)))
 
     print("Adjusted images have been saved in folder: " + save_folder)
