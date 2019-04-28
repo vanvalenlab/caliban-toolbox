@@ -24,21 +24,25 @@
 # limitations under the License.
 # ==============================================================================
 '''
-Code for adjusting the contrast of images to aid image annotaters
+Code for adjusting the contrast of images to aid image annotators
 '''
 
-from deepcell_toolbox.utils.io_utils import get_image, get_images_from_directory, get_img_names
+import datetime
+import json
 import numpy as np
-import skimage as sk
-from skimage import filters
 import os
+import skimage as sk
+import scipy
 import stat
 import sys
-from scipy import ndimage
-import scipy
-from imageio import imread, imwrite
 
-def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
+from deepcell_toolbox.utils.io_utils import get_image, get_images_from_directory, get_img_names
+from imageio import imread, imwrite
+from scipy import ndimage
+from skimage import filters
+
+
+def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, v_min, v_max):
     '''takes image and image adjustment settings, returns adjusted image array'''
 
     if len(image.shape) > 2:
@@ -47,7 +51,6 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
 
     # Blur
     image = filters.gaussian(image, sigma, multichannel=False)
-    #nuclear_image = ndimage.filters.gaussian_filter(nuclear_image, sigma)
 
     # Find edges
     if sobel_option:
@@ -74,9 +77,11 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert):
     image = image.astype(np.uint8)
     #okay to lose precision in these images--they don't get used in training data, just annotation
 
+    image = sk.exposure.rescale_intensity(image, in_range=(v_min, v_max))    
+
     return image
 
-def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, is_2D):
+def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
     '''
     adjusts the contrast of raw images - does not overwrite raw images
     adjusted images are easier to crowdsource annotations
@@ -101,7 +106,26 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(process_dir, mode)
-        
+    
+    #where we will save a log of the settings
+    log_dir = os.path.join(base_dir, "json_logs")
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
+
+    #extract variables from settings dictionary
+    sigma = contrast_settings['blur']
+    hist = contrast_settings['equalize_hist']
+    adapthist = contrast_settings['equalize_adapthist']
+    gamma = contrast_settings['gamma_adjust']
+    sobel_option = contrast_settings['sobel_toggle']
+    sobel = contrast_settings['sobel_factor']
+    invert = contrast_settings['invert_img']
+    v_min = contrast_settings['v_min']
+    v_max = contrast_settings['v_max']
+
     # Sorted list of image names from raw directory
     img_list = get_img_names(raw_dir)
 
@@ -113,7 +137,7 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
 
         img_path = os.path.join(raw_dir, img_list[j])
         image = get_image(img_path) #np.float32
-        adjusted_image = contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert)
+        adjusted_image = contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, v_min, v_max)
 
         #Save processed image
         if is_2D:
@@ -125,6 +149,25 @@ def adjust_folder(base_dir, raw_folder, identifier, sigma, hist, adapthist, gamm
         print("Saved " + adjusted_name + "; image " + str(j + 1) + " of " + str(number_of_images))
     
     print('Adjusted images have been saved in folder: ' + process_dir )
+
+    #log in json for future reference
+
+    log_data = {}
+    log_data['date'] = str(datetime.datetime.now())
+    log_data['raw_settings'] = contrast_settings
+    log_data['raw'] = raw_folder
+    log_data['identifier'] = identifier
+    log_data['combined'] = False
+
+    #save log in JSON format
+    #save with identifier; should be saved in "log" folder
+
+    log_path = os.path.join(log_dir, identifier + "_contrast_adjustment_log.json")
+
+    with open(log_path, "w") as write_file:
+        json.dump(log_data, write_file)
+
+    print('A record of the settings used has been saved in folder: ' + log_dir)
 
 def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings, is_2D):
 
@@ -139,6 +182,13 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(save_dir, mode)
 
+    log_dir = os.path.join(base_dir, "json_logs")
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
+
     raw_dir = os.path.join(base_dir, raw_folder)
     overlay_dir = os.path.join(base_dir, overlay_folder)
 
@@ -151,6 +201,8 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
     raw_invert = raw_settings['invert_img']
     raw_sobel_factor = raw_settings['sobel_factor']
     raw_sobel_toggle = raw_settings['sobel_toggle']
+    raw_min = raw_settings['v_min']
+    raw_max = raw_settings['v_max']
 
     overlay_sigma = overlay_settings['blur']
     overlay_eq_adapthist = overlay_settings['equalize_adapthist']
@@ -159,6 +211,8 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
     overlay_invert = overlay_settings['invert_img']
     overlay_sobel_factor = overlay_settings['sobel_factor']
     overlay_sobel_toggle = overlay_settings['sobel_toggle']
+    overlay_min = overlay_settings['v_min']
+    overlay_max = overlay_settings['v_max']
 
     prop_raw = combined_settings['prop_raw']
     v_min = combined_settings['v_min']
@@ -174,14 +228,14 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         raw_img_name = get_img_names(raw_dir)[frame]
         raw_img_path = os.path.join(raw_dir, raw_img_name)
         raw_img = imread(raw_img_path)
-        raw_adjusted = contrast(raw_img, raw_sigma, raw_eq_hist, raw_eq_adapthist, raw_gamma, raw_sobel_toggle, raw_sobel_factor, raw_invert)
+        raw_adjusted = contrast(raw_img, raw_sigma, raw_eq_hist, raw_eq_adapthist, raw_gamma, raw_sobel_toggle, raw_sobel_factor, raw_invert, raw_min, raw_max)
 
         #contrast adjust overlay
 
         overlay_img_name = get_img_names(overlay_dir)[frame]
         overlay_img_path = os.path.join(overlay_dir, overlay_img_name)
         overlay_img = imread(overlay_img_path)
-        overlay_adjusted = contrast(overlay_img, overlay_sigma, overlay_eq_hist, overlay_eq_adapthist, overlay_gamma, overlay_sobel_toggle, overlay_sobel_factor, overlay_invert)
+        overlay_adjusted = contrast(overlay_img, overlay_sigma, overlay_eq_hist, overlay_eq_adapthist, overlay_gamma, overlay_sobel_toggle, overlay_sobel_factor, overlay_invert, overlay_min, overlay_max)
 
         #combine images
 
@@ -213,3 +267,26 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         print("Saved " + adjusted_name + "; image " + str(frame + 1) + " of " + str(len(img_list)))
 
     print("Adjusted images have been saved in folder: " + save_folder)
+
+    #log in json for future reference
+
+    log_data = {}
+    log_data['date'] = str(datetime.datetime.now())
+    log_data['raw_settings'] = raw_settings
+    log_data['overlay_settings'] = overlay_settings
+    log_data['combined_settings'] = combined_settings
+    log_data['identifier'] = identifier
+    log_data['overlay'] = overlay_folder
+    log_data['raw'] = raw_folder
+    log_data['combined'] = True
+
+    #save log in JSON format
+    #save with identifier; should be saved in "log" folder
+
+    log_path = os.path.join(log_dir, identifier + "_contrast_adjustment_overlay_log.json")
+
+    with open(log_path, "w") as write_file:
+        json.dump(log_data, write_file)
+
+    print('A record of the settings used has been saved in folder: ' + log_dir)
+

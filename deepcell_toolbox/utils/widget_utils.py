@@ -71,7 +71,7 @@ def choose_img_pair(frame, raw_dir, overlay_dir):
     return raw_img_path, overlay_img_path
     
 
-def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_img = True, gamma_adjust = 1.0, equalize_hist=False, equalize_adapthist=False):
+def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_img = True, gamma_adjust = 1.0, equalize_hist=False, equalize_adapthist=False, v_min = 0, v_max = 255):
     """Used to edit the image using the widget tester"""
 
     new_image = filters.gaussian(image, sigma=blur, multichannel=False)
@@ -95,6 +95,9 @@ def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_
      
     new_image = sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = np.uint8)
     new_image = new_image.astype(np.uint8)
+
+    #adjust min/max of image after it is rescaled to np.uint8
+    new_image = sk.exposure.rescale_intensity(new_image, in_range=(v_min, v_max))
     
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(new_image, cmap = mpl.cm.gray)
