@@ -56,7 +56,6 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
     overlapping_x_pix = int(start_x*(overlap_perc/100))
     new_x = int(start_x+2*overlapping_x_pix)
 
-
     # pad full-size image
     padded_img = np.pad(img, ((overlapping_y_pix, overlapping_y_pix), (overlapping_x_pix, overlapping_x_pix)), mode='constant', constant_values=0)
 
@@ -67,15 +66,12 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
             sub_img = padded_img[int(j*start_y):int(((j+1) * start_y) + (2 * overlapping_y_pix)),
                                              int(i*start_x):int(((i+1) * start_x) + (2 * overlapping_x_pix))]
 
-            #save image in subfolder, different naming conventions for 2D vs 3D
+            #save image, different naming conventions for 2D vs 3D
             if is_2D:
-                sub_img_name = identifier + "_img_" + str(frame).zfill(2)+ "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + file_ext
-                sub_img_path = os.path.join(save_dir, sub_img_name)
+                sub_img_name = identifier + "_img_" + str(frame).zfill(3)+ "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + file_ext
 
             else:
-                sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(2) + file_ext
-                subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
-                sub_img_path = os.path.join(save_dir, subdir_name, sub_img_name)
+                sub_img_name = identifier + "_x_" + str(i).zfill(2) + "_y_" + str(j).zfill(2) + "_frame_" + str(frame).zfill(3) + file_ext
                 
             #no need to save as .tif if original file isn't .tif,
             #and need to change intensities if saving as png    
@@ -83,6 +79,7 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
                 sub_img = sk.exposure.rescale_intensity(sub_img, in_range = 'image', out_range = np.uint8)
                 sub_img = sub_img.astype(np.uint8)
             
+            sub_img_path = os.path.join(save_dir, sub_img_name)
             imsave(sub_img_path, sub_img)
 
 
@@ -97,7 +94,7 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     base_dir = os.path.dirname(raw_direc)
     unprocessed_name = os.path.basename(raw_direc)
 
-    save_dir = os.path.join(base_dir, unprocessed_name + "_chopped_" + str(num_x_segments) + "_" + str(num_y_segments))
+    save_dir = os.path.join(base_dir, unprocessed_name + "_chopped_" + str(num_x_segments).zfill(2) + "_" + str(num_y_segments).zfill(2))
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
         #add folder modification permissions to deal with files from file explorer
@@ -148,21 +145,22 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     overlapping_x_pix = int(start_x*(overlap_perc/100))
     new_x = int(start_x+2*overlapping_x_pix)
 
+    #for images that don't aren't divided evenly by num_segments, restitching can lead to losing a few pixels
+    #avoid this by logging the actual start indices for the subimages
+    y_start_indices = []
+    x_start_indices = []
+
+    for i in range(num_x_segments):
+        x_start_index = int(i*start_x) 
+        x_start_indices.append(x_start_index)
+
+    for j in range(num_y_segments):
+        y_start_index = int(j*start_y)
+        y_start_indices.append(y_start_index)
+
     print("Your new images will be ", new_x, " pixels by ", new_y, " pixels in size.")
 
     print("Processing...")
-    # make directories, if needed, to save chopped images in
-    if not is_2D:
-        #if making chopped movies, important to save to different subfolder for later montage creation
-        for i in range(num_x_segments):
-            for j in range(num_y_segments):
-                subdir_name = identifier + "_x_" + str(i).zfill(2) + '_y_' + str(j).zfill(2)
-                montage_dir = os.path.join(save_dir, subdir_name)
-                if not os.path.isdir(montage_dir):
-                    os.makedirs(montage_dir)
-                    #add folder modification permissions to deal with files from file explorer
-                    mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-                    os.chmod(montage_dir, mode)
 
     files = os.listdir(raw_direc)
     files_sorted = sorted_nicely(files)
@@ -186,6 +184,12 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     log_data['num_y_segments'] = num_y_segments
     log_data['overlap_perc'] = overlap_perc
     log_data['identifier'] = identifier
+    log_data['y_start_indices'] = y_start_indices
+    log_data['x_start_indices'] = x_start_indices
+    log_data['overlapping_x_pix'] = overlapping_x_pix
+    log_data['overlapping_y_pix'] = overlapping_y_pix
+    log_data['original_y'] = test_img_size[0]
+    log_data['original_x'] = test_img_size[1]
 
     #save log in JSON format
     #save with identifier; should be saved in "log" folder

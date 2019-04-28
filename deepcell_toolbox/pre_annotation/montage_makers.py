@@ -31,26 +31,25 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import datetime
+import json
+import math
+import numpy as np
 import os
 import stat
 import sys
-import json
-import math
-import datetime
-
-import numpy as np
-
-from skimage.io import imread, imsave
-from skimage.external import tifffile
+import warnings
 
 from deepcell_toolbox.utils.io_utils import get_img_names
+from skimage.external import tifffile
+from skimage.io import imread, imsave
 
 
-def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer):
+def montage_maker(montage_len, chopped_dir, save_dir, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer):
     '''
     montage_len = integer number of frames you want to be in the montage
-    stack_direc = string, path to folder containing cropped images that will be turned into montage
-    save_direc = string, path to folder where montages will be saved. usually .../montages
+    chopped_dir = string, path to folder containing cropped images that will be turned into montage
+    save_dir = string, path to folder where montages will be saved. usually .../montages
     identifier = string of information about the movie to be used in saving the montage. ie "RAW264_set1"
     x_pos = x coordinate of slice from original movie. eg 0 for the first column of slices
     y_pos = y coordinate of slice from original movie. eg 1 for the second row of slices
@@ -60,25 +59,27 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
     '''
 
     #from folder, sort nicely, put images into list
-    img_stack = get_img_names(stack_direc)
+    img_stack = get_img_names(chopped_dir)
 
     #load test image
-    test_img_name = os.path.join(stack_direc, img_stack[0])
+    test_img_name = os.path.join(chopped_dir, img_stack[0])
     test_img = imread(test_img_name)
 
+    #get file_ext from test_img
+    file_ext = os.path.splitext(test_img_name)[1]
+
     #determine how many montages can be made from movie
-    num_frames = len(img_stack)
+    subimg_list = [img for img in img_stack if "x_{0:02d}_y_{1:02d}".format(x_pos, y_pos) in img]
+    num_frames = len(subimg_list)
     num_montages = num_frames // montage_len
     print("You will be able to make " + str(num_montages) + " montages from this movie.")
-    print("The last %d frames will not be used in a montage. \n" % (num_frames % montage_len))
+    print("The last %d frame(s) will not be used in a montage. \n" % (num_frames % montage_len))
 
     ###check with user to confirm discarding last few images from movie if not divisible
 
     ###include option to make montage with remainder images? n by default
 
     #read image size and calculate montage size
-    #test_img_name = cropped_images[0]
-    #test_img = imread(os.path.join(raw_img_folder, test_img_name))
     x_dim = test_img.shape[-1]
     y_dim = test_img.shape[-2]
 
@@ -94,8 +95,8 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
         montage_img = np.zeros((final_y, final_x), dtype = np.uint16)
 
         #name the montage
-        montage_name = identifier + "_x_" + str(x_pos) + "_y_" + str(y_pos) + "_montage_" + str(montage) + ".png"
-        montage_name = os.path.join(save_direc, montage_name)
+        montage_name = identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2) + "_montage_" + str(montage).zfill(2) + ".png"
+        montage_name = os.path.join(save_dir, montage_name)
 
         #loop through rows to add images to montage
         for row in range(number_of_rows):
@@ -108,10 +109,10 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
             for column in range(row_length):
 
                 #read img
-                #this works because the img_stack is sorted_nicely
-                slice_num = (montage * montage_len) + (row * row_length) + column
-                current_slice_name = img_stack[slice_num]
-                current_slice = imread(os.path.join(stack_direc, current_slice_name))
+                #this works because the images were saved in 3D naming mode
+                frame_num = (montage * montage_len) + (row * row_length) + column
+                current_frame_name = "{0}_x_{1:02d}_y_{2:02d}_frame_{3:03d}{4}".format(identifier, x_pos, y_pos, frame_num, file_ext)
+                current_slice = imread(os.path.join(chopped_dir, current_frame_name))
 
                 #set pixel range for current column
                 x_start = x_buffer + ((x_buffer + x_dim) * column )
@@ -121,16 +122,19 @@ def montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos
                 montage_img[y_start:y_end,x_start:x_end] = current_slice
 
         #save montage
-        imsave(montage_name, montage_img)
+        with warnings.catch_warnings():
+            #ignore "low contrast image" warnings
+            warnings.simplefilter("ignore")
+            imsave(montage_name, montage_img)
 
     return num_montages
 
 
-def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_segments, num_y_segments, row_length, x_buffer, y_buffer, log_direc):
+def multiple_montage_maker(montage_len, base_dir, chopped_dir, save_dir, identifier, num_x_segments, num_y_segments, row_length, x_buffer, y_buffer):
     '''
     montage_len = integer number of frames you want to be in the montage
-    direc = string, path to folder containing subfolders, each containing a cropped movie
-    save_direc = string, path to folder where montages will be saved. usually .../montages
+    dir = string, path to folder containing subfolders, each containing a cropped movie
+    save_dir = string, path to folder where montages will be saved. usually .../montages
     identifier = string of information about the movie to be used in saving the montage. ie "RAW264_set1"
     num_x_segments = integer number of columns original movie was cropped into
     num_y_segments = integer number of rows original movie was cropped into
@@ -139,25 +143,30 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
     y_buffer = how many pixels separating each row of images
     '''
 
-    #go to direc with cropped movie folders
-    if not os.path.isdir(save_direc):
-        os.makedirs(save_direc)
+    #make folder to save montages in if it doesn't exist already
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-        os.chmod(save_direc, mode)
+        os.chmod(save_dir, mode)
+
+    #make log_dir if it doesn't exist already
+    log_dir = os.path.join(base_dir, "json_logs")
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
 
     #list of montages processed for logging purposes
     #montage_list = []
 
-    #loop over cropped folders and call montage maker on each
+    #loop over positions of cropped images and call montage maker on each
     for y_pos in range(num_y_segments):
-
         for x_pos in range(num_x_segments):
 
-            stack_direc = os.path.join(direc, identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2))
-
-            print("Now montaging images from: " + identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2))
-            num_montages = montage_maker(montage_len, stack_direc, save_direc, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer)
+            print("Now montaging images from the stack of: " + identifier + "_x_" + str(x_pos).zfill(2) + "_y_" + str(y_pos).zfill(2))
+            num_montages = montage_maker(montage_len, chopped_dir, save_dir, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer)
 
             #logged_name = identifier + "_x_" + str(x_pos) + "_y_" + str(y_pos)
             #montage_list.append(logged_name)
@@ -175,15 +184,12 @@ def multiple_montage_maker(montage_len, direc, save_direc, identifier, num_x_seg
     log_data['y_buffer'] = y_buffer
     log_data['montages_in_pos'] = num_montages
 
-
     #save log in JSON format
     #save with identifier; should be saved in "log" folder
-    if not os.path.isdir(log_direc):
-        os.makedirs(log_direc)
-        #add folder modification permissions to deal with files from file explorer
-        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-        os.chmod(log_direc, mode)
-    log_path = os.path.join(log_direc, identifier + "_montage_maker_log.json")
+    log_path = os.path.join(log_dir, identifier + "_montage_maker_log.json")
 
     with open(log_path, "w") as write_file:
         json.dump(log_data, write_file)
+
+    print('A record of the settings used has been saved in folder: ' + log_dir)
+
