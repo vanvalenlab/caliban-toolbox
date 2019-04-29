@@ -33,9 +33,15 @@ import sys
 import pandas as pd
 
 
-def csv_maker(uploaded_montages, identifier, csv_direc):
-    
+def csv_maker(uploaded_montages, prev_images, next_images, identifier, csv_direc, include_context):
+
+    #previous and next images in sequence
+    #helps for annotating 3D images that aren't montaged
+        
     data = {'image_url': uploaded_montages, 'identifier': identifier}
+    if include_context:
+        data['prev_image'] = prev_images
+        data['next_image'] = next_images
 
     dataframe = pd.DataFrame(data=data, index = range(len(uploaded_montages)))
 
@@ -45,7 +51,7 @@ def csv_maker(uploaded_montages, identifier, csv_direc):
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(csv_direc, mode)
-    csv_name = os.path.join(csv_direc, identifier + '.csv')
+    csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
 
     #save csv file
     dataframe.to_csv(csv_name, index = False)

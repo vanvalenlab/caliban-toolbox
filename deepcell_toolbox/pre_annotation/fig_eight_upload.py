@@ -55,7 +55,7 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
     print('New job ID is: ' + str(new_job_id))
 
     #add data from csv to job you just made
-    csv_name = os.path.join(csv_direc, identifier + '.csv')
+    csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
     data = upload_data(csv_name, new_job_id, key)
 
 
