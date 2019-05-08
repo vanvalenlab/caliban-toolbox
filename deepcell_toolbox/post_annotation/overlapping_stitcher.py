@@ -53,9 +53,11 @@ def overlapping_stitcher(pieces_dir, save_dir, num_x, num_y, overlap_perc, ident
     
     small_img_size = test_img.shape
     
+    #trim dimensions are the size of each sub image, with the overlap removed
     trim_y = math.ceil(small_img_size[0]/(1+(2*overlap_perc/100)))
     trim_x = math.ceil(small_img_size[1]/(1+(2*overlap_perc/100)))
-    
+
+    #pad dimensions are the amount of padding added to a sub image on each edge    
     pad_x = int((overlap_perc/100)*trim_x)
     pad_y = int((overlap_perc/100)*trim_y)
     
@@ -64,6 +66,7 @@ def overlapping_stitcher(pieces_dir, save_dir, num_x, num_y, overlap_perc, ident
     
     padded_full_img = np.zeros((full_y + 2*pad_y, full_x + 2*pad_x))
 
+    #loop through the image pieces (sub_imgs)
     for j in range(num_y):
         for i in range(num_x):
 
@@ -77,24 +80,61 @@ def overlapping_stitcher(pieces_dir, save_dir, num_x, num_y, overlap_perc, ident
             sub_img = np.where(sub_img == 0, sub_img, sub_img + lowest_allowed_val)
             
             #if non-zero values in the sub image and the full image overlap, replace all instances of
-            #that value in the sub image, keep other values in the sub image the same
+            #that value in the sub image, using most common value, keep other values in the sub image the same
             
-            #merge top edge of sub_img
-            for y_pix in range(2*pad_y):
-                for x_pix in range(trim_x+2*pad_x): 
+            #working on top edge of sub_img
+            sub_img_overlap = sub_img[0:2*pad_y, 0:trim_x+2*pad_x]
+            full_img_overlap = padded_full_img[j*trim_y:j*trim_y+2*pad_y, i*trim_x:(i+1)*trim_x+2*pad_x]
+            
+            #add in cells from full_image that overlap with sub_img background
+            merged_overlap = np.where(sub_img_overlap == 0, full_img_overlap, sub_img_overlap)
+            sub_img[0:2*pad_y, 0:trim_x+2*pad_x] = merged_overlap
+            
+            #get ids of cells in sub_img that have any pixels in this overlap region
+            sub_cells = np.unique(merged_overlap)
+            nonzero_sub_cells = sub_cells[np.nonzero(sub_cells)]
+            
+            #for each cell, figure out which cell in full_img overlaps it the most
+            for cell in nonzero_sub_cells:
+                overlaps = np.where(merged_overlap == cell, full_img_overlap, 0)
+                nonzero_overlaps = overlaps[np.nonzero(overlaps)]
+                if len(nonzero_overlaps) > 0:
+                    (values,counts) = np.unique(nonzero_overlaps,return_counts=True)
+                    ind=np.argmax(counts)
+                    overlapper = values[ind]
+                    
+                    #use the best overlapping cell to update the values in the whole sub_img
+                    #not just the region of the sub_img that directly overlaps
+                    
+                    #replaces "cell" values with the overlapper, leaves everything else unchanged
+                    sub_img = np.where(sub_img == cell, overlapper, sub_img)
+            
+            #working on left edge of sub_img
+            sub_img_overlap = sub_img[0:trim_y+2*pad_y, 0:2*pad_x]
+            full_img_overlap = padded_full_img[j*trim_y:(j+1)*trim_y+2*pad_y, i*trim_x:i*trim_x+2*pad_x]
+            
+            #add in cells from full_image that overlap with sub_img background
+            merged_overlap = np.where(sub_img_overlap == 0, full_img_overlap, sub_img_overlap)
+            sub_img[0:trim_y+2*pad_y, 0:2*pad_x] = merged_overlap
+            
+            #get ids of cells in sub_img that have any pixels in this overlap region
+            sub_cells = np.unique(merged_overlap)
+            nonzero_sub_cells = sub_cells[np.nonzero(sub_cells)]
 
-                    sub_img_pix = sub_img[y_pix, x_pix]
-                    full_img_pix = padded_full_img[j*trim_y+y_pix, i*trim_x+x_pix]
-                    if (sub_img_pix != 0) and (full_img_pix != 0) and (sub_img_pix != full_img_pix):
-                        sub_img = np.where(sub_img == sub_img_pix, full_img_pix, sub_img)
+            for cell in nonzero_sub_cells:
+                overlaps = np.where(merged_overlap == cell, full_img_overlap, 0)
+                nonzero_overlaps = overlaps[np.nonzero(overlaps)]
+                if len(nonzero_overlaps) > 0:
+                    (values,counts) = np.unique(nonzero_overlaps,return_counts=True)
+                    ind=np.argmax(counts)
+                    overlapper = values[ind]
+                    
+                    #use the best overlapping cell to update the values in the whole sub_img
+                    #not just the region of the sub_img that directly overlaps
+                    
+                    #replaces "cell" values with the overlapper, leaves everything else unchanged
+                    sub_img = np.where(sub_img == cell, overlapper, sub_img)
             
-            #merge left edge of sub_img
-            for y_pix in range(trim_y+2*pad_y):
-                for x_pix in range(2*pad_x):
-                    sub_img_pix = sub_img[y_pix, x_pix]
-                    full_img_pix = padded_full_img[j*trim_y+y_pix, i*trim_x+x_pix]
-                    if (sub_img_pix != 0) and (full_img_pix != 0) and (sub_img_pix != full_img_pix):
-                        sub_img = np.where(sub_img == sub_img_pix, full_img_pix, sub_img)
             
             #put sub image into the full image
             padded_full_img[int(j*trim_y):int(((j+1) * trim_y) + (2*pad_y)),
@@ -104,6 +144,16 @@ def overlapping_stitcher(pieces_dir, save_dir, num_x, num_y, overlap_perc, ident
 
     #trim off edges
     full_img = padded_full_img[pad_y:pad_y+full_y, pad_x:pad_x+full_x]
+    
+    #relabel cells so values aren't skipped
+    relabled_img = np.zeros(full_img.shape, dtype = np.uint16)
+    unique_cells = np.unique(full_img)
+    unique_cells = unique_cells[np.nonzero(unique_cells)]
+    relabel_ids = np.arange(1, len(unique_cells) + 1)
+
+    for cell_id, relabel_id in zip(unique_cells, relabel_ids):
+        relabled_img = np.where(full_img == cell_id, relabel_id, relabled_img)
+
 
     #save big image
     #suppress "low contrast image" warnings
