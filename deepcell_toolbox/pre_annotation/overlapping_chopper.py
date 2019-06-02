@@ -83,7 +83,7 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
             imsave(sub_img_path, sub_img)
 
 
-def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc, is_2D = False):
+def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc, frame_offset, is_2D = False):
     '''
     raw_direc = string, path to folder containing movie slices that will be cropped. likely ".../processed". passed to chopper
     num_x_segments = integer number of columns the movie will be chopped up into
@@ -93,8 +93,10 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     #directories
     base_dir = os.path.dirname(raw_direc)
     unprocessed_name = os.path.basename(raw_direc)
-
-    save_dir = os.path.join(base_dir, unprocessed_name + "_chopped_" + str(num_x_segments).zfill(2) + "_" + str(num_y_segments).zfill(2))
+    
+    
+    save_folder = unprocessed_name + "_offset_{0:03d}_chopped_{1:02d}_{2:02d}".format(frame_offset, num_x_segments, num_y_segments)
+    save_dir = os.path.join(base_dir, save_folder)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
         #add folder modification permissions to deal with files from file explorer
@@ -172,9 +174,11 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
             img = get_image(file_path)
         else:
             img = np.squeeze(get_image(file_path), axis=0)
+        #factor in whether we're starting from frame zero so that chopped files get correct frame number
+        current_frame = frame + frame_offset
 
         #each frame of the movie will be chopped into x by y smaller frames and saved
-        overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D, file_ext)
+        overlapping_img_chopper(img, save_dir, identifier, current_frame, num_x_segments, num_y_segments, overlap_perc, is_2D, file_ext)
 
     #log in json for post-annotation use
 
@@ -190,6 +194,9 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
     log_data['overlapping_y_pix'] = overlapping_y_pix
     log_data['original_y'] = test_img_size[0]
     log_data['original_x'] = test_img_size[1]
+    log_data['frame_offset'] = frame_offset
+    log_data['num_images'] = len(files_sorted)
+
 
     #save log in JSON format
     #save with identifier; should be saved in "log" folder
