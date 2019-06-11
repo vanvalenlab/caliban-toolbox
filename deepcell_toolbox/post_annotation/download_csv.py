@@ -43,7 +43,7 @@ def download_report(job_id, save_folder, report_type):
 
     #make folder to save job stuff in if needed
     if not os.path.isdir(save_folder):
-        os.path.makedirs(save_folder)
+        os.makedirs(save_folder)
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(save_folder, mode)
@@ -79,7 +79,7 @@ def unzip_report(path_to_zip):
     extract_loc = os.path.join(parent_dir, "CSV")
 
     if not os.path.isdir(extract_loc):
-        os.path.makedirs(extract_loc)
+        os.makedirs(extract_loc)
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(extract_loc, mode)
