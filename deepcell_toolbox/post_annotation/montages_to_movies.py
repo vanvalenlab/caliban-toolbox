@@ -37,8 +37,8 @@ import stat
 import sys
 import warnings
 
-from skimage.io import imsave
-from imageio import imread
+#from skimage.io import imsave
+from imageio import imread, imwrite
 from deepcell_toolbox.utils.io_utils import get_img_names
 
 
@@ -83,7 +83,7 @@ def read_json_params_chopper(log_folder, identifier):
 
 
 
-def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_folder):
+def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_dir):
     '''
     takes the annotation of a single montage and chops it into pieces
     these pieces match up with the movies of contrast-adjusted raw images that were processed into montages
@@ -114,10 +114,10 @@ def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_se
             frame_num = (row * row_length) + column
 
             #make image name
-            #not anticipating more than 99 x 99 segments, or more than 999 frames
+            #not anticipating more than 99 x 99 segments, or more than 99 frames per montage
             #if this changes, need to change zfill here for consistent naming
-            current_frame_name = identifier + "_x_" + str(x_seg).zfill(2) + "_y_" + str(y_seg).zfill(2) + "_frame_" + str(frame_num).zfill(3) + ".png"
-            current_frame_path = os.path.join(save_folder, current_frame_name)
+            current_frame_name = "{0}_x_{1:02d}_y_{2:02d}_part_{3}_frame_{4:02d}.png".format(identifier, x_seg, y_seg, part_num, frame_num)
+            current_frame_path = os.path.join(save_dir, current_frame_name)
 
             #math to calculate pixel boundaries, x
             x_start = x_buffer + ((x_buffer + x_dim) * column )
@@ -130,52 +130,36 @@ def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_se
             current_frame = montage_img[y_start:y_end,x_start:x_end]
 
             #save image
-            imsave(current_frame_path, current_frame)
+            imwrite(current_frame_path, current_frame)
 
-def all_montages_chopper(base_folder, annotation_folder, identifier):
+def all_montages_chopper(base_dir, montage_dir, identifier, json_montage_log):
     '''
-    calls read_json_params so it can pass correct information to montage_chopper
     calls montage_chopper on all of the montages in given folder
-    does some organizing of save folders for montage_chopper
     '''
+    
+    #unpack info from json log
+    montage_len = json_montage_log['montage_len']
+    num_x_segments = json_montage_log['num_x_segments']
+    num_y_segments = json_montage_log['num_y_segments']
+    row_length = json_montage_log['row_length']
+    x_buffer = json_montage_log['x_buffer']
+    y_buffer = json_montage_log['y_buffer']
+    num_montages = json_montage_log['montages_in_pos']
 
-    #find json data in folder log was saved to; "json_logs" by default
-    json_folder = os.path.join(base_folder, "json_logs")
-    #get data, store as a tuple
-    json_params = read_json_params_montage(json_folder, identifier)
-
-    montage_len = json_params[0]
-    num_x_segments = json_params[1]
-    num_y_segments = json_params[2]
-    row_length = json_params[3]
-    x_buffer = json_params[4]
-    y_buffer = json_params[5]
-    num_montages = json_params[6]
-
-    montage_folder = os.path.join(base_folder, annotation_folder) #where to find the montages
-
-    movie_folder = os.path.join(base_folder, "movies")
+    save_dir = os.path.join(base_dir, "chopped_annotations")
+    perm_mod = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+    
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+        os.chmod(save_dir, perm_mod)
+    
     for part_num in range(num_montages):
-
-        part = "part" + str(part_num)
-
         for x_seg in range(num_x_segments):
             for y_seg in range(num_y_segments):
 
-                #make folder for that position
-                position_folder = os.path.join(movie_folder, part, "x_{0:02d}_y_{1:02d}".format(x_seg, y_seg))
-                annotations_folder = os.path.join(position_folder, "annotated") #where to save the frames
-                if not os.path.isdir(annotations_folder):
-                    os.makedirs(annotations_folder)
-                    #add folder modification permissions to deal with files from file explorer
-                    mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-                    os.chmod(annotations_folder, mode)
-
-
                 #all montages for that position should get chopped into that folder
-
-                montage_name = identifier + "_x_" + str(x_seg) + "_y_" + str(y_seg) + "_montage_" + str(part_num) + "_annotation.png"
-                montage_path = os.path.join(montage_folder, montage_name)
+                montage_name = "{0}_x_{1}_y_{2}_montage_{3}_annotation.png".format(identifier, x_seg, y_seg, part_num)
+                montage_path = os.path.join(montage_dir, montage_name)
 
                 if not os.path.isfile(montage_path):
                     print("Didn't find a file at: ", montage_path)
@@ -183,7 +167,7 @@ def all_montages_chopper(base_folder, annotation_folder, identifier):
                     #run the montage chopper on a file that exists
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
-                        montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, annotations_folder)
+                        montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_dir)
 
 
     #name: MouseBrain_s7_nuc_x_0_y_2_montage_0_annotation
