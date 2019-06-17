@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Interact with the Figure 8 API to copy an existing job and upload data in a CSV to it
 
 '''
 
@@ -39,6 +39,18 @@ from getpass import getpass
 
 
 def fig_eight(csv_direc, identifier, job_id_to_copy):
+    '''
+    Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
+    
+    Args:
+        csv_direc: full path to directory that contains CSV files
+        identifier: string, used to find correct CSV file in csv_direc
+        job_id_to_copy: ID number of Figure 8 job from which to copy instructions and settings to new job
+        
+    Returns:
+        None
+    '''
+    
     key = str(getpass("Figure eight api key? "))
     #job_to_copy = input("What job do you want to copy? ")
 
@@ -58,8 +70,20 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
     csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
     data = upload_data(csv_name, new_job_id, key)
 
+    return None
 
 def copy_job(id, key):
+
+    '''
+    Create a Figure 8 job based on existing job
+    
+    Args:
+        id: ID number of job to copy instructions and settings from when creating new job
+        key: API key to access Figure 8 account
+                
+    Returns:
+        ID number of job created
+    '''
 
     url = 'https://api.figure-eight.com/v1/jobs/{job_id}/copy.json?'
     url = url.replace('{job_id}', str(id))
@@ -73,6 +97,18 @@ def copy_job(id, key):
     return new_job_id
 
 def upload_data(csv_name, id, key):
+
+    '''
+    Add data to an existing Figure 8 job by uploading a CSV file
+    
+    Args:
+        csv_direc: full path to CSV file to upload
+        id: ID number of job to upload data to 
+        key: API key to access Figure 8 account
+        
+    Returns:
+        None
+    '''
 
     url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
     url = url.replace('{job_id}', str(id))
@@ -94,3 +130,5 @@ def upload_data(csv_name, id, key):
             "-review the job design \n" +
             "-confirm pricing \n" +
             "-launch the job (or contact success manager)")
+            
+    return None

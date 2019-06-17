@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Put consecutive frames of a movie next to each other for annotation jobs that track cells across frames
 '''
 
 from __future__ import absolute_import
@@ -47,15 +47,22 @@ from skimage.io import imread, imsave
 
 def montage_maker(montage_len, chopped_dir, save_dir, identifier, x_pos, y_pos, row_length, x_buffer, y_buffer):
     '''
-    montage_len = integer number of frames you want to be in the montage
-    chopped_dir = string, path to folder containing cropped images that will be turned into montage
-    save_dir = string, path to folder where montages will be saved. usually .../montages
-    identifier = string of information about the movie to be used in saving the montage. ie "RAW264_set1"
-    x_pos = x coordinate of slice from original movie. eg 0 for the first column of slices
-    y_pos = y coordinate of slice from original movie. eg 1 for the second row of slices
-    row_length = integer number of frames you want per row of the montage
-    x_buffer = how many pixels separating each column of images
-    y_buffer = how many pixels separating each row of images
+    Take a stack of images from a specific x and y position in a movie and create montages
+    
+    Args:
+        montage_len: integer number of frames montage will contain
+        chopped_dir: full path to folder containing cropped images that will be turned into montages
+        save_dir: full path to folder where montages will be saved
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to load image pieces and to save montages
+        x_pos: x coordinate of slice from original movie, used to load image pieces and to save montage
+        y_pos: y coordinate of slice from original movie, used to load image pieces and to save montage
+        row_length: integer number of frames each row of the montage will hold
+        x_buffer: how many pixels will separate each column of images
+        y_buffer: how many pixels will separate each row of images
+        
+    Returns:
+        The number of montages created from the given image stack
     '''
 
     #from folder, sort nicely, put images into list
@@ -132,15 +139,24 @@ def montage_maker(montage_len, chopped_dir, save_dir, identifier, x_pos, y_pos, 
 
 def multiple_montage_maker(montage_len, base_dir, chopped_dir, save_dir, identifier, num_x_segments, num_y_segments, row_length, x_buffer, y_buffer):
     '''
-    montage_len = integer number of frames you want to be in the montage
-    dir = string, path to folder containing subfolders, each containing a cropped movie
-    save_dir = string, path to folder where montages will be saved. usually .../montages
-    identifier = string of information about the movie to be used in saving the montage. ie "RAW264_set1"
-    num_x_segments = integer number of columns original movie was cropped into
-    num_y_segments = integer number of rows original movie was cropped into
-    row_length = integer number of frames you want per row of the montage
-    x_buffer = how many pixels separating each column of images
-    y_buffer = how many pixels separating each row of images
+    Create montages from all x and y positions of a chopped movie. Also saves json log of settings used, to be
+    used later to get individual frames from montage.
+
+    Args:
+        montage_len: integer number of frames montage will contain
+        base_dir: full path to parent directory that contains json logs folder
+        chopped_dir: full path to folder containing cropped images that will be turned into montages
+        save_dir: full path to folder where montages will be saved
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to load image pieces and to save montages 
+        num_x_segments: how many pieces across the movie was chopped into
+        num_y_segments: how many pieces down the movie was chopped into
+        row_length: integer number of frames each row of the montage will hold
+        x_buffer: how many pixels will separate each column of images
+        y_buffer: how many pixels will separate each row of images
+
+    Returns:
+        None
     '''
 
     #make folder to save montages in if it doesn't exist already
@@ -192,4 +208,6 @@ def multiple_montage_maker(montage_len, base_dir, chopped_dir, save_dir, identif
         json.dump(log_data, write_file)
 
     print('A record of the settings used has been saved in folder: ' + log_dir)
+    
+    return None
 

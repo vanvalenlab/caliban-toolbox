@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Chop images into smaller, overlapping pieces to make annotation of each image more manageable
 '''
 
 from __future__ import absolute_import
@@ -45,6 +45,23 @@ from deepcell_toolbox.utils.io_utils import get_image, get_img_names
 from deepcell_toolbox.utils.misc_utils import sorted_nicely
 
 def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc, is_2D, file_ext):
+    '''
+    Takes an image and chops it into x by y overlapping image pieces, saves each image piece
+    
+    Args:
+        img: image to be chopped, as numpy array
+        save_dir: full path to directory where chopped image pieces will be saved
+        identifier: string used to specify data set (same variable used throughout pipeline), used to save images
+        frame: which frame image pieces come from, used to save images
+        num_x_segments: number of columns image will be chopped into
+        num_y_segments: number of rows image will be chopped into
+        overlap_perc: percent of image on each edge that overlaps with other chopped images
+        is_2D: whether to use 2D naming convention for saving chopped image pieces
+        file_ext: file extension for image type, used for saving image pieces in the same format as original
+        
+    Returns:
+        None
+    '''
 
     img_size = img.shape
 
@@ -81,14 +98,26 @@ def overlapping_img_chopper(img, save_dir, identifier, frame, num_x_segments, nu
             
             sub_img_path = os.path.join(save_dir, sub_img_name)
             imsave(sub_img_path, sub_img)
-
+            
+    return None
 
 def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, overlap_perc, frame_offset, is_2D = False):
     '''
-    raw_direc = string, path to folder containing movie slices that will be cropped. likely ".../processed". passed to chopper
-    num_x_segments = integer number of columns the movie will be chopped up into
-    num_y_segments = integer number of rows the movie will be chopped up into
-    overlap_perc = percent of image that will be added to border that overlaps with other chopped images
+    Uses overlapping_img_chopper on all images in a folder. Also saves json log of settings, to be used when
+    stitching images back together.
+    
+    Args:
+        raw_direc: full path to folder containing movie slices that will be chopped
+        identifier: string used to specify data set (same variable used throughout pipeline), 
+            used to load and save files
+        num_x_segments: integer number of columns the images will be chopped into
+        num_y_segments: integer number of rows the images will be chopped into
+        overlap_perc: percent of image on each edge that overlaps with other chopped images
+        frame_offset: frame number chopper is starting from, used to calculate correct frame number for each image
+        is_2D: whether to use 2D naming convention for loading images and saving chopped image pieces
+        
+    Returns:
+        None
     '''
     #directories
     base_dir = os.path.dirname(raw_direc)
@@ -207,3 +236,6 @@ def overlapping_crop_dir(raw_direc, identifier, num_x_segments, num_y_segments, 
         json.dump(log_data, write_file)
 
     print("Cropped files saved to {}".format(save_dir))
+    
+    return None
+    

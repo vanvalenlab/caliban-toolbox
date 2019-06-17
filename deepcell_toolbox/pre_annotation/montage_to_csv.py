@@ -24,6 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
+Make CSV file that can be uploaded to Figure 8 to load images to annotate
 
 '''
 
@@ -34,6 +35,23 @@ import pandas as pd
 
 
 def csv_maker(uploaded_montages, prev_images, next_images, identifier, csv_direc, include_context):
+    '''
+    Make and save a CSV file containing image urls, to be uploaded to a Figure 8 job
+    
+    Args:
+        uploaded_montages: ordered list of urls of images in Amazon S3 bucket
+        prev_images: ordered list of urls for the image one frame before current image, None if current frame 
+            is the first frame of the movie
+        next_images: ordered list of urls for the image one frame after current image, None if current frame
+            is the last frame of the movie
+        identifier: string used to specify data set (same variable used throughout pipeline), included in
+            CSV file to keep data sets distinct from each other
+        csv_direc: full path to directory where CSV file should be saved; created if does not exist
+        include_context: whether to include the urls for adjacent frames in the CSV file
+        
+    Returns:
+        None
+    '''
 
     #previous and next images in sequence
     #helps for annotating 3D images that aren't montaged
@@ -55,3 +73,5 @@ def csv_maker(uploaded_montages, prev_images, next_images, identifier, csv_direc
 
     #save csv file
     dataframe.to_csv(csv_name, index = False)
+    
+    return None

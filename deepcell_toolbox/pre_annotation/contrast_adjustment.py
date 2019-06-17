@@ -43,7 +43,24 @@ from skimage import filters
 
 
 def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, v_min, v_max):
-    '''takes image and image adjustment settings, returns adjusted image array'''
+    '''
+    Contrast adjusts an image using assortment of filters and skimage functions
+    
+    Args:
+        image: image to adjust, as array, with dtype np.float32
+        sigma: how much to blur image with gaussian filter (values between 0 and 1 sharpen image)
+        hist: whether to use histogram equalization on the image
+        adapthist: whether to use adaptive histogram equilazation on the image
+        gamma: how much to adjust the overall brightness of the image
+        sobel_option: whether to apply a sobel filter to the image (find edges of objects)
+        sobel: how heavily the sobel filter is applied
+        invert: whether to invert light and dark in the image
+        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
+        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
+        
+    Returns:
+        Contrast adjusted image as a numpy array (np.uint8)
+    '''
 
     if len(image.shape) > 2:
         print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
@@ -83,15 +100,18 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, 
 
 def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
     '''
-    adjusts the contrast of raw images - does not overwrite raw images
-    adjusted images are easier to crowdsource annotations
-
-    assumes channels have already been split out of images for simplicity
-    also because future versions will allow user to adjust variables for image processing, and different channels may need to be adjusted differently
-
-    base_dir is parent folder that contains wherever raw data is stored, a folder to store processed images will be created in base_dir
-    raw_folder is the name of the folder in base_dir where data to be contrast-adjusted is stored
-    identifier used to name processed images
+    Constrast adjust images in a given folder, save contrast adjusted images in new folder. Also creates a
+        json log to record settings used.
+    
+    Args:
+        base_dir: full path to parent directory that holds raw_folder; json logs folder will be created here
+        raw_folder: name of folder (not full path) containing images to be contrast adjusted
+        identifier: string, used to name processed images and json log
+        contrast_settings: dictionary of settings to use for contrast adjustment
+        is_2D: whether to save images with 2D naming convention 
+    
+    Returns:
+        None
 
     '''
 
@@ -168,8 +188,30 @@ def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
         json.dump(log_data, write_file)
 
     print('A record of the settings used has been saved in folder: ' + log_dir)
+    
+    return None
 
 def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings, is_2D):
+    '''
+    Constrast adjust images from two folders, overlay images, and save adjusted images in new folder. Also creates a
+        json log to record settings used.
+    
+    Args:
+        base_dir: full path to parent directory that holds raw_folder; json logs folder will be created here
+        raw_folder: name of first folder (not full path) containing images to be contrast adjusted
+        overlay_folder: name of second folder (not full path) containing images to be contrast adjusted
+        identifier: string, used to name processed images and json log
+        raw_settings: dictionary of settings to use for contrast adjustment of first folder
+        overlay_settings: dictionary of settings to use for contrast adjustment of second folder
+        combined_settings: dictionary of settings to use to overlay two images
+        is_2D: whether to save images with 2D naming convention 
+    
+    Returns:
+        None
+
+    '''
+
+
 
     #directory management
 
@@ -289,4 +331,6 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         json.dump(log_data, write_file)
 
     print('A record of the settings used has been saved in folder: ' + log_dir)
+    
+    return None
 

@@ -54,9 +54,17 @@ class ProgressPercentage(object):
 
 def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
-    folder_to_save = location in bucket where files will be put, used to make keys
-    bucket_name = name of bucket, "figure-eight-deepcell" by default
-    folder_to_upload = string, path to folder where images to be uploaded are, usually .../montages
+    Creates an AWS s3 session with which to upload images.
+    
+    Args:
+        folder_to_save: location in bucket where files will be put, used to make keys
+        bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
+        folder_to_upload: string, full path to folder where images to be uploaded are
+        include_context: whether to return lists of previous and next images to be included in figure8 job
+            (only for single 3D images)
+    
+    Returns:
+        lists of image urls (to be used to create a CSV file)
     '''
     ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
     ##might replace with a "create_session" function for user input of access keys, then run upload separately
@@ -73,11 +81,20 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
 
 def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
     '''
-    s3 = boto3.Session client allows script to upload to the user's AWS acct
-    folder_to_save = string, location in bucket where files will be put, used to make keys
-    bucket_name = string, name of bucket
-    folder_to_upload = string, path to folder where images to be uploaded are
+    Uses an AWS s3 session to upload images.
+    
+    Args:
+        s3: boto3.Session client allows script to upload to the user's AWS acct
+        folder_to_save: location in bucket where files will be put, used to make keys
+        bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
+        folder_to_upload: string, full path to folder where images to be uploaded are
+        include_context: whether to return lists of previous and next images to be included in figure8 job
+            (only for single 3D images)
+    
+    Returns:
+        lists of image urls (to be used to create a CSV file)    
     '''
+    
     #load the images from specified folder but not the json log file
     imgs_to_upload = get_img_names(folder_to_upload)
 
@@ -130,5 +147,3 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
     return uploaded_images, prev_images, next_images
 
 
-#if __name__ == '__main__':
-#    aws_upload()
