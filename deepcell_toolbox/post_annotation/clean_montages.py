@@ -24,8 +24,8 @@
 # limitations under the License.
 # ==============================================================================
 '''
-scripts for cleaning up figure eight annotations before the montage annotations are sliced into single frames
-clean_montage and relabel_montage borrowed/adapted from earlier scripts
+Scripts for cleaning up figure eight annotations before the montage annotations are sliced into single frames;
+clean_montage and relabel_montage are borrowed/adapted from deprecated scripts
 '''
 
 import numpy as np
@@ -40,8 +40,14 @@ from deepcell_toolbox.utils.io_utils import get_img_names
 
 def grayscale_montage(image_path):
     '''
-    annotations downloaded from figure eight are in RGB format (with only the red channel having an intensity), but we want images to be in 2D format for downstream use
-    keeps files in .png format--for annotations (especially single montages), keeps file size smaller without loss of important data
+    Overwrite an image file with just the values in the first (red) channel; converts annotations downloaded
+    from Figure 8 into single-channel masks
+
+    Args:
+        image_path: full path to image to convert to greyscale
+        
+    Returns:
+        None
     '''
     image = imread(image_path)
 
@@ -49,8 +55,19 @@ def grayscale_montage(image_path):
     gray_image = image[:,:,0] #uses values from red channel of rgb image to set intensities for 2D image
 
     imwrite(image_path, gray_image) #overwrites original .png
+    
+    return None
 
 def convert_grayscale_all(annotations_folder):
+    '''
+    Convert all images in folder to greyscale
+    
+    Args:
+        annotations_folder: full path to directory containing images to be converted to greyscale
+        
+    Returns:
+        None
+    '''
 
     #from folder, sort nicely, put images into list
     img_list = get_img_names(annotations_folder)
@@ -60,9 +77,21 @@ def convert_grayscale_all(annotations_folder):
         #load image
         img_name = os.path.join(annotations_folder, img)
         grayscale_montage(img_name)
+        
+    return None
 
 
 def clean_montage(img_path):
+    '''
+    Remove small holes and small objects (stray pixels) from annotation. Original annotation will be
+    overwritten by cleaned annotation
+    
+    Args:
+        img_path: full path to image to clean
+        
+    Returns:
+        None
+    '''
     img = imread(img_path)
 
     clean_img = remove_small_holes(img, connectivity=1,in_place=False)
@@ -109,8 +138,19 @@ def clean_montage(img_path):
                     fixed_img[x, y] = pixel_val
 
     imwrite(img_path, fixed_img)
+    
+    return None
 
 def relabel_montage(y):
+    '''
+    Relabel annotations in an image, starting from 1, so that no labels are skipped
+    
+    Args:
+        y: image to relabel, as numpy array
+        
+    Returns:
+        relabeled image, as numpy array
+    '''
     # create new_y to save new labels to
     new_y = np.zeros(y.shape, dtype = np.uint8)
     unique_cells = np.unique(y) # get all unique values of y
@@ -125,6 +165,15 @@ def relabel_montage(y):
     return new_y
 
 def clean_montages(annotations_folder):
+    '''
+    Clean all annotations in folder
+    
+    Args:
+        annotations_folder: full path to directory containing images to be cleaned
+    
+    Returns:
+        None
+    '''
 
     #from folder, sort nicely, put images into list
     img_list = get_img_names(annotations_folder)
@@ -142,7 +191,18 @@ def clean_montages(annotations_folder):
         #save image
         #imwrite(img_name, cleaned_montage)
 
+    return None
+
 def relabel_montages(annotations_folder):
+    '''
+    Relabel all annotations in folder
+    
+    Args:
+        annotations_folder: full path to directory containing images to be cleaned
+    
+    Returns:
+        None
+    '''
 
     #from folder, sort nicely, put images into list
     img_list = get_img_names(annotations_folder)
@@ -160,3 +220,6 @@ def relabel_montages(annotations_folder):
 
         #save image
         imwrite(img_name, relabeled_montage)
+        
+    return None
+    

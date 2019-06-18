@@ -23,7 +23,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+'''
+Recombine overlapping pieces of annotations to create fullsized annotation masks
+'''
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
@@ -48,6 +50,35 @@ def overlapping_stitcher_core(pieces_dir,
                                  identifier, 
                                  sub_img_format, 
                                  save_name):
+    '''
+    Takes overlapping annotation pieces and stitches them together into a
+    fullsize image.
+    
+    Args:
+        pieces_dir: full path to directory where image pieces are saved
+        save_dir: full path to directory where stitched annotation should be saved
+        x_start_indices: list of pixel locations corresponding to the x indices
+            in the original image where the edges of each image piece began
+        y_start_indices: list of pixel locations corresponding to the y indices
+            in the original image where the edges of each image piece began
+        overlapping_x_pix: number of pixels of overlap between horizontally
+            adjacent image pieces
+        overlapping_y_pix: number of pixels of overlap between vertically
+            adjacent image pieces
+        original_x: x dimension of original (whole) image; stitched image will
+            have this x dimension
+        original_y: y dimension of original (whole) image; stitched image will
+            have this y dimension
+        identifier: string used to specify data set (same variable used throughout 
+            pipeline), used to load image pieces and save stitched image
+        sub_img_format: string with formatting to load image pieces, depends on
+            whether 2D naming convention was used
+        save_name: file name to save stitched image as
+        
+    Returns:
+        None
+    '''
+
 
     #save path
     img_path = os.path.join(save_dir, save_name)
@@ -171,9 +202,31 @@ def overlapping_stitcher_core(pieces_dir,
 
     #save big image
     imwrite(img_path, relabeled_img)
+    
+    return None
 
 def overlapping_stitcher_folder(pieces_dir, save_dir, identifier, num_images, json_chopper_log, is_2D):
-
+    '''
+    Unpacks variables from json_chopper_log (and calculates variables if needed) to
+    run overlapping_stitcher_core to stitch multiple images from image pieces contained
+    in same folder.
+    
+    Args:
+        pieces_dir: full path to directory where image pieces are saved
+        save_dir: full path to directory where stitched annotation should be saved
+        identifier: string used to specify data set (same variable used throughout 
+            pipeline), used to load image pieces and save stitched image
+        num_images: number of stitched images to create, usually the same number of
+            fullsize raw images that were annotated
+        json_chopper_log: dictionary loaded from json log file containing variables
+            that were used by the overlapping_chopper in constructing raw image
+            pieces for this dataset
+        is_2D: whether 2D naming convention was used to name image pieces
+    
+    Returns:
+        None
+    '''
+    
     #directories
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
@@ -266,4 +319,6 @@ def overlapping_stitcher_folder(pieces_dir, save_dir, identifier, num_images, js
                                  identifier, 
                                  sub_img_format, 
                                  save_name)
+                                 
+    return None
     

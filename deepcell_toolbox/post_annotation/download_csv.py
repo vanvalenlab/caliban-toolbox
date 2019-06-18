@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Download completed annotations from Figure 8
 '''
 
 #imports
@@ -40,6 +40,19 @@ from getpass import getpass
 
 
 def download_report(job_id, save_folder, report_type):
+    '''
+    Download zipped job report from Figure 8, containing links to completed annotations
+    
+    Args:
+        job_id: ID number for the job to download a report from Figure 8
+        save_folder: full path to where zip file of job report should be saved. Should not be CSV dir.
+        report_type: string specifying the type of report to download from Figure 8. Can choose between
+            'full', 'aggregated', 'json', 'gold_report', 'workset', and 'source'. Usually, 'full' is the most
+            useful.
+        
+    Returns:
+        Path to downloaded zipped CSV if file was successfully downloaded. Otherwise, returns None.
+    '''
 
     #make folder to save job stuff in if needed
     if not os.path.isdir(save_folder):
@@ -65,11 +78,18 @@ def download_report(job_id, save_folder, report_type):
     if csv_request.status_code == 200:
         print("File " + file_name + " successfully downloaded and saved in " + save_folder)
         return save_path
+    else:
+        return None
 
 def unzip_report(path_to_zip):
     '''
-    uses path returned by download_report to handle zip file downloaded from figure eight
-    unzips .csv file and renames it to what the zip file was named
+    Unzips .csv file and renames it appropriately
+    
+    Args:
+        path_to_zip: full path to where zipped csv file is saved
+        
+    Returns:
+        Full path to unzipped and renamed csv file; will be saved in a directory named "CSV"
     '''
     #names and paths
     parent_dir = os.path.dirname(path_to_zip)
@@ -95,12 +115,39 @@ def unzip_report(path_to_zip):
     return new_csv_path
 
 def download_and_unzip(job_id, save_folder, report_type = 'full'):
+    '''
+    Download and unzip a job report csv file from Figure 8
+    
+    Args:
+        job_id: ID number for the job to download a report from Figure 8
+        save_folder: full path to where zip file of job report should be saved. Should not be CSV dir.
+        report_type: string specifying the type of report to download from Figure 8. Can choose between
+            'full', 'aggregated', 'json', 'gold_report', 'workset', and 'source'. Usually, 'full' is the most
+            useful.
+    
+    Returns:
+        Full path to unzipped and renamed csv file; will be saved in a directory named "CSV"
+    '''
 
     zip_saved_path = download_report(job_id, save_folder, report_type)
 
     csv_path = unzip_report(zip_saved_path)
 
 def save_annotations_from_csv(csv_path, annotations_folder):
+    '''
+    Uses information from Figure 8 job report to download image annotations and name appropriately.
+    If annotations do not exist, user is notified of missing annotations and a csv file for reuploading
+    the source images is created.
+    
+    Args:
+        csv_path: full path to csv file containing annotation information
+        annotations_folder: full path to directory where downloaded annotations should be saved
+        
+    Returns:
+        List of images that have missing annotations; list is empty if job completed successfully. If job
+            did not complete successfully, a csv file is created that contains just the rows that should be
+            reuploaded.
+    '''
 
     #make save folder if doesn't exist
     if not os.path.isdir(annotations_folder):
