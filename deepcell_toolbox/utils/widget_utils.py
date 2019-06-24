@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Functions to select and adjust images with widgets in jupyter notebooks
 '''
 
 # import statements
@@ -43,6 +43,16 @@ from imageio import imread
 from deepcell_toolbox.utils.io_utils import get_img_names
 
 def choose_img(name, dirpath):
+    '''
+    Pick an image from a directory to see effects of contrast adjustment steps; image chosen is displayed
+    
+    Args:
+        name: name of image file
+        dirpath: full path to directory containing images
+    
+    Returns:
+        Full path to selected image
+    '''
     filepath = os.path.join(dirpath, name)
     img = imread(filepath)
     fig, ax = plt.subplots(figsize=(16, 12))
@@ -50,6 +60,18 @@ def choose_img(name, dirpath):
     return filepath
 
 def choose_img_pair(frame, raw_dir, overlay_dir):
+    '''
+    Pick two paired images from two directories (eg, each directory contains a different channel)
+    to see effects of contrast adjustment steps; both images chosen are displayed
+    
+    Args:
+        frame: index of image location in directory
+        raw_dir: full path to first image-containing directory
+        overlay_dir: full path to second image-containing directory
+        
+    Returns:
+        Full paths to both images selected 
+    '''
     #load raw and overlay images based on frame number
     raw_img_name = get_img_names(raw_dir)[frame]
     raw_img_path = os.path.join(raw_dir, raw_img_name)
@@ -71,8 +93,25 @@ def choose_img_pair(frame, raw_dir, overlay_dir):
     return raw_img_path, overlay_img_path
     
 
-def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_img = True, gamma_adjust = 1.0, equalize_hist=False, equalize_adapthist=False):
-    """Used to edit the image using the widget tester"""
+def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_img = True, gamma_adjust = 1.0, equalize_hist=False, equalize_adapthist=False, v_min = 0, v_max = 255):
+    '''
+    Display effects of contrast adjustment on an image
+    
+    Args:
+        image: image to adjust, as array
+        blur: how much to blur image with gaussian filter (values between 0 and 1 sharpen image)
+        sobel_toggle: whether to apply a sobel filter to the image (find edges of objects)
+        sobel_factor: how heavily the sobel filter is applied
+        invert_img: whether to invert light and dark in the image
+        gamma_adjust: how much to adjust the overall brightness of the image
+        equalize_hist: whether to use histogram equalization on the image
+        equalize_adapthist: whether to use adaptive histogram equilazation on the image
+        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
+        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
+    
+    Returns:
+        Contrast-adjusted image
+    '''
 
     new_image = filters.gaussian(image, sigma=blur, multichannel=False)
     
@@ -95,6 +134,9 @@ def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_
      
     new_image = sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = np.uint8)
     new_image = new_image.astype(np.uint8)
+
+    #adjust min/max of image after it is rescaled to np.uint8
+    new_image = sk.exposure.rescale_intensity(new_image, in_range=(v_min, v_max))
     
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(new_image, cmap = mpl.cm.gray)
@@ -102,6 +144,19 @@ def edit_image(image, blur=1.0, sobel_toggle = True, sobel_factor = 100, invert_
     return new_image
 
 def overlay_images(raw_img, overlay_img, prop_raw, v_min = 0, v_max = 255):
+    '''
+    Display effects of overlaying two contrast-adjusted images
+    
+    Args:
+        raw_img: first image of pair to form composite, as numpy array
+        overlay_img: second image of pair to form composite, as numpy array
+        prop_raw: what percentage of the composite image comes from the first input image
+        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
+        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
+        
+    Returns:
+        None
+    '''
     
     prop_overlay = 1.0 - prop_raw
     mod_img = prop_overlay * overlay_img + prop_raw * raw_img
@@ -122,5 +177,5 @@ def overlay_images(raw_img, overlay_img, prop_raw, v_min = 0, v_max = 255):
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(mod_img, cmap = mpl.cm.gray)
     
-
+    return None
 

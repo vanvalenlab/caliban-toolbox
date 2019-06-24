@@ -52,11 +52,19 @@ class ProgressPercentage(object):
                     percentage))
             sys.stdout.flush()
 
-def aws_upload(bucket_name, aws_folder, folder_to_upload):
+def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
-    folder_to_save = location in bucket where files will be put, used to make keys
-    bucket_name = name of bucket, "figure-eight-deepcell" by default
-    folder_to_upload = string, path to folder where images to be uploaded are, usually .../montages
+    Creates an AWS s3 session with which to upload images.
+    
+    Args:
+        folder_to_save: location in bucket where files will be put, used to make keys
+        bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
+        folder_to_upload: string, full path to folder where images to be uploaded are
+        include_context: whether to return lists of previous and next images to be included in figure8 job
+            (only for single 3D images)
+    
+    Returns:
+        lists of image urls (to be used to create a CSV file)
     '''
     ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
     ##might replace with a "create_session" function for user input of access keys, then run upload separately
@@ -67,26 +75,62 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload):
     print('Connected to AWS')
     s3 = session.client('s3')
 
-    uploaded_montages = upload(s3, bucket_name, aws_folder, folder_to_upload)
-    return uploaded_montages
+    uploaded_montages, prev_images, next_images = upload(s3, bucket_name, aws_folder, folder_to_upload, include_context)
+    return uploaded_montages, prev_images, next_images
 
 
-def upload(s3, bucket_name, aws_folder, folder_to_upload):
+def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
     '''
-    s3 = boto3.Session client allows script to upload to the user's AWS acct
-    folder_to_save = string, location in bucket where files will be put, used to make keys
-    bucket_name = string, name of bucket
-    folder_to_upload = string, path to folder where images to be uploaded are
+    Uses an AWS s3 session to upload images.
+    
+    Args:
+        s3: boto3.Session client allows script to upload to the user's AWS acct
+        folder_to_save: location in bucket where files will be put, used to make keys
+        bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
+        folder_to_upload: string, full path to folder where images to be uploaded are
+        include_context: whether to return lists of previous and next images to be included in figure8 job
+            (only for single 3D images)
+    
+    Returns:
+        lists of image urls (to be used to create a CSV file)    
     '''
+    
     #load the images from specified folder but not the json log file
     imgs_to_upload = get_img_names(folder_to_upload)
 
     #create list of montages that were uploaded to pass to csv maker
-    uploaded_montages = []
+    uploaded_images = []
+    prev_images = []
+    next_images = []
 
     #upload each image from that folder
     for img in imgs_to_upload:
 
+        if include_context:
+            #frame number of image            
+            frame = int(img.split("frame_")[1].split(".png")[0])
+            
+            if frame == 0:
+                #no previous image if it's the first frame in that position
+                prev_image_path = 'None'
+            else:
+                prev_image = img.split("frame_")[0] + "frame_" + str(frame - 1).zfill(3) + ".png"
+                prev_image_key = os.path.join(aws_folder, prev_image)
+                prev_image_path = os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, prev_image_key)
+                
+            prev_images.append(prev_image_path)
+            
+            #next image should have an identical name to current image, but frame is current image frame + 1
+            next_image = img.split("frame_")[0] + "frame_" + str(frame + 1).zfill(3) + ".png"
+            next_image_key = os.path.join(aws_folder, next_image)
+            next_image_path = os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, next_image_key)
+            
+            #if the next_image is not in the images we're uploading, current image is the last in that position
+            if not next_image in imgs_to_upload:
+                next_image_path = 'None'
+                
+            next_images.append(next_image_path)
+            
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
 
@@ -98,9 +142,8 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload):
         print('\n')
 
         #add uploaded montage url to list
-        uploaded_montages.append(os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, img_key))
+        uploaded_images.append(os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, img_key))
 
-    return uploaded_montages
+    return uploaded_images, prev_images, next_images
 
-#if __name__ == '__main__':
-#    aws_upload()
+

@@ -31,6 +31,8 @@ from __future__ import print_function
 from deepcell_toolbox.post_annotation import clean_montages
 from deepcell_toolbox.post_annotation import download_csv
 from deepcell_toolbox.post_annotation import montages_to_movies
+from deepcell_toolbox.post_annotation import overlapping_stitcher
+from deepcell_toolbox.post_annotation import post_annotation_training_data
 
 del absolute_import
 del division

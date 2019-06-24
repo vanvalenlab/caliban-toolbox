@@ -24,23 +24,54 @@
 # limitations under the License.
 # ==============================================================================
 '''
+Make CSV file that can be uploaded to Figure 8 to load images to annotate
 
 '''
 
 import os
+import stat
+import sys
 import pandas as pd
 
 
-def csv_maker(uploaded_montages, identifier, csv_direc):
+def csv_maker(uploaded_montages, prev_images, next_images, identifier, csv_direc, include_context):
+    '''
+    Make and save a CSV file containing image urls, to be uploaded to a Figure 8 job
     
+    Args:
+        uploaded_montages: ordered list of urls of images in Amazon S3 bucket
+        prev_images: ordered list of urls for the image one frame before current image, None if current frame 
+            is the first frame of the movie
+        next_images: ordered list of urls for the image one frame after current image, None if current frame
+            is the last frame of the movie
+        identifier: string used to specify data set (same variable used throughout pipeline), included in
+            CSV file to keep data sets distinct from each other
+        csv_direc: full path to directory where CSV file should be saved; created if does not exist
+        include_context: whether to include the urls for adjacent frames in the CSV file
+        
+    Returns:
+        None
+    '''
+
+    #previous and next images in sequence
+    #helps for annotating 3D images that aren't montaged
+        
     data = {'image_url': uploaded_montages, 'identifier': identifier}
+    if include_context:
+        data['prev_image'] = prev_images
+        data['next_image'] = next_images
 
     dataframe = pd.DataFrame(data=data, index = range(len(uploaded_montages)))
 
     #create file location, name file
     if not os.path.isdir(csv_direc):
         os.makedirs(csv_direc)
-    csv_name = os.path.join(csv_direc, identifier + '.csv')
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(csv_direc, mode)
+    csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
 
     #save csv file
     dataframe.to_csv(csv_name, index = False)
+    
+    return None

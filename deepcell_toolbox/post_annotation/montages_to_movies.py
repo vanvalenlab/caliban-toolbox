@@ -24,7 +24,7 @@
 # limitations under the License.
 # ==============================================================================
 '''
-
+Functions for processing montage annotations into individual frames of a movie
 '''
 
 from __future__ import division
@@ -33,18 +33,28 @@ import json
 import math
 import numpy as np
 import os
+import stat
+import sys
 import warnings
 
-from skimage.io import imsave
-from imageio import imread
+#from skimage.io import imsave
+from imageio import imread, imwrite
 from deepcell_toolbox.utils.io_utils import get_img_names
 
 
 
 def read_json_params_montage(log_folder, identifier):
     '''
-    finds the .json file that you want to read montage parameters from
-    returns the parameters you need
+    Reads parameters from a json log created by the montage maker. Not currently used in pipeline.
+    
+    Args:
+        log_folder: full path to folder where json logs are stored
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to load correct json file
+
+    Returns:
+        Variables extracted from dictionary; montage_len, num_x_segments, num_y_segments, row_length, 
+            x_buffer, y_buffer, num_montages
     '''
 
     json_path = os.path.join(log_folder, identifier + "_montage_maker_log.json")
@@ -64,9 +74,17 @@ def read_json_params_montage(log_folder, identifier):
 
 def read_json_params_chopper(log_folder, identifier):
     '''
-    finds the .json file that you want to read overlapping_chopper parameters from
-    returns the parameters you need
+    Reads parameters from a json log created by the overlapping chopper. Not currently used in pipeline.
+    
+    Args:
+        log_folder: full path to folder where json logs are stored
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to load correct json file
+
+    Returns:
+        Variables extracted from dictionary; overlap_perc, num_x_segments, num_y_segments
     '''
+
 
     json_path = os.path.join(log_folder, identifier + "_overlapping_chopper_log.json")
 
@@ -81,10 +99,26 @@ def read_json_params_chopper(log_folder, identifier):
 
 
 
-def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_folder):
+def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_dir):
     '''
-    takes the annotation of a single montage and chops it into pieces
-    these pieces match up with the movies of contrast-adjusted raw images that were processed into montages
+    Takes a montage and saves its constituent frames as individual image files
+    
+    Args:
+        montage_path: full path to montage annotation that will be chopped into constituent frames
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to save image pieces
+        montage_len: how many frames in total are in montage
+        part_num: which montage number is being chopped (eg, montage 2 out of 10 for position x, y)
+        x_seg: which x position is being chopped
+        y_seg: which y position is being chopped
+        row_length: number of frames in each row of montage
+        x_buffer: how many pixels separate each column of images
+        y_buffer: how many pixels separate each row of images
+        save_dir: full path to directory where individual frames will be saved
+        
+    Returns:
+        None
+    
     '''
 
     #montage_num is to calculate correct frame number for new image: ie, montage_num*montage_len is the starting index for frame numbering
@@ -112,10 +146,10 @@ def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_se
             frame_num = (row * row_length) + column
 
             #make image name
-            #not anticipating more than 99 x 99 segments, or more than 999 frames
+            #not anticipating more than 99 x 99 segments, or more than 99 frames per montage
             #if this changes, need to change zfill here for consistent naming
-            current_frame_name = identifier + "_x_" + str(x_seg).zfill(2) + "_y_" + str(y_seg).zfill(2) + "_frame_" + str(frame_num).zfill(3) + ".png"
-            current_frame_path = os.path.join(save_folder, current_frame_name)
+            current_frame_name = "{0}_x_{1:02d}_y_{2:02d}_part_{3}_frame_{4:02d}.png".format(identifier, x_seg, y_seg, part_num, frame_num)
+            current_frame_path = os.path.join(save_dir, current_frame_name)
 
             #math to calculate pixel boundaries, x
             x_start = x_buffer + ((x_buffer + x_dim) * column )
@@ -128,48 +162,48 @@ def montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_se
             current_frame = montage_img[y_start:y_end,x_start:x_end]
 
             #save image
-            imsave(current_frame_path, current_frame)
+            imwrite(current_frame_path, current_frame)
+    
+    return None
 
-def all_montages_chopper(base_folder, identifier):
+def all_montages_chopper(base_dir, montage_dir, identifier, json_montage_log):
     '''
-    calls read_json_params so it can pass correct information to montage_chopper
-    calls montage_chopper on all of the montages in given folder
-    does some organizing of save folders for montage_chopper
+    Runs montage_chopper on all montages in given folder
+    
+    Args:
+        base_dir: full path to directory where folder to keep image pieces will be created
+        montage_dir: full path to directory where montage annotations are saved
+        identifier: string used to specify data set (same variable used throughout pipeline); 
+            used to load montages and save image pieces
+        json_montage_log: dictionary of variables loaded from json log created by montage_maker
+        
+    Returns:
+        None
     '''
+    
+    #unpack info from json log
+    montage_len = json_montage_log['montage_len']
+    num_x_segments = json_montage_log['num_x_segments']
+    num_y_segments = json_montage_log['num_y_segments']
+    row_length = json_montage_log['row_length']
+    x_buffer = json_montage_log['x_buffer']
+    y_buffer = json_montage_log['y_buffer']
+    num_montages = json_montage_log['montages_in_pos']
 
-    #find json data in folder log was saved to; "json_logs" by default
-    json_folder = os.path.join(base_folder, "json_logs")
-    #get data, store as a tuple
-    json_params = read_json_params_montage(json_folder, identifier)
-
-    montage_len = json_params[0]
-    num_x_segments = json_params[1]
-    num_y_segments = json_params[2]
-    row_length = json_params[3]
-    x_buffer = json_params[4]
-    y_buffer = json_params[5]
-    num_montages = json_params[6]
-
-    montage_folder = os.path.join(base_folder, "annotations") #where to find the montages
-
-    movie_folder = os.path.join(base_folder, "movies")
+    save_dir = os.path.join(base_dir, "chopped_annotations")
+    perm_mod = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+    
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+        os.chmod(save_dir, perm_mod)
+    
     for part_num in range(num_montages):
-
-        part = "part" + str(part_num)
-
         for x_seg in range(num_x_segments):
             for y_seg in range(num_y_segments):
 
-                #make folder for that position
-                position_folder = os.path.join(movie_folder, part, "x_{0:02d}_y_{1:02d}".format(x_seg, y_seg))
-                annotations_folder = os.path.join(position_folder, "annotated") #where to save the frames
-                if not os.path.isdir(annotations_folder):
-                    os.makedirs(annotations_folder)
-
                 #all montages for that position should get chopped into that folder
-
-                montage_name = identifier + "_x_" + str(x_seg) + "_y_" + str(y_seg) + "_montage_" + str(part_num) + "_annotation.png"
-                montage_path = os.path.join(montage_folder, montage_name)
+                montage_name = "{0}_x_{1}_y_{2}_montage_{3}_annotation.png".format(identifier, x_seg, y_seg, part_num)
+                montage_path = os.path.join(montage_dir, montage_name)
 
                 if not os.path.isfile(montage_path):
                     print("Didn't find a file at: ", montage_path)
@@ -177,17 +211,28 @@ def all_montages_chopper(base_folder, identifier):
                     #run the montage chopper on a file that exists
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
-                        montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, annotations_folder)
+                        montage_chopper(montage_path, identifier, montage_len, part_num, x_seg, y_seg, row_length, x_buffer, y_buffer, save_dir)
 
 
-    #name: MouseBrain_s7_nuc_x_0_y_2_montage_0_annotation
-    #name: {identifier}_x_{}_y{}_montage_{}_annotation.png
-
+    return None
 
 
 def overlapping_img_chopper(img_path, save_dir, identifier, frame, num_x_segments, num_y_segments, overlap_perc):
     '''
-    slightly modified from overlapping_chopper in pre-annotation notebooks, mostly to save files in different places
+    Slightly modified version of pre-annotation overlapping chopper to be used with raw_movie_maker; not
+    currently used in pipeline.
+    
+    Args:
+        img_path: full path to image to be chopped
+        save_dir: full path to directory where chopped image pieces will be saved
+        identifier: string used to specify data set (same variable used throughout pipeline), used to save images
+        frame: which frame image pieces come from, used to save images
+        num_x_segments: number of columns image will be chopped into
+        num_y_segments: number of rows image will be chopped into
+        overlap_perc: percent of image on each edge that overlaps with other chopped images
+        
+    Returns:
+        None
     '''
 
     img = imread(img_path)
@@ -219,20 +264,31 @@ def overlapping_img_chopper(img_path, save_dir, identifier, frame, num_x_segment
             sub_img_path = os.path.join(save_dir, subdir_name, "raw", sub_img_name)
             #import pdb; pdb.set_trace()
             imsave(sub_img_path, sub_img)
+            
+    return None
 
 
 def raw_movie_maker(base_dir, raw_dir, identifier):
     '''
-    base_dir is folder that contains folders for log files, movies, etc
-    raw_dir is the name of the folder that contains the raw images that will be chopped up; often "raw" or identifier
+    Chops raw images into pieces to match the annotation pieces; not currently used in pipeline.
+    
+    Args:
+        base_dir: full path to directory that contains folder for json logs; "movies" folder will be created
+            in this directory
+        raw_dir: full path to directory that contains raw images to be chopped
+        identifier: string used to specify data set (same variable used throughout pipeline), used to load files
+            and save images
 
-    to chop up the raw images to match the annotations, script pulls from json log that was made when contrast adjusted images were cropped; this avoids user input to match chopped images with each other
-    also pulls from montage_maker json log so that the correct number of raw frames are matched to annotations
+    Returns:
+        None
     '''
 
     movies_dir = os.path.join(base_dir, "movies")
     if not os.path.isdir(movies_dir):
         os.makedirs(movies_dir)
+        #add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(movies_dir, mode)
 
     #find json data in folder log was saved to; "json_logs" by default
     json_folder = os.path.join(base_dir, "json_logs")
@@ -259,6 +315,10 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
             part_folder = os.path.join(movies_dir, "part" + str(part)) #zero based indexing for part folders
             if not os.path.isdir(part_folder):
                 os.makedirs(part_folder)
+                #add folder modification permissions to deal with files from file explorer
+                mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                os.chmod(part_folder, mode)
+
             for x_seg in range(num_x_segments):
                 for y_seg in range(num_y_segments):
 
@@ -267,6 +327,10 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
                     raw_subfolder = os.path.join(position_folder, "raw")
                     if not os.path.isdir(raw_subfolder):
                         os.makedirs(raw_subfolder)
+                        #add folder modification permissions to deal with files from file explorer
+                        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+                        os.chmod(raw_subfolder, mode)
+
 
         #sorting of raw movies into appropriate parts folders happens here
         total_frames = num_montages * montage_len
@@ -294,3 +358,6 @@ def raw_movie_maker(base_dir, raw_dir, identifier):
 
     else:
         print("Num_segments mismatch; double-check your files and logs to make sure you're trying to put the correct movies together.")
+        
+    return None
+    
