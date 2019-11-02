@@ -31,7 +31,10 @@ import sys
 import boto3
 import os
 import threading
+import re
+
 from getpass import getpass
+
 
 from deepcell_toolbox.utils.io_utils import get_img_names
 
@@ -52,6 +55,22 @@ class ProgressPercentage(object):
                     percentage))
             sys.stdout.flush()
 
+
+def connect_aws():
+    # AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
+    # AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
+
+
+    AWS_ACCESS_KEY_ID = 'AKIAZC5RJJOUT22AZS3J'
+    AWS_SECRET_ACCESS_KEY = 'rF2ORqc3+HErfpa2nyOXDJ1Cll/kjyYQ0HwGbzQ3'
+
+    session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    print('Connected to AWS')
+    s3 = session.client('s3')
+
+    return s3
+
+
 def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
     Creates an AWS s3 session with which to upload images.
@@ -68,12 +87,8 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
     ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
     ##might replace with a "create_session" function for user input of access keys, then run upload separately
-    AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
-    AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
 
-    session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-    print('Connected to AWS')
-    s3 = session.client('s3')
+    s3 = connect_aws()
 
     uploaded_montages, prev_images, next_images = upload(s3, bucket_name, aws_folder, folder_to_upload, include_context)
     return uploaded_montages, prev_images, next_images
@@ -145,5 +160,59 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
         uploaded_images.append(os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, img_key))
 
     return uploaded_images, prev_images, next_images
+
+def aws_caliban_upload(input_bucket, output_bucket, aws_folder, folder_to_upload):
+    '''
+
+    folder_to_save = location in bucket where files will be put, used to make keys
+    bucket_name = name of bucket, "figure-eight-deepcell" by default
+    folder_to_upload = string, path to folder where images to be uploaded are, usually .../montages
+    '''
+
+    s3 = connect_aws()
+
+    uploaded_montages = caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload)
+    return uploaded_montages
+
+
+def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload):
+    '''
+    s3 = boto3.Session client allows script to upload to the user's AWS acct
+    folder_to_save = string, location in bucket where files will be put, used to make keys
+    bucket_name = string, name of bucket
+    folder_to_upload = string, path to folder where images to be uploaded are
+    '''
+    #load the images from specified folder but not the json log file
+    imgs_to_upload = get_img_names(folder_to_upload)
+    
+    #create list of montages that were uploaded to pass to csv maker
+    filename_list = []
+
+    subfolders = re.split('/', aws_folder)
+    subfolders = '__'.join(subfolders)
+
+    print(aws_folder)
+    print(folder_to_upload)
+    print(imgs_to_upload)
+    
+    #upload each image from that folder
+    for img in imgs_to_upload:
+        print(img)
+        
+        #set full path to image
+        img_path = os.path.join(folder_to_upload, img)
+        
+        #set destination path
+        img_key = os.path.join(aws_folder, img)
+        
+        #upload
+        s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
+        print('\n')
+        
+        #add caliban url to list
+        filename_list.append("https://www.caliban.deepcell.org/" + input_bucket + "__" + output_bucket + "__" + subfolders + "__" + img)
+        
+    return filename_list
+        
 
 

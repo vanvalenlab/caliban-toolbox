@@ -67,7 +67,7 @@ def get_img_names(direc_name):
     Return all image filenames in direc_name as sorted list
     """
     imglist = os.listdir(direc_name)
-    imgfiles = [i for i in imglist if ".tif" in i or ".png" in i or ".jpg" in i]
+    imgfiles = [i for i in imglist if ".tif" in i or ".png" in i or ".jpg" in i or ".npz" in i]
     imgfiles = sorted_nicely(imgfiles)
     return imgfiles
 
