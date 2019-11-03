@@ -57,12 +57,8 @@ class ProgressPercentage(object):
 
 
 def connect_aws():
-    # AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
-    # AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
-
-
-    AWS_ACCESS_KEY_ID = 'AKIAZC5RJJOUT22AZS3J'
-    AWS_SECRET_ACCESS_KEY = 'rF2ORqc3+HErfpa2nyOXDJ1Cll/kjyYQ0HwGbzQ3'
+    AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
+    AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
 
     session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
     print('Connected to AWS')
@@ -190,14 +186,9 @@ def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload
 
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
-
-    print(aws_folder)
-    print(folder_to_upload)
-    print(imgs_to_upload)
     
     #upload each image from that folder
     for img in imgs_to_upload:
-        print(img)
         
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
