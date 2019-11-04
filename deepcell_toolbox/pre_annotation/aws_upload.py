@@ -36,7 +36,7 @@ import re
 from getpass import getpass
 
 
-from deepcell_toolbox.utils.io_utils import get_img_names
+from deepcell_toolbox.utils.io_utils import get_img_names, list_npzs_folder
 
 # Taken from AWS Documentation
 class ProgressPercentage(object):
@@ -159,16 +159,17 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
 
 def aws_caliban_upload(input_bucket, output_bucket, aws_folder, folder_to_upload):
     '''
-
-    folder_to_save = location in bucket where files will be put, used to make keys
-    bucket_name = name of bucket, "figure-eight-deepcell" by default
-    folder_to_upload = string, path to folder where images to be uploaded are, usually .../montages
+    input_bucket = string, name of bucket where files will be uploaded
+    output_bucket = string, name of bucket where files will be saved during annotation
+    aws_folder = string, location in input bucket where files will be uploaded, used to make keys;
+        files will be saved to this folder within output bucket during annotation
+    folder_to_upload = string, path to folder where npzs to be uploaded are
     '''
 
     s3 = connect_aws()
 
-    uploaded_montages = caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload)
-    return uploaded_montages
+    uploaded_files = caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload)
+    return uploaded_files
 
 
 def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload):
@@ -179,31 +180,28 @@ def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload
     folder_to_upload = string, path to folder where images to be uploaded are
     '''
     #load the images from specified folder but not the json log file
-    imgs_to_upload = get_img_names(folder_to_upload)
-    
+    imgs_to_upload = list_npzs_folder(folder_to_upload)
+
     #create list of montages that were uploaded to pass to csv maker
     filename_list = []
 
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
-    
+
     #upload each image from that folder
     for img in imgs_to_upload:
-        
+
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
-        
+
         #set destination path
         img_key = os.path.join(aws_folder, img)
-        
+
         #upload
         s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
-        
+
         #add caliban url to list
         filename_list.append("https://www.caliban.deepcell.org/" + input_bucket + "__" + output_bucket + "__" + subfolders + "__" + img)
-        
+
     return filename_list
-        
-
-
