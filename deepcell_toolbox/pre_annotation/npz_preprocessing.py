@@ -52,7 +52,7 @@ def slice_npz_batches(full_npz_path, batch_size, save_dir):
         batch_size: (int) number of frames to include in each sliced npz
         save_dir: path to folder where sliced npzs should be saved
 
-    Output:
+    Returns:
         None (npzs are created and saved while function runs)
     '''
 
@@ -87,11 +87,26 @@ def slice_npz_batches(full_npz_path, batch_size, save_dir):
         elif batch_size == 1:
             piece_name = "{0}_frames_{1}.npz".format(npz_basename, batch_start)
 
-        # save sliced npz into save_dir
+        #don't save anything if npz piece is empty of annotations
+        cells = np.unique(partial_y)
 
-        # TODO: save empty pieces into subfolder in save_dir as in reshape_npz
-        piece_path = os.path.join(save_dir, piece_name)
-        np.savez(piece_path, X = partial_X, y = partial_y)
+        # background will be counted as one "cell" by np.unique
+        if len(cells) > 1:
+            # save sliced npz into save_dir
+            piece_path = os.path.join(save_dir, piece_name)
+            np.savez(piece_path, X = partial_X, y = partial_y)
+
+        # don't save if the annotations are empty: Caliban can't open it
+
+        # TODO: save empty npzs into subfolder in save_dir; there may be parts
+        # of these files that should get annotated even if they are blank now
+        else:
+            if batch_size > 1:
+                print('Piece of {0} from frames {1} to {2} is empty of annotations'.format(
+                full_npz_path, batch_start, batch_end))
+            elif batch_size == 1:
+                print('Piece of {0} at frame {1} is empty of annotations'.format(
+                full_npz_path, batch_start))
 
     return None
 
@@ -111,7 +126,7 @@ def reshape_npz(full_npz_path, x_size, y_size, save_dir, save_individual = True)
             new npz file (recommended for fig8), or to save as one 5D file containing
             batch info (could be repurposed for making training data)
 
-    Output:
+    Returns:
         Returns None.
         Saves either: reshaped (5D) npz in shape (batches, frames, y, x, channels)
             or n individual reshaped 4D npzs in shape (frames, y, x, channels)
@@ -234,7 +249,7 @@ def slice_npz_folder(src_folder, batch_size, save_dir):
         batch_size: (int) number of frames to include in each sliced npz
         save_dir: path to folder where sliced npzs should be saved
 
-    Outputs:
+    Returns:
         None
     '''
     # create the save dir if necessary
