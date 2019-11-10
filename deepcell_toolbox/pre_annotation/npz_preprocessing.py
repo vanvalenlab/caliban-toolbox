@@ -338,13 +338,60 @@ def relabel_npz_unique(full_npz_path, start_val = 1):
     return None
 
 
-def relabel_npz_preserve_relationships():
+def relabel_npz_preserve_relationships(full_npz_path, start_val = 1):
     '''
-    Placeholder for a function that relabels each feature in a 4D npz
-    while preserving relationships. Eg, if cell 5 gets relabeled to cell 4,
-    every instance of cell 5 in the movie will get relabeled to cell 4 as well.
+    Relabels each feature in a 4D npz while preserving relationships.
+    Eg, if cell 5 gets relabeled to cell 4, every instance of cell 5 in
+    the movie will get relabeled to cell 4 as well.
+
+    Npz should be 4D in shape (frames, y, x, channels).
+
+    Inputs:
+        full_npz_path: full path to npz to relabel. Used to load and then
+            save npz.
+        start_val: What label to begin relabeling with. 1 by default but
+            could be set to another value if needed for other purposes
+
+    Returns:
+        None (relabeled npzs are saved in place)
 
     '''
+    # load npz
+    npz = np.load(full_npz_path)
+
+    # load raw and annotations, but we only need to modify annotations
+    raw = npz['X'][()]
+    annotations = npz['y'][()]
+
+    # TODO: make sure that npz is 4D
+
+    # assumes channels_last
+    features = annotations.shape[-1]
+
+    # create new array to store the relabeled annotations
+    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
+
+    # features should be relabeled independently of each other
+    for f in range(features):
+
+        img_stack = annotations[:,:,:,f]
+
+        # get all unique values in this stack, excluding 0 (background)
+        unique_cells = np.unique(img_stack)
+        unique_cells = unique_cells[np.nonzero(unique_cells)]
+
+        # create array from starting value to starting value + number of cells to relabel
+        # ensures no labels are skipped
+        relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
+
+        # populate relabeled_annotations array with relabeled annotations for that frame
+        for cell_id, relabel_id in zip(unique_cells, relabel_ids):
+            relabeled_annotations[:,:,:,f] = np.where(img_stack == cell_id, relabel_id,
+                relabeled_annotations[:,:,:,f])
+
+    # overwrite original npz with relabeled npz (only the annotations have changed)
+    np.savez(full_npz_path, X = raw, y = relabeled_annotations)
+
     return None
 
 
