@@ -202,6 +202,6 @@ def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload
         print('\n')
 
         #add caliban url to list
-        filename_list.append("https://www.caliban.deepcell.org/" + input_bucket + "__" + output_bucket + "__" + subfolders + "__" + img)
+        filename_list.append("https://caliban.deepcell.org/" + input_bucket + "__" + output_bucket + "__" + subfolders + "__" + img)
 
     return filename_list
