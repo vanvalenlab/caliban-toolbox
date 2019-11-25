@@ -402,7 +402,10 @@ def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
     #assumes that these are new cells and that all prev labels have been assigned
     #only make as many new labels as needed
 
-    current_max = max(np.max(cells), np.max(relabeled_values)) + 1
+    if len(relabeled_values) > 0:
+        current_max = max(np.max(cells), np.max(relabeled_values)) + 1
+    else:
+        current_max = np.max(cells) + 1
 
     stringent_allowed = []
     for additional_needed in range(len(unmatched_cells)):
