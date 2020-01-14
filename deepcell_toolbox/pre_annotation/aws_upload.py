@@ -69,15 +69,15 @@ def connect_aws():
 
 def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
-    Creates an AWS s3 session with which to upload images.
-    
+    Uses an AWS s3 session to upload images.
+
     Args:
         folder_to_save: location in bucket where files will be put, used to make keys
         bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
         folder_to_upload: string, full path to folder where images to be uploaded are
         include_context: whether to return lists of previous and next images to be included in figure8 job
             (only for single 3D images)
-    
+
     Returns:
         lists of image urls (to be used to create a CSV file)
     '''
@@ -86,26 +86,6 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
 
     s3 = connect_aws()
 
-    uploaded_montages, prev_images, next_images = upload(s3, bucket_name, aws_folder, folder_to_upload, include_context)
-    return uploaded_montages, prev_images, next_images
-
-
-def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
-    '''
-    Uses an AWS s3 session to upload images.
-    
-    Args:
-        s3: boto3.Session client allows script to upload to the user's AWS acct
-        folder_to_save: location in bucket where files will be put, used to make keys
-        bucket_name: name of AWS s3 bucket, "figure-eight-deepcell" by default
-        folder_to_upload: string, full path to folder where images to be uploaded are
-        include_context: whether to return lists of previous and next images to be included in figure8 job
-            (only for single 3D images)
-    
-    Returns:
-        lists of image urls (to be used to create a CSV file)    
-    '''
-    
     #load the images from specified folder but not the json log file
     imgs_to_upload = get_img_names(folder_to_upload)
 
@@ -118,9 +98,9 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
     for img in imgs_to_upload:
 
         if include_context:
-            #frame number of image            
+            #frame number of image
             frame = int(img.split("frame_")[1].split(".png")[0])
-            
+
             if frame == 0:
                 #no previous image if it's the first frame in that position
                 prev_image_path = 'None'
@@ -128,20 +108,20 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
                 prev_image = img.split("frame_")[0] + "frame_" + str(frame - 1).zfill(3) + ".png"
                 prev_image_key = os.path.join(aws_folder, prev_image)
                 prev_image_path = os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, prev_image_key)
-                
+
             prev_images.append(prev_image_path)
-            
+
             #next image should have an identical name to current image, but frame is current image frame + 1
             next_image = img.split("frame_")[0] + "frame_" + str(frame + 1).zfill(3) + ".png"
             next_image_key = os.path.join(aws_folder, next_image)
             next_image_path = os.path.join("https://s3.us-east-2.amazonaws.com", bucket_name, next_image_key)
-            
+
             #if the next_image is not in the images we're uploading, current image is the last in that position
             if not next_image in imgs_to_upload:
                 next_image_path = 'None'
-                
+
             next_images.append(next_image_path)
-            
+
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
 
@@ -157,7 +137,8 @@ def upload(s3, bucket_name, aws_folder, folder_to_upload, include_context):
 
     return uploaded_images, prev_images, next_images
 
-def aws_caliban_upload(input_bucket, output_bucket, aws_folder, folder_to_upload):
+
+def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload):
     '''
     input_bucket = string, name of bucket where files will be uploaded
     output_bucket = string, name of bucket where files will be saved during annotation
@@ -168,19 +149,8 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, folder_to_upload
 
     s3 = connect_aws()
 
-    uploaded_files = caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload)
-    return uploaded_files
-
-
-def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload):
-    '''
-    s3 = boto3.Session client allows script to upload to the user's AWS acct
-    folder_to_save = string, location in bucket where files will be put, used to make keys
-    bucket_name = string, name of bucket
-    folder_to_upload = string, path to folder where images to be uploaded are
-    '''
-    #load the images from specified folder but not the json log file
-    imgs_to_upload = list_npzs_folder(folder_to_upload)
+     #load the images from specified folder but not the json log file
+    files_to_upload = list_npzs_folder(folder_to_upload)
 
     #create list of montages that were uploaded to pass to csv maker
     filename_list = []
@@ -189,19 +159,37 @@ def caliban_upload(s3, input_bucket, output_bucket, aws_folder, folder_to_upload
     subfolders = '__'.join(subfolders)
 
     #upload each image from that folder
-    for img in imgs_to_upload:
+    for img in files_to_upload:
 
         #set full path to image
         img_path = os.path.join(folder_to_upload, img)
 
         #set destination path
-        img_key = os.path.join(aws_folder, img)
+        img_key = os.path.join(aws_folder, stage, img)
 
         #upload
         s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
-        #add caliban url to list
-        filename_list.append("https://caliban.deepcell.org/" + input_bucket + "__" + output_bucket + "__" + subfolders + "__" + img)
+        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
+            output_bucket, subfolders, stage, img)
 
-    return filename_list
+        #add caliban url to list
+        filename_list.append(url)
+
+    return files_to_upload, filename_list
+
+def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
+    '''
+    Helper function to transfer files from one bucket/key to another. Used
+    in conjunction with pre_annotation.caliban_csv.create_next_CSV to create
+    the next stage of Caliban jobs without needing to download each result file.
+    '''
+
+    copy_source = {'Bucket': output_bucket,
+                    'Key': key_src}
+
+    s3.copy(copy_source, input_bucket, key_dst,
+        ExtraArgs={'ACL':'public-read'})
+
+
