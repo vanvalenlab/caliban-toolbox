@@ -740,7 +740,8 @@ overlap_frac = 0.2
 
 compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac)
 
-def compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac):
+
+def compute_crop_indices(img_shape, crop_size, overlap_frac):
     """ Determine how to crop the image.
 
     Inputs
@@ -758,25 +759,37 @@ def compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac):
     # compute overlap fraction in pixels
     row_overlap_pix = math.floor(crop_size[0] * overlap_frac)
 
-    # the first crop starts at zero
-    row_start_indices = np.zeros(1, dtype='int')
+    # crops start at pixel 0 (from padded image)
+    row_start_indices =np.arange(0, img_shape[0], crop_size[0])
 
-    # the next crop starts overlap_pix from the end of the first crop
-    row_start_value = crop_size[0] - row_overlap_pix
+    # crops end at crop_size + 2 * overlap pixels away from the start
+    row_end_indices = row_start_indices + (crop_size[0] + 2 * row_overlap_pix)
 
-    # the rest of the crops are equally spaced from the second crop
-    subsequent_row_starts = np.arange(row_start_value, img_shape[0] - row_overlap_pix, crop_size[0])
-
-    row_start_indices = np.concatenate((row_start_indices, subsequent_row_starts))
-
-    # the first crop ends at crop_size + overlap_pix
-    row_end_indices = np.full(1, crop_size[0] + row_overlap_pix)
-
-    # the rest of the crops end at crop_size + 2 * overlap_pix from the start
-    subsequent_row_ends = subsequent_row_starts + (crop_size[0] + 2 * row_overlap_pix)
-
-    row_end_indices = np.concatenate((row_end_indices, subsequent_row_ends))
-
-    row_padding = row_end_indices[-1] - test_img.shape[0]
+    row_padding = row_end_indices[-1] - img_shape[0]
 
     return row_start_indices, row_end_indices, row_padding
+
+
+def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
+    crop_num = len(row_start) * len(col_start)
+    crop_size_row = row_end[0] - row_start[0]
+    crop_size_col = col_end[0] - col_start
+
+    cropped_stack = np.zeros((crop_num, crop_size_row, crop_size_col, input_data.shape[2]))
+
+    padded_input = np.pad(input_data, padding, mode="constant", constant_values=0)
+    crop_counter = 0
+    for i in range(len(row_start)):
+        for j in range(len(col_start)):
+            cropped_stack[crop_counter, ...] = padded_input[row_start[i]:row_end[i], col_start[i]:col_end[i], :]
+
+    return cropped_stack, padded_input.shape
+
+
+def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
+
+    for i in range(len(cropped_x_data.shape[0])):
+        np.savez(os.path.join(save_dir, "{}_crop_{}.npz".format(file_base, i)),
+                              X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
+
+
