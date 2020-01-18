@@ -732,3 +732,51 @@ def relabel_npzs_folder(npz_dir, relabel_type = 'preserve', start_val = 1, thres
 
         elif relabel_type == 'predict':
             relabel_npz_zstack_prediction(full_npz_path, start_val, threshold)
+
+
+img_shape = np.zeros((230, 230)).shape
+crop_size = (20, 20)
+overlap_frac = 0.2
+
+compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac)
+
+def compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac):
+    """ Determine how to crop the image.
+
+    Inputs
+        test_img: shape of the image to be cropped
+        crop_size: size in pixels of the crop
+        overlap_frac: fraction that adjacent crops will overlap each other
+
+    Outputs:
+        row_start_indices: array of row coordinates for crop starts
+        row_end_indices: array of coordinates for crow crop ends
+        col_start_indices: array of column coordinates for crop starts
+        col_end_indices: array of column coordinates for crop ends
+    """
+
+    # compute overlap fraction in pixels
+    row_overlap_pix = math.floor(crop_size[0] * overlap_frac)
+
+    # the first crop starts at zero
+    row_start_indices = np.zeros(1, dtype='int')
+
+    # the next crop starts overlap_pix from the end of the first crop
+    row_start_value = crop_size[0] - row_overlap_pix
+
+    # the rest of the crops are equally spaced from the second crop
+    subsequent_row_starts = np.arange(row_start_value, img_shape[0] - row_overlap_pix, crop_size[0])
+
+    row_start_indices = np.concatenate((row_start_indices, subsequent_row_starts))
+
+    # the first crop ends at crop_size + overlap_pix
+    row_end_indices = np.full(1, crop_size[0] + row_overlap_pix)
+
+    # the rest of the crops end at crop_size + 2 * overlap_pix from the start
+    subsequent_row_ends = subsequent_row_starts + (crop_size[0] + 2 * row_overlap_pix)
+
+    row_end_indices = np.concatenate((row_end_indices, subsequent_row_ends))
+
+    row_padding = row_end_indices[-1] - test_img.shape[0]
+
+    return row_start_indices, row_end_indices, row_padding
