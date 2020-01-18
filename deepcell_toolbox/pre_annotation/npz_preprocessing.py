@@ -741,33 +741,32 @@ overlap_frac = 0.2
 compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac)
 
 
-def compute_crop_indices(img_shape, crop_size, overlap_frac):
+def compute_crop_indices(img_len, crop_size, overlap_frac):
     """ Determine how to crop the image.
 
     Inputs
-        test_img: shape of the image to be cropped
+        img_len: length of the image to be cropped
         crop_size: size in pixels of the crop
         overlap_frac: fraction that adjacent crops will overlap each other
 
     Outputs:
-        row_start_indices: array of row coordinates for crop starts
-        row_end_indices: array of coordinates for crow crop ends
-        col_start_indices: array of column coordinates for crop starts
-        col_end_indices: array of column coordinates for crop ends
+        start_indices: array of row coordinates for crop starts
+        end_indices: array of coordinates for crop ends
+        padding: number of pixels of padding at start and end of image
     """
 
     # compute overlap fraction in pixels
-    row_overlap_pix = math.floor(crop_size[0] * overlap_frac)
+    overlap_pix = math.floor(crop_size * overlap_frac)
 
     # crops start at pixel 0 (from padded image)
-    row_start_indices =np.arange(0, img_shape[0], crop_size[0])
+    start_indices = np.arange(0, img_len, crop_size)
 
     # crops end at crop_size + 2 * overlap pixels away from the start
-    row_end_indices = row_start_indices + (crop_size[0] + 2 * row_overlap_pix)
+    end_indices = start_indices + (crop_size + 2 * overlap_pix)
 
-    row_padding = row_end_indices[-1] - img_shape[0]
+    padding = end_indices[-1] - (img_len + overlap_pix)
 
-    return row_start_indices, row_end_indices, row_padding
+    return start_indices, end_indices, (overlap_pix, padding)
 
 
 def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
@@ -793,3 +792,21 @@ def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
                               X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
 
 
+def crop_npz(npz_name, base_dir, crop_size, overlap_frac):
+    npz = np.load(os.path.join(base_dir, npz_name))
+    X = npz["X"]
+    y = npz["y"]
+
+    row_start, row_end, row_padding = compute_crop_indices(img_len=X.shape[0], crop_size=crop_size[0],
+                                                                           overlap_frac=overlap_frac)
+
+    col_start, col_end, col_padding = compute_crop_indices(img_len=X.shape[1], crop_size=crop_size[1],
+                                                           overlap_frac=overlap_frac)
+
+    X_cropped = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
+                            padding=(row_padding, col_padding))
+
+    y_cropped = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
+                            padding=(row_padding, col_padding))
+
+    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=npz_name, save_dir=base_dir)
