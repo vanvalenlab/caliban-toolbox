@@ -734,13 +734,6 @@ def relabel_npzs_folder(npz_dir, relabel_type = 'preserve', start_val = 1, thres
             relabel_npz_zstack_prediction(full_npz_path, start_val, threshold)
 
 
-img_shape = np.zeros((230, 230)).shape
-crop_size = (20, 20)
-overlap_frac = 0.2
-
-compute_overlapping_crop_indices(img_shape, crop_size, overlap_frac)
-
-
 def compute_crop_indices(img_len, crop_size, overlap_frac):
     """ Determine how to crop the image.
 
@@ -772,7 +765,7 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
 def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
     crop_num = len(row_start) * len(col_start)
     crop_size_row = row_end[0] - row_start[0]
-    crop_size_col = col_end[0] - col_start
+    crop_size_col = col_end[0] - col_start[0]
 
     cropped_stack = np.zeros((crop_num, crop_size_row, crop_size_col, input_data.shape[2]))
 
@@ -787,7 +780,7 @@ def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
 
 def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
 
-    for i in range(len(cropped_x_data.shape[0])):
+    for i in range(cropped_x_data.shape[0]):
         np.savez(os.path.join(save_dir, "{}_crop_{}.npz".format(file_base, i)),
                               X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
 
@@ -803,10 +796,10 @@ def crop_npz(npz_name, base_dir, crop_size, overlap_frac):
     col_start, col_end, col_padding = compute_crop_indices(img_len=X.shape[1], crop_size=crop_size[1],
                                                            overlap_frac=overlap_frac)
 
-    X_cropped = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                            padding=(row_padding, col_padding))
+    X_cropped, padded_shape = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
+                            padding=(row_padding, col_padding, (0, 0)))
 
-    y_cropped = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                            padding=(row_padding, col_padding))
+    y_cropped, padded_shape = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
+                            padding=(row_padding, col_padding, (0, 0)))
 
     save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=npz_name, save_dir=base_dir)
