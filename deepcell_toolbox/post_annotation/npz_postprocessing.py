@@ -26,7 +26,8 @@
 
 import numpy as np
 import os
-import copy
+import json
+
 from skimage.segmentation import relabel_sequential
 
 
@@ -43,7 +44,6 @@ def combine_npz(npz_dir):
     files = os.listdir(npz_dir)
     files = [file for file in files if ".npz" in file]
     files.sort()
-    print(files)
 
     # load first npz to get dimensions, create stack to hold all npz
     test_npz = np.load(os.path.join(npz_dir, files[0]))["y"]
@@ -62,20 +62,26 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     """Takes a stack of annotated labels and stitches them together into a single image
 
     Inputs:
-        y_stack: stack of annotations
+        stack: stack of crops to be stitched together
+        padded_img_shape: shape of the original padded image
+        row_starts: list of row indices for crop starts
+        row_ends: list of row indices for crops ends
+        col_starts: list of col indices for col starts
+        col_ends: list of col indices for col ends
 
     Outputs:
-        stiched_image: stitched labels image"""
+        relabeled_stitch: stitched labels image, sequentially relabeled"""
 
     # Initialize image
     stitched_image = np.zeros(padded_img_shape)
 
     crop_counter = 0
 
+    # loop through all crops in the stack
     for row in range(len(row_starts)):
         for col in range(len(col_starts)):
 
-            # get crop and increment values to ensure unique labels across image
+            # get crop and increment values to ensure unique labels across final image
             crop = stack[crop_counter, ...]
             lowest_allowed_val = np.amax(stitched_image)
             crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
@@ -114,3 +120,38 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     return relabeled_stitch
 
 
+def reconstruct_npz(npz_dir, original_npz):
+    """High level function to combine npz crops together into a single stitched image
+
+    Inputs:
+        npz_dir: directory where cropped npz files are stored
+        original_npz: path to original npz file to load the channel data from
+
+    Outputs:
+        None (saves stitched npz to folder)"""
+
+    # combine all npz crops into a single stack
+    npz_stack = combine_npz(npz_dir)
+
+    # unpack JSON data
+    with open(os.path.join(npz_dir, "log_data.json")) as json_file:
+        log_data = json.load(json_file)
+
+    num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
+    col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
+    row_padding, col_padding = log_data["row_padding"], log_data["col_padding"]
+
+    if npz_stack.shape[0] != num_crops:
+        raise ValueError("Number of crops does not match: {} found, {} expected".format(npz_stack.shape[0], num_crops))
+
+    # stitch crops together into single contiguous image
+    stitched_image = stitch_crops(stack=npz_stack, padded_img_shape=padded_shape, row_starts=row_start,
+                                  row_ends=row_end, col_starts=col_start, col_ends=col_end)
+
+    # crop image down to original size
+    stitched_image = stitched_image[row_padding[0]:(-row_padding[1]), col_padding[0]:(-col_padding[1])]
+
+    # combine newly generated stitched labels with original channels data
+    original_npz = np.load(original_npz)
+
+    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_npz["X"], y=stitched_image)

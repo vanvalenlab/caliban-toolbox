@@ -32,6 +32,7 @@ import numpy as np
 import os
 import stat
 import sys
+import json
 
 from deepcell_toolbox.utils.io_utils import list_npzs_folder
 from tensorflow.python.keras import backend as K
@@ -791,7 +792,7 @@ def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
                               X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
 
 
-def crop_npz(npz_name, base_dir, crop_size, overlap_frac):
+def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
 
     # load the npz to be cropped
     npz = np.load(os.path.join(base_dir, npz_name))
@@ -813,5 +814,28 @@ def crop_npz(npz_name, base_dir, crop_size, overlap_frac):
                             padding=(row_padding, col_padding, (0, 0)))
 
     # save each resulting crop into a separate npz
-    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=npz_name, save_dir=base_dir)
+    save_dir = os.path.join(base_dir, save_name)
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+
+    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=npz_name,
+             save_dir=save_dir)
+
+    # save relevant parameters for reconstructing image
+    log_data = {}
+    log_data["num_crops"] = y_cropped.shape[0]
+    log_data["row_start"] = row_start.tolist()
+    log_data["row_end"] = row_end.tolist()
+    log_data["col_start"] = col_start.tolist()
+    log_data["col_end"] = col_end.tolist()
+    log_data["padded_shape"] = padded_shape
+    log_data["row_padding"] = [int(row_padding[0]), int(row_padding[1])]
+    log_data["col_padding"] = [int(col_padding[0]), int(col_padding[1])]
+
+    log_path = os.path.join(save_dir, "log_data.json")
+
+    with open(log_path, "w") as write_file:
+        json.dump(log_data, write_file)
+
+    return None
 
