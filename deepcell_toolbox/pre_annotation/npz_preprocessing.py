@@ -741,7 +741,7 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
     Inputs
         img_len: length of the image to be cropped
         crop_size: size in pixels of the crop
-        overlap_frac: fraction that adjacent crops will overlap each other
+        overlap_frac: fraction that adjacent crops will overlap each other on each side
 
     Outputs:
         start_indices: array of row coordinates for crop starts
@@ -752,19 +752,32 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
     # compute overlap fraction in pixels
     overlap_pix = math.floor(crop_size * overlap_frac)
 
-    # the crops start at pixel 0 (from padded image)
-    start_indices = np.arange(0, img_len, crop_size)
+    # the crops start at pixel 0, and are spaced crop_size - overlap_pix away from each other
+    start_indices = np.arange(0, img_len - overlap_pix, crop_size - overlap_pix)
 
-    # the crops end at crop_size + 2 * overlap pixels away from the start
-    end_indices = start_indices + (crop_size + 2 * overlap_pix)
+    # the crops each end crop_size away the start
+    end_indices = start_indices + crop_size
 
     # the padding for the final image is the amount that the last crop goes beyond the image size
-    padding = end_indices[-1] - (img_len + overlap_pix)
+    padding = end_indices[-1] - img_len
 
-    return start_indices, end_indices, (overlap_pix, padding)
+    return start_indices, end_indices, padding
 
 
 def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
+    """Crops an image into pieces according to supplied coordinates
+    Inputs
+        input_data: image of [rows, cols, channels] to be cropped
+        row_start: list of indices where row crops start
+        row_end: list of indices where row crops end
+        col_start: list of indices where col crops start
+        col_end: list of indices where col crops end
+        padding: tuple of ((row_left, row_right), (col_top, col_bottom), (channel_start, channel_end))
+                 which specifies the amount of padding to add the final image
+
+    Outputs:
+        cropped_stack: stack of cropped images of [crops, rows, cols, channels]
+        padded_image_shape: shape of the final padded image"""
 
     # initialize array to hold crops
     crop_num = len(row_start) * len(col_start)
@@ -808,10 +821,10 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
 
     # crop X and y images
     X_cropped, padded_shape = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                            padding=(row_padding, col_padding, (0, 0)))
+                                          padding=((0, row_padding), (0, col_padding), (0, 0)))
 
     y_cropped, padded_shape = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                            padding=(row_padding, col_padding, (0, 0)))
+                                          padding=((0, row_padding), (0, col_padding), (0, 0)))
 
     # save each resulting crop into a separate npz
     save_dir = os.path.join(base_dir, save_name)
@@ -829,8 +842,8 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
     log_data["col_start"] = col_start.tolist()
     log_data["col_end"] = col_end.tolist()
     log_data["padded_shape"] = padded_shape
-    log_data["row_padding"] = [int(row_padding[0]), int(row_padding[1])]
-    log_data["col_padding"] = [int(col_padding[0]), int(col_padding[1])]
+    log_data["row_padding"] = int(row_padding)
+    log_data["col_padding"] = int(col_padding)
 
     log_path = os.path.join(save_dir, "log_data.json")
 

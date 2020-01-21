@@ -149,7 +149,7 @@ def reconstruct_npz(npz_dir, original_npz):
                                   row_ends=row_end, col_starts=col_start, col_ends=col_end)
 
     # crop image down to original size
-    stitched_image = stitched_image[row_padding[0]:(-row_padding[1]), col_padding[0]:(-col_padding[1])]
+    stitched_image = stitched_image[0:(-row_padding), 0:(-col_padding)]
 
     # combine newly generated stitched labels with original channels data
     original_npz = np.load(original_npz)
