@@ -31,18 +31,19 @@ import json
 from skimage.segmentation import relabel_sequential
 
 
-def combine_npz(npz_dir):
+def combine_npz(npz_dir, file_header):
     """Reads all of the npzs in a directory, and aggregates them into a single stack
 
     Inputs:
         npz_dir: path to directory with npz files
+        file_header: pattern to search for in NPZ files
 
     Outputs:
         stack: combined array of all labeled images"""
 
     # get all npz files
     files = os.listdir(npz_dir)
-    files = [file for file in files if ".npz" in file]
+    files = [file for file in files if file_header in file]
     files.sort()
 
     # load first npz to get dimensions, create stack to hold all npz
@@ -130,16 +131,16 @@ def reconstruct_npz(npz_dir, original_npz):
     Outputs:
         None (saves stitched npz to folder)"""
 
-    # combine all npz crops into a single stack
-    npz_stack = combine_npz(npz_dir)
-
     # unpack JSON data
     with open(os.path.join(npz_dir, "log_data.json")) as json_file:
         log_data = json.load(json_file)
 
     num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
     col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
-    row_padding, col_padding = log_data["row_padding"], log_data["col_padding"]
+    row_padding, col_padding, file_header = log_data["row_padding"], log_data["col_padding"], log_data["file_header"]
+
+    # combine all npz crops into a single stack
+    npz_stack = combine_npz(npz_dir, file_header)
 
     if npz_stack.shape[0] != num_crops:
         raise ValueError("Number of crops does not match: {} found, {} expected".format(npz_stack.shape[0], num_crops))

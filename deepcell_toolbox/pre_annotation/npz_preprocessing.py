@@ -36,6 +36,8 @@ import json
 
 from deepcell_toolbox.utils.io_utils import list_npzs_folder
 from tensorflow.python.keras import backend as K
+from skimage.segmentation import relabel_sequential
+
 
 def slice_npz_batches(full_npz_path, batch_size, save_dir):
     '''
@@ -799,13 +801,23 @@ def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
 
 
 def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
+    """Takes a stack of cropped images and saves them into separate NPZs
+
+    Inputs
+        cropped_x_data: the cropped stack of imaging data
+        cropped_y_data: the cropped stack of labels
+        file_base: the header of each file name
+        save_dir: the directory to save cropped npz
+
+    Outputs:
+        None, saves directly to directory"""
 
     for i in range(cropped_x_data.shape[0]):
         np.savez(os.path.join(save_dir, "{}_crop_{}.npz".format(file_base, i)),
                               X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
 
 
-def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
+def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=True):
 
     # load the npz to be cropped
     npz = np.load(os.path.join(base_dir, npz_name))
@@ -826,12 +838,17 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
     y_cropped, padded_shape = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
                                           padding=((0, row_padding), (0, col_padding), (0, 0)))
 
+    if relabel:
+        for i in range(y_cropped.shape[0]):
+            y_cropped[i, ...], _, _ = relabel_sequential(y_cropped[i, ...])
+
     # save each resulting crop into a separate npz
     save_dir = os.path.join(base_dir, save_name)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=npz_name,
+    file_header = npz_name.split(".")[0]
+    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=file_header,
              save_dir=save_dir)
 
     # save relevant parameters for reconstructing image
@@ -844,6 +861,7 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac):
     log_data["padded_shape"] = padded_shape
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
+    log_data["file_header"] = file_header
 
     log_path = os.path.join(save_dir, "log_data.json")
 

@@ -89,4 +89,5 @@ def test_crop_and_stitch():
     assert(len(np.unique(stitched)) == len(np.unique(test_img)))
 
     # clean up
-    os.remove(base_dir + "test_folder")
+    shutil.rmtree(base_dir + "test_folder")
+    os.remove(base_dir + "test.npz")
