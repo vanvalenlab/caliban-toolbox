@@ -33,8 +33,8 @@ import xarray as xr
 from skimage.segmentation import relabel_sequential
 
 
-def combine_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops, num_channels,
-                  save_format):
+def load_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops, num_channels,
+               save_format):
     """Reads all of the cropped images from a directory, and aggregates them into a single stack
 
     Inputs:
@@ -50,9 +50,6 @@ def combine_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_cro
     Outputs:
         stack: combined array of all labeled images"""
 
-    if save_format not in ("npz", "xr"):
-        raise ValueError("invalid format type, expecting 'xr' or 'npz', got {}".format(save_format))
-
     stack = np.zeros((len(fov_names), num_col_crops*num_row_crops, row_crop_size, col_crop_size, num_channels))
 
     # loop through all npz files
@@ -62,7 +59,7 @@ def combine_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_cro
             for col in range(num_col_crops):
 
                 # if data was saved as npz, load X and y separately then combine
-                if format == "npz":
+                if save_format == "npz":
                     npz_path = os.path.join(crop_dir, "{}_row_{}_col_{}.npz".format(fov_name, row, col))
                     if os.path.exists(npz_path):
                         temp_npz = np.load(npz_path)
@@ -70,17 +67,17 @@ def combine_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_cro
                         stack[fov_idx, crop_idx, ..., -1:] = temp_npz["y"]
                     else:
                         # npz not generated, did not contain any labels, keep blank
-                        print("could not find npz {}".format(npz_path))
+                        print("could not find npz {}, skipping".format(npz_path))
 
                 # if data was saved as xr, load both X and y simultaneously
-                elif format == "xr":
-                    xr_path = os.path.join(crop_dir, "{}_row_{}_col_{}.nc".format(fov_name, row, col))
+                elif save_format == "xr":
+                    xr_path = os.path.join(crop_dir, "{}_row_{}_col_{}.xr".format(fov_name, row, col))
                     if os.path.exists(xr_path):
                         temp_xr = xr.open_dataarray(xr_path)
                         stack[fov_idx, crop_idx, ...] = temp_xr
                     else:
                         # npz not generated, did not contain any labels, keep blank
-                        print("could not find xr {}".format(xr_path))
+                        print("could not find xr {}, skippiing".format(xr_path))
                 crop_idx += 1
 
     return stack
@@ -161,6 +158,13 @@ def reconstruct_image_stack(crop_dir, save_format="xr"):
     Outputs:
         None (saves stitched xarray to folder)"""
 
+    # sanitize inputs
+    if not os.path.isdir(crop_dir):
+        raise ValueError("crop_dir not a valid directory: {}".format(crop_dir))
+
+    if save_format not in ["xr", "npz"]:
+        raise ValueError("save_format needs to be one of ['xr', 'npz'], got {}".format(save_format))
+
     # unpack JSON data
     with open(os.path.join(crop_dir, "log_data.json")) as json_file:
         log_data = json.load(json_file)
@@ -171,7 +175,7 @@ def reconstruct_image_stack(crop_dir, save_format="xr"):
     chan_names = log_data["chan_names"]
 
     # combine all npz crops into a single stack
-    crop_stack = combine_crops(crop_dir=crop_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
+    crop_stack = load_crops(crop_dir=crop_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
                                col_crop_size=col_end[0]-col_start[0], num_row_crops=len(row_start),
                                num_col_crops=len(col_start), num_channels=len(chan_names), save_format=save_format)
 
