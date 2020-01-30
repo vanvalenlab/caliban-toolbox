@@ -33,30 +33,54 @@ import xarray as xr
 from skimage.segmentation import relabel_sequential
 
 
-def combine_npz(npz_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops):
-    """Reads all of the npzs in a directory, and aggregates them into a single stack
+def combine_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops, num_channels,
+                  save_format):
+    """Reads all of the cropped images from a directory, and aggregates them into a single stack
 
     Inputs:
-        npz_dir: path to directory with npz files
-        file_header: pattern to search for in NPZ files
+        crop_dir: path to directory with cropped npz or xarray files
+        fov_names: list of unique fov names in dataset
+        row_crop_size: size of the crops in rows dimension
+        col_crop_size: size of the crops in cols dimension
+        num_row_crops: number of crops in rows dimension
+        num_col_cops: number of crops in cols dimension
+        num_channels: number of channels in imaging data
+        save_format: format in which the crops were saved
 
     Outputs:
         stack: combined array of all labeled images"""
 
-    stack = np.zeros((len(fov_names), num_col_crops*num_row_crops, row_crop_size, col_crop_size, 1))
+    if save_format not in ("npz", "xr"):
+        raise ValueError("invalid format type, expecting 'xr' or 'npz', got {}".format(save_format))
 
-    # loop through all npz files, load into appropriate position in stack
+    stack = np.zeros((len(fov_names), num_col_crops*num_row_crops, row_crop_size, col_crop_size, num_channels))
+
+    # loop through all npz files
     for fov_idx, fov_name in enumerate(fov_names):
         crop_idx = 0
         for row in range(num_row_crops):
             for col in range(num_col_crops):
-                npz_path = os.path.join(npz_dir, "{}_row_{}_col_{}.npz".format(fov_name, row, col))
-                if os.path.exists(npz_path):
-                    npz = np.load(npz_path)["y"]
-                    stack[fov_idx, crop_idx, ...] = npz
-                else:
-                    # npz not generated, did not contain any labels, keep blank
-                    print("could not find npz {}".format(npz_path))
+
+                # if data was saved as npz, load X and y separately then combine
+                if format == "npz":
+                    npz_path = os.path.join(crop_dir, "{}_row_{}_col_{}.npz".format(fov_name, row, col))
+                    if os.path.exists(npz_path):
+                        temp_npz = np.load(npz_path)
+                        stack[fov_idx, crop_idx, ..., :-1] = temp_npz["X"]
+                        stack[fov_idx, crop_idx, ..., -1:] = temp_npz["y"]
+                    else:
+                        # npz not generated, did not contain any labels, keep blank
+                        print("could not find npz {}".format(npz_path))
+
+                # if data was saved as xr, load both X and y simultaneously
+                elif format == "xr":
+                    xr_path = os.path.join(crop_dir, "{}_row_{}_col_{}.nc".format(fov_name, row, col))
+                    if os.path.exists(xr_path):
+                        temp_xr = xr.open_dataarray(xr_path)
+                        stack[fov_idx, crop_idx, ...] = temp_xr
+                    else:
+                        # npz not generated, did not contain any labels, keep blank
+                        print("could not find xr {}".format(xr_path))
                 crop_idx += 1
 
     return stack
@@ -74,18 +98,21 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
         col_ends: list of col indices for col ends
 
     Outputs:
-        relabeled_stitch: stitched labels image, sequentially relabeled"""
+        stitched_image: stitched labels image, sequentially relabeled"""
 
     # Initialize image
-    stitched_image = np.zeros(padded_img_shape[:-1] + [1])
-    # loop through all crops in the stack
+    stitched_image = np.zeros(padded_img_shape)
+
+    # loop through all crops in the stack for each image
     for img in range(stack.shape[0]):
         crop_counter = 0
         for row in range(len(row_starts)):
             for col in range(len(col_starts)):
 
-                # get crop and increment values to ensure unique labels across final image
+                # get current crop
                 crop = stack[img, crop_counter, ...]
+
+                # increment values to ensure unique labels across final image
                 lowest_allowed_val = np.amax(stitched_image[img, ...])
                 crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
 
@@ -95,6 +122,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
 
                 # get values of stitched image at location where crop will be placed
                 stitched_crop = stitched_image[img, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], :]
+
                 # loop through each cell in the crop to determine if it overlaps with another cell in full image
                 for cell in potential_overlap_cells:
 
@@ -116,43 +144,47 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
 
                 crop_counter += 1
 
-    # # relabel image so that all cell_ids are present
-    # relabeled_stitch, _, _ = relabel_sequential(stitched_image)
+    # relabel images to remove skipped cell_ids
+    for img in range(stitched_image.shape[0]):
+        stitched_image[img, ..., -1], _, _ = relabel_sequential(stitched_image[img, ..., -1])
 
     return stitched_image
 
 
-def reconstruct_npz(npz_dir, original_stack):
-    """High level function to combine npz crops together into a single stitched image
+def reconstruct_image_stack(crop_dir, save_format="xr"):
+    """High level function to combine crops together into a single stitched image
 
     Inputs:
-        npz_dir: directory where cropped npz files are stored
-        original_npz: path to original npz file to load the channel data from
+        crop_dir: directory where cropped files are stored
+        save_format: format that crops were saved in
 
     Outputs:
-        None (saves stitched npz to folder)"""
+        None (saves stitched xarray to folder)"""
 
     # unpack JSON data
-    with open(os.path.join(npz_dir, "log_data.json")) as json_file:
+    with open(os.path.join(crop_dir, "log_data.json")) as json_file:
         log_data = json.load(json_file)
 
     num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
     col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
     row_padding, col_padding, fov_names = log_data["row_padding"], log_data["col_padding"], log_data["fov_names"]
+    chan_names = log_data["chan_names"]
 
     # combine all npz crops into a single stack
-    npz_stack = combine_npz(npz_dir=npz_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
-                            col_crop_size=col_end[0]-col_start[0], num_row_crops=len(row_start),
-                            num_col_crops=len(col_start))
+    crop_stack = combine_crops(crop_dir=crop_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
+                               col_crop_size=col_end[0]-col_start[0], num_row_crops=len(row_start),
+                               num_col_crops=len(col_start), num_channels=len(chan_names), save_format=save_format)
 
     # stitch crops together into single contiguous image
-    stitched_images = stitch_crops(stack=npz_stack, padded_img_shape=padded_shape, row_starts=row_start,
+    stitched_images = stitch_crops(stack=crop_stack, padded_img_shape=padded_shape, row_starts=row_start,
                                    row_ends=row_end, col_starts=col_start, col_ends=col_end)
 
     # crop image down to original size
     stitched_images = stitched_images[:, 0:(-row_padding), 0:(-col_padding), :]
 
-    # combine newly generated stitched labels with original channels data
-    original_stack = xr.open_dataarray(original_stack)
+    stitched_xr = xr.DataArray(data=stitched_images,
+                               coords=[fov_names, range(stitched_images.shape[1]), range(stitched_images.shape[2]),
+                                       chan_names], dims=["fovs", "rows", "cols", "channels"])
 
-    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_stack.values[:, :, :, :-1], y=stitched_images)
+    stitched_xr.to_netcdf(os.path.join(crop_dir, "stitched_images.nc"))
+

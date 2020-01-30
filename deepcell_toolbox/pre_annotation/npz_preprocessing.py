@@ -738,17 +738,17 @@ def relabel_npzs_folder(npz_dir, relabel_type = 'preserve', start_val = 1, thres
 
 
 def compute_crop_indices(img_len, crop_size, overlap_frac):
-    """ Determine how to crop the image.
+    """ Determine how to crop the image across one dimension.
 
     Inputs
-        img_len: length of the image to be cropped
-        crop_size: size in pixels of the crop
+        img_len: length of the image for given dimension
+        crop_size: size in pixels of the crop in given dimension
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
     Outputs:
-        start_indices: array of row coordinates for crop starts
-        end_indices: array of coordinates for crop ends
-        padding: number of pixels of padding at start and end of image
+        start_indices: array of coordinates for where each crop will start in given dimension
+        end_indices: array of coordinates for where each crop will end in given dimension
+        padding: number of pixels of padding at start and end of image in given dimension
     """
 
     # compute overlap fraction in pixels
@@ -766,10 +766,11 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
     return start_indices, end_indices, padding
 
 
-def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
+def crop_helper(input_data, row_start, row_end, col_start, col_end, padding):
     """Crops an image into pieces according to supplied coordinates
+
     Inputs
-        input_data: image of [fovs, rows, cols, channels] to be cropped
+        input_data: xarray of [fovs, rows, cols, channels] to be cropped
         row_start: list of indices where row crops start
         row_end: list of indices where row crops end
         col_start: list of indices where col crops start
@@ -782,50 +783,69 @@ def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
         cropped_stack: stack of cropped images of [fovs, crops, rows, cols, channels]
         padded_image_shape: shape of the final padded image"""
 
-    # initialize array to hold crops
+    # determine key parameters of crop
     crop_num = len(row_start) * len(col_start)
     fov_num = input_data.shape[0]
     chan_num = input_data.shape[-1]
     crop_size_row = row_end[0] - row_start[0]
     crop_size_col = col_end[0] - col_start[0]
-    cropped_stack = np.zeros((fov_num, crop_num, crop_size_row, crop_size_col, chan_num))
 
-    # pad the input so that all crops are the same size
+    # create xarray to hold crops
+    cropped_stack = np.zeros((fov_num, crop_num, crop_size_row, crop_size_col, chan_num))
+    cropped_xr = xr.DataArray(data=cropped_stack, coords=[input_data.fovs, range(crop_num), range(crop_size_row),
+                                                          range(crop_size_col), input_data.channels],
+                              dims=["fovs", "crops", "rows", "cols", "channels"])
+
+    # pad the input to account for last crop
     padded_input = np.pad(input_data, padding, mode="constant", constant_values=0)
 
     # loop through rows and cols to generate crops
     crop_counter = 0
     for i in range(len(row_start)):
         for j in range(len(col_start)):
-            cropped_stack[:, crop_counter, ...] = padded_input[:, row_start[i]:row_end[i], col_start[j]:col_end[j], :]
+            cropped_xr[:, crop_counter, ...] = padded_input[:, row_start[i]:row_end[i], col_start[j]:col_end[j], :]
             crop_counter += 1
 
-    return cropped_stack, padded_input.shape
+    return cropped_xr, padded_input.shape
 
 
-def save_npz(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir):
-    """Takes a stack of cropped images and saves them into separate NPZs
+def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, save_format):
+    """Takes a stack of cropped images and saves each individually
 
     Inputs
-        cropped_data: the cropped stack of imaging data
-        fov_names: the header to use for each distinct FOV
+        cropped_data: the cropped xarray of imaging data [fovs, crops, rows, cols, channels]
+        fov_names: the name of each distinct FOV
         num_row_crops: the number of crops in the row dimension
         num_col_crops: the number of crops in the col dimension
-        save_dir: the directory to save cropped npz
+        save_dir: the directory to save cropped images
+        save_format: determine whether to use 'npz' or 'xr' format for saving
+
 
     Outputs:
         None, saves directly to directory"""
 
+    if save_format not in ["npz", "xr"]:
+        raise ValueError("save format must be one of 'xr', 'npz', got {}".format(save_format))
+
+    # loop through all crops in all images
     for img in range(cropped_data.shape[0]):
         crop_counter = 0
         for row in range(num_row_crops):
             for col in range(num_col_crops):
-                np.savez(os.path.join(save_dir, "{}_row_{}_col_{}.npz".format(fov_names[img], row, col)),
-                         X=cropped_data[img, crop_counter, ..., :-1], y=cropped_data[img, crop_counter, ..., -1:])
+
+                # determine what format to save the images in
+                if save_format == 'npz':
+                    np.savez(os.path.join(save_dir, "{}_row_{}_col_{}.npz".format(fov_names[img], row, col)),
+                             X=cropped_data[img, crop_counter, ..., :-1].values,
+                             y=cropped_data[img, crop_counter, ..., -1:].values)
+
+                elif save_format == 'xr':
+                    crop_xr = cropped_data[img, crop_counter]
+                    crop_xr.to_netcdf(os.path.join(save_dir, "{}_row_{}_col_{}.nc".format(fov_names[img], row, col)))
                 crop_counter += 1
 
 
-def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, relabel=True):
+def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, save_format="xr", relabel=True):
     """Takes in a stack of images and crops them into small pieces for easier annotation
 
     Inputs
@@ -833,6 +853,7 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, re
         folder_save: full path to folder to save crops into
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
+        save_format: determines whether the crops will be saved as xr or npz files
         relabel: boolean specifying wheether each crop will be relabeled independently from 1
 
     Outputs:
@@ -848,23 +869,24 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, re
     col_start, col_end, col_padding = compute_crop_indices(img_len=data_xr.shape[2], crop_size=crop_size[1],
                                                            overlap_frac=overlap_frac)
 
-    # crop X and y images
-    data_xr_cropped, padded_shape = crop_images(data_xr, row_start=row_start, row_end=row_end, col_start=col_start,
+    # crop images
+    data_xr_cropped, padded_shape = crop_helper(data_xr, row_start=row_start, row_end=row_end, col_start=col_start,
                                                 col_end=col_end,
                                                 padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
 
+    # relabel each crop so that all ids from 1 to n are present
     if relabel:
         for img in range(data_xr_cropped.shape[0]):
-            for crop in range(y_cropped.shape[1]):
-                data_xr_cropped[img, crop, ..., -1], _, _ = relabel_sequential(data_xr_cropped[img, crop, ..., -1])
+            for crop in range(data_xr_cropped.shape[1]):
+                data_xr_cropped[img, crop, ..., -1], _, _ = relabel_sequential(data_xr_cropped[img, crop, ..., -1].values)
 
-    # save each resulting crop into a separate npz
+    # save each resulting crop into a separate file
     if not os.path.isdir(folder_save):
         os.makedirs(folder_save)
 
-    fov_names = data_xr.points.values
-    save_npz(cropped_data=data_xr_cropped, fov_names=fov_names,
-             num_row_crops=len(row_start), num_col_crops=len(col_start), save_dir=folder_save)
+    fov_names = data_xr.fovs.values
+    save_crops(cropped_data=data_xr_cropped, fov_names=fov_names,num_row_crops=len(row_start),
+               num_col_crops=len(col_start), save_dir=folder_save, save_format=save_format)
 
     # save relevant parameters for reconstructing image
     log_data = {}
@@ -877,6 +899,7 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, re
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
     log_data["fov_names"] = fov_names.tolist()
+    log_data["chan_names"] = data_xr.channels.values.tolist()
 
     log_path = os.path.join(folder_save, "log_data.json")
 
