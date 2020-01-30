@@ -37,7 +37,7 @@ import json
 from deepcell_toolbox.utils.io_utils import list_npzs_folder
 from tensorflow.python.keras import backend as K
 from skimage.segmentation import relabel_sequential
-
+import xarray as xr
 
 def slice_npz_batches(full_npz_path, batch_size, save_dir):
     '''
@@ -803,67 +803,72 @@ def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
     return cropped_stack, padded_input.shape
 
 
-def save_npz(cropped_x_data, cropped_y_data, fov_names, num_row_crops, num_col_crops, save_dir):
+def save_npz(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir):
     """Takes a stack of cropped images and saves them into separate NPZs
 
     Inputs
-        cropped_x_data: the cropped stack of imaging data
-        cropped_y_data: the cropped stack of labels
+        cropped_data: the cropped stack of imaging data
         fov_names: the header to use for each distinct FOV
+        num_row_crops: the number of crops in the row dimension
+        num_col_crops: the number of crops in the col dimension
         save_dir: the directory to save cropped npz
 
     Outputs:
         None, saves directly to directory"""
 
-    for img in range(cropped_x_data.shape[0]):
+    for img in range(cropped_data.shape[0]):
         crop_counter = 0
         for row in range(num_row_crops):
             for col in range(num_col_crops):
                 np.savez(os.path.join(save_dir, "{}_row_{}_col_{}.npz".format(fov_names[img], row, col)),
-                         X=cropped_x_data[img, crop_counter, ...], y=cropped_y_data[img, crop_counter, ...])
+                         X=cropped_data[img, crop_counter, ..., :-1], y=cropped_data[img, crop_counter, ..., -1:])
                 crop_counter += 1
 
 
-def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=True):
-    # TODO add docstring
+def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, relabel=True):
+    """Takes in a stack of images and crops them into small pieces for easier annotation
+
+    Inputs
+        xarray_path: full path to xarray that will be loaded
+        folder_save: full path to folder to save crops into
+        crop_size: (row_crop, col_crop) tuple specifying shape of the crop
+        overlap_frac: fraction that crops will overlap each other on each edge
+        relabel: boolean specifying wheether each crop will be relabeled independently from 1
+
+    Outputs:
+        None, saves crops to specified directory"""
 
     # load the npz to be cropped
-    npz = np.load(os.path.join(base_dir, npz_name))
-    X = npz["X"]
-    y = npz["y"]
+    data_xr = xr.open_dataarray(xarray_path)
 
     # compute the start and end coordinates for the row and column crops
-    row_start, row_end, row_padding = compute_crop_indices(img_len=X.shape[1], crop_size=crop_size[0],
+    row_start, row_end, row_padding = compute_crop_indices(img_len=data_xr.shape[1], crop_size=crop_size[0],
                                                                            overlap_frac=overlap_frac)
 
-    col_start, col_end, col_padding = compute_crop_indices(img_len=X.shape[2], crop_size=crop_size[1],
+    col_start, col_end, col_padding = compute_crop_indices(img_len=data_xr.shape[2], crop_size=crop_size[1],
                                                            overlap_frac=overlap_frac)
 
     # crop X and y images
-    X_cropped, padded_shape = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                                          padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
-
-    y_cropped, padded_shape = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                                          padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
+    data_xr_cropped, padded_shape = crop_images(data_xr, row_start=row_start, row_end=row_end, col_start=col_start,
+                                                col_end=col_end,
+                                                padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
 
     if relabel:
-        for img in range(y_cropped.shape[0]):
+        for img in range(data_xr_cropped.shape[0]):
             for crop in range(y_cropped.shape[1]):
-                y_cropped[img, crop, ...], _, _ = relabel_sequential(y_cropped[img, crop, ...])
+                data_xr_cropped[img, crop, ..., -1], _, _ = relabel_sequential(data_xr_cropped[img, crop, ..., -1])
 
     # save each resulting crop into a separate npz
-    save_dir = os.path.join(base_dir, save_name)
-    if not os.path.isdir(save_dir):
-        os.makedirs(save_dir)
+    if not os.path.isdir(folder_save):
+        os.makedirs(folder_save)
 
-    # TODO change to take in name of each from xarray
-    file_header = npz_name.split(".")[0]
-    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, fov_names=list(range(X.shape[0])),
-             num_row_crops=len(row_start), num_col_crops=len(col_start), save_dir=save_dir)
+    fov_names = data_xr.points.values
+    save_npz(cropped_data=data_xr_cropped, fov_names=fov_names,
+             num_row_crops=len(row_start), num_col_crops=len(col_start), save_dir=folder_save)
 
     # save relevant parameters for reconstructing image
     log_data = {}
-    log_data["num_crops"] = y_cropped.shape[0]
+    log_data["num_crops"] = data_xr_cropped.shape[0]
     log_data["row_start"] = row_start.tolist()
     log_data["row_end"] = row_end.tolist()
     log_data["col_start"] = col_start.tolist()
@@ -871,9 +876,9 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=Tru
     log_data["padded_shape"] = padded_shape
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
-    log_data["fov_names"] = list(range(X.shape[0]))
+    log_data["fov_names"] = fov_names.tolist()
 
-    log_path = os.path.join(save_dir, "log_data.json")
+    log_path = os.path.join(folder_save, "log_data.json")
 
     with open(log_path, "w") as write_file:
         json.dump(log_data, write_file)

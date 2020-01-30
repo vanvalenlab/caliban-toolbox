@@ -28,6 +28,8 @@ import numpy as np
 import os
 import json
 
+import xarray as xr
+
 from skimage.segmentation import relabel_sequential
 
 
@@ -75,8 +77,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
         relabeled_stitch: stitched labels image, sequentially relabeled"""
 
     # Initialize image
-    stitched_image = np.zeros(padded_img_shape)
-
+    stitched_image = np.zeros(padded_img_shape[:-1] + [1])
     # loop through all crops in the stack
     for img in range(stack.shape[0]):
         crop_counter = 0
@@ -94,7 +95,6 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
 
                 # get values of stitched image at location where crop will be placed
                 stitched_crop = stitched_image[img, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], :]
-
                 # loop through each cell in the crop to determine if it overlaps with another cell in full image
                 for cell in potential_overlap_cells:
 
@@ -122,7 +122,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     return stitched_image
 
 
-def reconstruct_npz(npz_dir, original_npz):
+def reconstruct_npz(npz_dir, original_stack):
     """High level function to combine npz crops together into a single stitched image
 
     Inputs:
@@ -153,6 +153,6 @@ def reconstruct_npz(npz_dir, original_npz):
     stitched_images = stitched_images[:, 0:(-row_padding), 0:(-col_padding), :]
 
     # combine newly generated stitched labels with original channels data
-    original_npz = np.load(original_npz)
+    original_stack = xr.open_dataarray(original_stack)
 
-    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_npz["X"], y=stitched_images)
+    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_stack.values[:, :, :, :-1], y=stitched_images)
