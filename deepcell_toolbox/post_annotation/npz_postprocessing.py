@@ -31,7 +31,7 @@ import json
 from skimage.segmentation import relabel_sequential
 
 
-def combine_npz(npz_dir, file_header):
+def combine_npz(npz_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops):
     """Reads all of the npzs in a directory, and aggregates them into a single stack
 
     Inputs:
@@ -41,20 +41,21 @@ def combine_npz(npz_dir, file_header):
     Outputs:
         stack: combined array of all labeled images"""
 
-    # get all npz files
-    files = os.listdir(npz_dir)
-    files = [file for file in files if file_header in file]
-    files.sort()
-
-    # load first npz to get dimensions, create stack to hold all npz
-    test_npz = np.load(os.path.join(npz_dir, files[0]))["y"]
-    stack_num = len(files)
-    stack = np.zeros((stack_num,) + test_npz.shape[:-1] + (1, ))
+    stack = np.zeros((len(fov_names), num_col_crops*num_row_crops, row_crop_size, col_crop_size, 1))
 
     # loop through all npz files, load into appropriate position in stack
-    for idx, file in enumerate(files):
-        npz = np.load(os.path.join(npz_dir, file))
-        stack[idx, ...] = npz["y"]
+    for fov_idx, fov_name in enumerate(fov_names):
+        crop_idx = 0
+        for row in range(num_row_crops):
+            for col in range(num_col_crops):
+                npz_path = os.path.join(npz_dir, "{}_row_{}_col_{}.npz".format(fov_name, row, col))
+                if os.path.exists(npz_path):
+                    npz = np.load(npz_path)["y"]
+                    stack[fov_idx, crop_idx, ...] = npz
+                else:
+                    # npz not generated, did not contain any labels, keep blank
+                    print("could not find npz {}".format(npz_path))
+                crop_idx += 1
 
     return stack
 
@@ -76,49 +77,49 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     # Initialize image
     stitched_image = np.zeros(padded_img_shape)
 
-    crop_counter = 0
-
     # loop through all crops in the stack
-    for row in range(len(row_starts)):
-        for col in range(len(col_starts)):
+    for img in range(stack.shape[0]):
+        crop_counter = 0
+        for row in range(len(row_starts)):
+            for col in range(len(col_starts)):
 
-            # get crop and increment values to ensure unique labels across final image
-            crop = stack[crop_counter, ...]
-            lowest_allowed_val = np.amax(stitched_image)
-            crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
+                # get crop and increment values to ensure unique labels across final image
+                crop = stack[img, crop_counter, ...]
+                lowest_allowed_val = np.amax(stitched_image[img, ...])
+                crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
 
-            # get ids of cells in current crop
-            potential_overlap_cells = np.unique(crop)
-            potential_overlap_cells = potential_overlap_cells[np.nonzero(potential_overlap_cells)]
+                # get ids of cells in current crop
+                potential_overlap_cells = np.unique(crop)
+                potential_overlap_cells = potential_overlap_cells[np.nonzero(potential_overlap_cells)]
 
-            # get values of stitched image at location where crop will be placed
-            stitched_crop = stitched_image[row_starts[row]:row_ends[row], col_starts[col]:col_ends[col]]
+                # get values of stitched image at location where crop will be placed
+                stitched_crop = stitched_image[img, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], :]
 
-            # loop through each cell in the crop to determine if it overlaps with another cell in full image
-            for cell in potential_overlap_cells:
+                # loop through each cell in the crop to determine if it overlaps with another cell in full image
+                for cell in potential_overlap_cells:
 
-                # get cell ids present in stitched image at location of current cell in crop
-                stitched_overlap_vals, stitched_overlap_counts = np.unique(stitched_crop[crop == cell],
-                                                                           return_counts=True)
-                stitched_overlap_vals = stitched_overlap_vals[np.nonzero(stitched_overlap_vals)]
+                    # get cell ids present in stitched image at location of current cell in crop
+                    stitched_overlap_vals, stitched_overlap_counts = np.unique(stitched_crop[crop == cell],
+                                                                               return_counts=True)
+                    stitched_overlap_vals = stitched_overlap_vals[np.nonzero(stitched_overlap_vals)]
 
-                # if there are overlaps, determine which is greatest, and replace with that value
-                if len(stitched_overlap_vals) > 0:
-                    max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_vals)]
-                    crop[crop == cell] = max_overlap
+                    # if there are overlaps, determine which is greatest, and replace with that value
+                    if len(stitched_overlap_vals) > 0:
+                        max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_vals)]
+                        crop[crop == cell] = max_overlap
 
-            # combine the crop with the current values in the stitched image
-            combined_crop = np.where(stitched_crop > 0, stitched_crop, crop)
+                # combine the crop with the current values in the stitched image
+                combined_crop = np.where(stitched_crop > 0, stitched_crop, crop)
 
-            # use this combined crop to update the values of stitched image
-            stitched_image[row_starts[row]:row_ends[row], col_starts[col]:col_ends[col]] = combined_crop
+                # use this combined crop to update the values of stitched image
+                stitched_image[img, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col]] = combined_crop
 
-            crop_counter += 1
+                crop_counter += 1
 
-    # relabel image so that all cell_ids are present
-    relabeled_stitch, _, _ = relabel_sequential(stitched_image)
+    # # relabel image so that all cell_ids are present
+    # relabeled_stitch, _, _ = relabel_sequential(stitched_image)
 
-    return relabeled_stitch
+    return stitched_image
 
 
 def reconstruct_npz(npz_dir, original_npz):
@@ -137,22 +138,21 @@ def reconstruct_npz(npz_dir, original_npz):
 
     num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
     col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
-    row_padding, col_padding, file_header = log_data["row_padding"], log_data["col_padding"], log_data["file_header"]
+    row_padding, col_padding, fov_names = log_data["row_padding"], log_data["col_padding"], log_data["fov_names"]
 
     # combine all npz crops into a single stack
-    npz_stack = combine_npz(npz_dir, file_header)
-
-    if npz_stack.shape[0] != num_crops:
-        raise ValueError("Number of crops does not match: {} found, {} expected".format(npz_stack.shape[0], num_crops))
+    npz_stack = combine_npz(npz_dir=npz_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
+                            col_crop_size=col_end[0]-col_start[0], num_row_crops=len(row_start),
+                            num_col_crops=len(col_start))
 
     # stitch crops together into single contiguous image
-    stitched_image = stitch_crops(stack=npz_stack, padded_img_shape=padded_shape, row_starts=row_start,
-                                  row_ends=row_end, col_starts=col_start, col_ends=col_end)
+    stitched_images = stitch_crops(stack=npz_stack, padded_img_shape=padded_shape, row_starts=row_start,
+                                   row_ends=row_end, col_starts=col_start, col_ends=col_end)
 
     # crop image down to original size
-    stitched_image = stitched_image[0:(-row_padding), 0:(-col_padding)]
+    stitched_images = stitched_images[:, 0:(-row_padding), 0:(-col_padding), :]
 
     # combine newly generated stitched labels with original channels data
     original_npz = np.load(original_npz)
 
-    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_npz["X"], y=stitched_image)
+    np.savez(os.path.join(npz_dir, "stitched_npz.npz"), X=original_npz["X"], y=stitched_images)

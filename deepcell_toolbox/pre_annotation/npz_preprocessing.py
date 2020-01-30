@@ -769,23 +769,26 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
 def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
     """Crops an image into pieces according to supplied coordinates
     Inputs
-        input_data: image of [rows, cols, channels] to be cropped
+        input_data: image of [fovs, rows, cols, channels] to be cropped
         row_start: list of indices where row crops start
         row_end: list of indices where row crops end
         col_start: list of indices where col crops start
         col_end: list of indices where col crops end
-        padding: tuple of ((row_left, row_right), (col_top, col_bottom), (channel_start, channel_end))
-                 which specifies the amount of padding to add the final image
+        padding: tuple of ((fov_start, fov_end), (row_left, row_right),
+                           (col_top, col_bottom), (channel_start, channel_end))
+                which specifies the amount of padding to add the final image
 
     Outputs:
-        cropped_stack: stack of cropped images of [crops, rows, cols, channels]
+        cropped_stack: stack of cropped images of [fovs, crops, rows, cols, channels]
         padded_image_shape: shape of the final padded image"""
 
     # initialize array to hold crops
     crop_num = len(row_start) * len(col_start)
+    fov_num = input_data.shape[0]
+    chan_num = input_data.shape[-1]
     crop_size_row = row_end[0] - row_start[0]
     crop_size_col = col_end[0] - col_start[0]
-    cropped_stack = np.zeros((crop_num, crop_size_row, crop_size_col, input_data.shape[2]))
+    cropped_stack = np.zeros((fov_num, crop_num, crop_size_row, crop_size_col, chan_num))
 
     # pad the input so that all crops are the same size
     padded_input = np.pad(input_data, padding, mode="constant", constant_values=0)
@@ -794,30 +797,35 @@ def crop_images(input_data, row_start, row_end, col_start, col_end, padding):
     crop_counter = 0
     for i in range(len(row_start)):
         for j in range(len(col_start)):
-            cropped_stack[crop_counter, ...] = padded_input[row_start[i]:row_end[i], col_start[j]:col_end[j], :]
+            cropped_stack[:, crop_counter, ...] = padded_input[:, row_start[i]:row_end[i], col_start[j]:col_end[j], :]
             crop_counter += 1
 
     return cropped_stack, padded_input.shape
 
 
-def save_npz(cropped_x_data, cropped_y_data, file_base, save_dir):
+def save_npz(cropped_x_data, cropped_y_data, fov_names, num_row_crops, num_col_crops, save_dir):
     """Takes a stack of cropped images and saves them into separate NPZs
 
     Inputs
         cropped_x_data: the cropped stack of imaging data
         cropped_y_data: the cropped stack of labels
-        file_base: the header of each file name
+        fov_names: the header to use for each distinct FOV
         save_dir: the directory to save cropped npz
 
     Outputs:
         None, saves directly to directory"""
 
-    for i in range(cropped_x_data.shape[0]):
-        np.savez(os.path.join(save_dir, "{}_crop_{}.npz".format(file_base, i)),
-                              X=cropped_x_data[i, ...], y=cropped_y_data[i, ...])
+    for img in range(cropped_x_data.shape[0]):
+        crop_counter = 0
+        for row in range(num_row_crops):
+            for col in range(num_col_crops):
+                np.savez(os.path.join(save_dir, "{}_row_{}_col_{}.npz".format(fov_names[img], row, col)),
+                         X=cropped_x_data[img, crop_counter, ...], y=cropped_y_data[img, crop_counter, ...])
+                crop_counter += 1
 
 
 def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=True):
+    # TODO add docstring
 
     # load the npz to be cropped
     npz = np.load(os.path.join(base_dir, npz_name))
@@ -825,31 +833,33 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=Tru
     y = npz["y"]
 
     # compute the start and end coordinates for the row and column crops
-    row_start, row_end, row_padding = compute_crop_indices(img_len=X.shape[0], crop_size=crop_size[0],
+    row_start, row_end, row_padding = compute_crop_indices(img_len=X.shape[1], crop_size=crop_size[0],
                                                                            overlap_frac=overlap_frac)
 
-    col_start, col_end, col_padding = compute_crop_indices(img_len=X.shape[1], crop_size=crop_size[1],
+    col_start, col_end, col_padding = compute_crop_indices(img_len=X.shape[2], crop_size=crop_size[1],
                                                            overlap_frac=overlap_frac)
 
     # crop X and y images
     X_cropped, padded_shape = crop_images(X, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                                          padding=((0, row_padding), (0, col_padding), (0, 0)))
+                                          padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
 
     y_cropped, padded_shape = crop_images(y, row_start=row_start, row_end=row_end, col_start=col_start, col_end=col_end,
-                                          padding=((0, row_padding), (0, col_padding), (0, 0)))
+                                          padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
 
     if relabel:
-        for i in range(y_cropped.shape[0]):
-            y_cropped[i, ...], _, _ = relabel_sequential(y_cropped[i, ...])
+        for img in range(y_cropped.shape[0]):
+            for crop in range(y_cropped.shape[1]):
+                y_cropped[img, crop, ...], _, _ = relabel_sequential(y_cropped[img, crop, ...])
 
     # save each resulting crop into a separate npz
     save_dir = os.path.join(base_dir, save_name)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
+    # TODO change to take in name of each from xarray
     file_header = npz_name.split(".")[0]
-    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, file_base=file_header,
-             save_dir=save_dir)
+    save_npz(cropped_x_data=X_cropped, cropped_y_data=y_cropped, fov_names=list(range(X.shape[0])),
+             num_row_crops=len(row_start), num_col_crops=len(col_start), save_dir=save_dir)
 
     # save relevant parameters for reconstructing image
     log_data = {}
@@ -861,7 +871,7 @@ def crop_npz(npz_name, base_dir, save_name, crop_size, overlap_frac, relabel=Tru
     log_data["padded_shape"] = padded_shape
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
-    log_data["file_header"] = file_header
+    log_data["fov_names"] = list(range(X.shape[0]))
 
     log_path = os.path.join(save_dir, "log_data.json")
 
