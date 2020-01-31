@@ -1,1 +1,0 @@
-{"col_end": [200, 360, 520, 680, 840, 1000, 1160], "row_end": [200, 360, 520, 680, 840, 1000, 1160], "padded_shape": [1160, 1160, 1], "row_padding": 136, "file_header": "example_npz", "col_start": [0, 160, 320, 480, 640, 800, 960], "row_start": [0, 160, 320, 480, 640, 800, 960], "num_crops": 49, "col_padding": 136}
