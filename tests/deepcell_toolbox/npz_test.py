@@ -230,21 +230,39 @@ def test_crop_multichannel_data():
     os.remove((os.path.join(base_dir, "crop_multichannel_test_xr.xr")))
 
 
-# TODO: test stitch_image function
+def test_stitch_crops():
+    # generate stack of crops from image with grid pattern
+    test_xr = _blank_xr(2, 400, 400, 4)
 
-# # test combine npz
-# npz_dir = base_dir + "test_folder"
-# with open(os.path.join(npz_dir, "log_data.json")) as json_file:
-#     log_data = json.load(json_file)
-#
-# num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
-# col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
-# row_padding, col_padding, fov_names = log_data["row_padding"], log_data["col_padding"], log_data["fov_names"]
-#
-# # combine all npz crops into a single stack
-# npz_stack = npz_postprocessing.combine_npz(npz_dir=npz_dir, fov_names=fov_names, row_crop_size=row_end[0]-row_start[0],
-#                         col_crop_size=col_end[0]-col_start[0], num_row_crops=len(row_start),
-#                         num_col_crops=len(col_start))
+    cell_idx = 1
+    for i in range(12):
+        for j in range(11):
+            for img in range(test_xr.shape[0]):
+                test_xr[img, (i * 35):(i * 35 + 10 + img * 10), (j * 37):(j * 37 + 8 + img * 10), 3] = cell_idx
+            cell_idx += 1
+
+    # img params
+    fov_num, row_num, col_num, chan_num = 2, 400, 400, 1
+    crop_size, overlap_frac = 50, 0.2
+
+    # test only one crop
+    starts, ends, padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=crop_size,
+                                                                               overlap_frac=overlap_frac)
+    cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr, row_start=starts, row_end=ends,
+                                                    col_start=starts, col_end=ends,
+                                                    padding=((0, 0), (0, padding), (0, padding), (0, 0)))
+
+    stitched_img = npz_postprocessing.stitch_crops(stack=cropped.values, padded_img_shape=padded, row_starts=starts,
+                                                   row_ends=ends, col_starts=starts, col_ends=ends)
+
+    # trim padding
+    stitched_img = stitched_img[:, :-padding, :-padding, :]
+
+    # check that objects are at same location
+    assert(np.all(np.equal(stitched_img[:, :, :, 3] > 0, test_xr.values[:, :, :, 3] > 0)))
+
+    # check that same number of unique objects
+    assert(np.all(np.unique(stitched_img) == np.unique(test_xr.values)))
 
 
 # integration test for whole crop + stitch workflow pipeline
