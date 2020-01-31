@@ -169,7 +169,7 @@ def reconstruct_image_stack(crop_dir, save_format="xr"):
     with open(os.path.join(crop_dir, "log_data.json")) as json_file:
         log_data = json.load(json_file)
 
-    num_crops, row_start, row_end = log_data["num_crops"], log_data["row_start"], log_data["row_end"]
+    row_start, row_end = log_data["row_start"], log_data["row_end"]
     col_start, col_end, padded_shape = log_data["col_start"], log_data["col_end"], log_data["padded_shape"]
     row_padding, col_padding, fov_names = log_data["row_padding"], log_data["col_padding"], log_data["fov_names"]
     chan_names = log_data["chan_names"]

@@ -825,7 +825,7 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
         None, saves directly to directory"""
 
     if blank_labels == "separate":
-        os.makedirs(os.path.join(save_dir, "blank_labels"))
+        os.makedirs(os.path.join(save_dir, "separate"))
 
     # loop through all crops in all images
     for img in range(cropped_data.shape[0]):
@@ -960,7 +960,6 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
 
     # save relevant parameters for reconstructing image
     log_data = {}
-    log_data["num_crops"] = data_xr_cropped.shape[0]
     log_data["row_start"] = row_start.tolist()
     log_data["row_end"] = row_end.tolist()
     log_data["col_start"] = col_start.tolist()
