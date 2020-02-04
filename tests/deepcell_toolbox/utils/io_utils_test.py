@@ -68,42 +68,6 @@ class TestIOUtils(test.TestCase):
         subdirs = io_utils.get_immediate_subdirs(temp_dir)
         self.assertListEqual(subdirs, list(reversed(dirs)))
 
-    def test_count_image_files(self):
-        # no montage_mode
-        test_extensions = [
-            '.tif',
-            '.tiff',
-            '.TIF',
-            '.TIFF',
-            '.png',
-            '.PNG',
-        ]
-        temp_dir = self.get_temp_dir()
-        for i, e in enumerate(test_extensions):
-            img_name = 'phase_{}{}'.format(i, e)
-            _write_image(os.path.join(temp_dir, img_name), 30, 30)
-
-        self.assertEqual(io_utils.count_image_files(
-            temp_dir, montage_mode=False), 6)
-
-        # with montage mode
-        temp_dir = self.get_temp_dir()
-        # create subdirs
-        os.makedirs(os.path.join(temp_dir, 'a'))
-        os.makedirs(os.path.join(temp_dir, 'b'))
-        # write each image in both directories
-        for i, e in enumerate(test_extensions):
-            img_name = 'phase_{}{}'.format(i, e)
-            _write_image(os.path.join(temp_dir, 'a', img_name), 30, 30)
-            _write_image(os.path.join(temp_dir, 'b', img_name), 30, 30)
-
-        # write extra images in A that will be ignored
-        for i, e in enumerate(test_extensions):
-            img_name = 'phase2_{}{}'.format(i, e)
-            _write_image(os.path.join(temp_dir, 'a', img_name), 30, 30)
-
-        self.assertEqual(io_utils.count_image_files(
-            temp_dir, montage_mode=True), 6)
 
     def test_get_image(self):
         temp_dir = self.get_temp_dir()
@@ -158,48 +122,6 @@ class TestIOUtils(test.TestCase):
         self.assertEqual(len(img), 1)
         self.assertEqual(img[0].shape, (1, 1, 300, 300))
 
-    def test_save_model_output(self):
-        temp_dir = self.get_temp_dir()
-        batches = 1
-        features = 3
-        img_w, img_h, frames = 30, 30, 5
-
-        # test channels_last
-        K.set_image_data_format('channels_last')
-
-        # test 2D output
-        output = np.random.random((batches, img_w, img_h, features))
-        io_utils.save_model_output(output, temp_dir, 'test', channel=None)
-        # test saving only one channel
-        io_utils.save_model_output(output, temp_dir, 'test', channel=1)
-
-        # test 3D output
-        output = np.random.random((batches, frames, img_w, img_h, features))
-        io_utils.save_model_output(output, temp_dir, 'test', channel=None)
-        # test saving only one channel
-        io_utils.save_model_output(output, temp_dir, 'test', channel=1)
-
-        # test channels_first 2D
-        output = np.random.random((batches, features, img_w, img_h))
-        io_utils.save_model_output(output, temp_dir, 'test', channel=None,
-                                   data_format='channels_first')
-
-        # test channels_first 3D
-        output = np.random.random((batches, features, frames, img_w, img_h))
-        io_utils.save_model_output(output, temp_dir, 'test', channel=None,
-                                   data_format='channels_first')
-
-        # test bad channel
-        with self.assertRaises(ValueError):
-            output = np.random.random((batches, features, img_w, img_h))
-            io_utils.save_model_output(output, temp_dir, 'test', channel=-1)
-            io_utils.save_model_output(output, temp_dir, 'test',
-                                       channel=features + 1)
-
-        # test no output directory
-        with self.assertRaises(FileNotFoundError):
-            bad_dir = os.path.join(temp_dir, 'test')
-            io_utils.save_model_output(output, bad_dir, 'test', channel=None)
 
 if __name__ == '__main__':
     test.main()
