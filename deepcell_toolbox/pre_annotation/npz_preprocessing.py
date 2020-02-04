@@ -886,7 +886,7 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
 
 
 def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, blank_labels="skip",
-                           save_format="xr", relabel=True):
+                           save_format="xr", relabel=True, test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Inputs
@@ -897,6 +897,7 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
         blank_labels: flag to determine what to do with empty labels. One of [skip, include, separate]
         save_format: determines whether the crops will be saved as xr or npz files
         relabel: boolean specifying wheether each crop will be relabeled independently from 1
+        test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
     Outputs:
         None, saves crops to specified directory"""
@@ -932,6 +933,10 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
     if "channels" not in data_xr.dims:
         raise ValueError("xarray does not contained channels index, found {}".format(data_xr.dims))
 
+    # check if testing or running all samples
+    if test_parameters:
+        data_xr = data_xr[:1, ...]
+
     # compute the start and end coordinates for the row and column crops
     row_start, row_end, row_padding = compute_crop_indices(img_len=data_xr.shape[1], crop_size=crop_size[0],
                                                                            overlap_frac=overlap_frac)
@@ -954,11 +959,8 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
     if not os.path.isdir(folder_save):
         os.makedirs(folder_save)
 
-    fov_names = data_xr.fovs.values
-    save_crops(cropped_data=data_xr_cropped, fov_names=fov_names, num_row_crops=len(row_start),
-               num_col_crops=len(col_start), save_dir=folder_save, save_format=save_format, blank_labels=blank_labels)
-
     # save relevant parameters for reconstructing image
+    fov_names = data_xr.fovs.values
     log_data = {}
     log_data["row_start"] = row_start.tolist()
     log_data["row_end"] = row_end.tolist()
@@ -970,10 +972,16 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
     log_data["fov_names"] = fov_names.tolist()
     log_data["chan_names"] = data_xr.channels.values.tolist()
 
-    log_path = os.path.join(folder_save, "log_data.json")
+    # don't save to disk, return values
+    if test_parameters:
+        return data_xr_cropped, log_data
+    else:
+        save_crops(cropped_data=data_xr_cropped, fov_names=fov_names, num_row_crops=len(row_start),
+                   num_col_crops=len(col_start), save_dir=folder_save, save_format=save_format, blank_labels=blank_labels)
+        log_path = os.path.join(folder_save, "log_data.json")
 
-    with open(log_path, "w") as write_file:
-        json.dump(log_data, write_file)
+        with open(log_path, "w") as write_file:
+            json.dump(log_data, write_file)
 
-    return None
+        return None
 
