@@ -33,7 +33,6 @@ import re
 import numpy as np
 from skimage.io import imread
 from skimage.external.tifffile import TiffFile
-from tensorflow.python.keras import backend as K
 
 
 def sorted_nicely(l):
@@ -63,12 +62,11 @@ def nikon_getfiles(direc_name, channel_name):
     return imgfiles
 
 
-def get_images_from_directory(data_location, channel_names):
+def get_images_from_directory(data_location, channel_names, data_format="channels_last"):
     """
     Read all images from directory with channel_name in the filename
     Return them in a numpy array
     """
-    data_format = K.image_data_format()
     img_list_channels = []
     for channel in channel_names:
         img_list_channels.append(nikon_getfiles(data_location, channel))

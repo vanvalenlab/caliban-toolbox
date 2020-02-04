@@ -37,7 +37,6 @@ import os
 import numpy as np
 from skimage.io import imread
 from skimage.external.tifffile import TiffFile
-from tensorflow.python.keras import backend as K
 
 from deepcell_toolbox.utils.misc_utils import sorted_nicely
 
