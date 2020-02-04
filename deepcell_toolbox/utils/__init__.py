@@ -29,12 +29,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from deepcell_toolbox.utils import dctb_data_utils
-#from deepcell_toolbox.utils import dctf_data_utils
-#from deepcell_toolbox.utils import retinanet_anchor_utils
+
 from deepcell_toolbox.utils import io_utils
 from deepcell_toolbox.utils import misc_utils
-from deepcell_toolbox.utils import transform_utils
 from deepcell_toolbox.utils import utils
 from deepcell_toolbox.utils import widget_utils
 
