@@ -53,22 +53,6 @@ def _write_image(filepath, img_w=30, img_h=30):
 
 class TestIOUtils(test.TestCase):
 
-    def test_get_immediate_subdirs(self):
-        dirs = []
-        temp_dir = self.get_temp_dir()
-        self.addCleanup(shutil.rmtree, temp_dir)
-        for x in range(2, -1, -1):  # iterate backwards to test sorting
-            sub_dir = os.path.join(temp_dir, str(x))
-            try:
-                os.makedirs(sub_dir)
-            except OSError as err:
-                if err.errno != os.errno.EEXIST:
-                    raise
-            dirs.append(str(x))
-        subdirs = io_utils.get_immediate_subdirs(temp_dir)
-        self.assertListEqual(subdirs, list(reversed(dirs)))
-
-
     def test_get_image(self):
         temp_dir = self.get_temp_dir()
         # test tiff files
@@ -93,17 +77,6 @@ class TestIOUtils(test.TestCase):
         self.assertListEqual(multi_images, ['multi1.tif', 'multi2.tif'])
         no_images = io_utils.nikon_getfiles(temp_dir, 'bad_channel_name')
         self.assertListEqual(no_images, [])
-
-    def test_get_image_sizes(self):
-        temp_dir = self.get_temp_dir()
-        _write_image(os.path.join(temp_dir, 'image1.png'), 300, 300)
-        _write_image(os.path.join(temp_dir, 'image2.png'), 300, 300)
-        # test with single channel name
-        size = io_utils.get_image_sizes(temp_dir, ['image1'])
-        self.assertEqual(size, (300, 300))
-        # test with multiple channel names
-        sizes = io_utils.get_image_sizes(temp_dir, ['image1', 'image2'])
-        self.assertEqual(sizes, (300, 300))
 
     def test_get_images_from_directory(self):
         temp_dir = self.get_temp_dir()
