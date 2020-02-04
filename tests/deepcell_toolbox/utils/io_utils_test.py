@@ -32,51 +32,51 @@ import os
 import shutil
 
 import numpy as np
-from tensorflow.python.keras.preprocessing.image import array_to_img
-from tensorflow.python.platform import test
+# from tensorflow.python.keras.preprocessing.image import array_to_img
+# from tensorflow.python.platform import test
 from skimage.external import tifffile as tiff
 
 from deepcell_toolbox.utils import io_utils
 
 
-def _write_image(filepath, img_w=30, img_h=30):
-    bias = np.random.rand(img_w, img_h, 1) * 64
-    variance = np.random.rand(img_w, img_h, 1) * (255 - 64)
-    imarray = np.random.rand(img_w, img_h, 1) * variance + bias
-    if filepath.lower().endswith('tif') or filepath.lower().endswith('tiff'):
-        tiff.imsave(filepath, imarray[:, :, 0])
-    else:
-        img = array_to_img(imarray, scale=False, data_format='channels_last')
-        img.save(filepath)
+# def _write_image(filepath, img_w=30, img_h=30):
+#     bias = np.random.rand(img_w, img_h, 1) * 64
+#     variance = np.random.rand(img_w, img_h, 1) * (255 - 64)
+#     imarray = np.random.rand(img_w, img_h, 1) * variance + bias
+#     if filepath.lower().endswith('tif') or filepath.lower().endswith('tiff'):
+#         tiff.imsave(filepath, imarray[:, :, 0])
+#     else:
+#         img = array_to_img(imarray, scale=False, data_format='channels_last')
+#         img.save(filepath)
+#
 
-
-class TestIOUtils(test.TestCase):
-
-    def test_get_image(self):
-        temp_dir = self.get_temp_dir()
-        # test tiff files
-        test_img_path = os.path.join(temp_dir, 'phase.tif')
-        _write_image(test_img_path, 300, 300)
-        test_img = io_utils.get_image(test_img_path)
-        self.assertEqual(np.asarray(test_img).shape, (300, 300))
-        # test png files
-        test_img_path = os.path.join(temp_dir, 'feature_0.png')
-        _write_image(test_img_path, 400, 400)
-        test_img = io_utils.get_image(test_img_path)
-        self.assertEqual(np.asarray(test_img).shape, (400, 400))
-
-    def test_nikon_getfiles(self):
-        temp_dir = self.get_temp_dir()
-        for filename in ('channel.tif', 'multi1.tif', 'multi2.tif'):
-            _write_image(os.path.join(temp_dir, filename), 300, 300)
-
-        images = io_utils.nikon_getfiles(temp_dir, 'channel')
-        self.assertListEqual(images, ['channel.tif'])
-        multi_images = io_utils.nikon_getfiles(temp_dir, 'multi')
-        self.assertListEqual(multi_images, ['multi1.tif', 'multi2.tif'])
-        no_images = io_utils.nikon_getfiles(temp_dir, 'bad_channel_name')
-        self.assertListEqual(no_images, [])
-
-
-if __name__ == '__main__':
-    test.main()
+# class TestIOUtils(test.TestCase):
+#
+#     def test_get_image(self):
+#         temp_dir = self.get_temp_dir()
+#         # test tiff files
+#         test_img_path = os.path.join(temp_dir, 'phase.tif')
+#         _write_image(test_img_path, 300, 300)
+#         test_img = io_utils.get_image(test_img_path)
+#         self.assertEqual(np.asarray(test_img).shape, (300, 300))
+#         # test png files
+#         test_img_path = os.path.join(temp_dir, 'feature_0.png')
+#         _write_image(test_img_path, 400, 400)
+#         test_img = io_utils.get_image(test_img_path)
+#         self.assertEqual(np.asarray(test_img).shape, (400, 400))
+#
+#     def test_nikon_getfiles(self):
+#         temp_dir = self.get_temp_dir()
+#         for filename in ('channel.tif', 'multi1.tif', 'multi2.tif'):
+#             _write_image(os.path.join(temp_dir, filename), 300, 300)
+#
+#         images = io_utils.nikon_getfiles(temp_dir, 'channel')
+#         self.assertListEqual(images, ['channel.tif'])
+#         multi_images = io_utils.nikon_getfiles(temp_dir, 'multi')
+#         self.assertListEqual(multi_images, ['multi1.tif', 'multi2.tif'])
+#         no_images = io_utils.nikon_getfiles(temp_dir, 'bad_channel_name')
+#         self.assertListEqual(no_images, [])
+#
+#
+# if __name__ == '__main__':
+#     test.main()
