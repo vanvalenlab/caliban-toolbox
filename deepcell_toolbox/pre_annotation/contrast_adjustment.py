@@ -36,7 +36,7 @@ import scipy
 import stat
 import sys
 
-from deepcell_toolbox.utils.io_utils import get_image, get_images_from_directory, get_img_names
+from deepcell_toolbox.utils.io_utils import get_image, get_img_names
 from imageio import imread, imwrite
 from scipy import ndimage
 from skimage import filters

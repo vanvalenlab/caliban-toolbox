@@ -78,23 +78,6 @@ class TestIOUtils(test.TestCase):
         no_images = io_utils.nikon_getfiles(temp_dir, 'bad_channel_name')
         self.assertListEqual(no_images, [])
 
-    def test_get_images_from_directory(self):
-        temp_dir = self.get_temp_dir()
-        _write_image(os.path.join(temp_dir, 'image.png'), 300, 300)
-        # test channels_last
-        K.set_image_data_format('channels_last')
-        img = io_utils.get_images_from_directory(temp_dir, ['image'])
-        self.assertIsInstance(img, list)
-        self.assertEqual(len(img), 1)
-        self.assertEqual(img[0].shape, (1, 300, 300, 1))
-
-        # test channels_last
-        K.set_image_data_format('channels_first')
-        img = io_utils.get_images_from_directory(temp_dir, ['image'])
-        self.assertIsInstance(img, list)
-        self.assertEqual(len(img), 1)
-        self.assertEqual(img[0].shape, (1, 1, 300, 300))
-
 
 if __name__ == '__main__':
     test.main()
