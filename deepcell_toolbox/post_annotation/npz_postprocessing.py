@@ -63,8 +63,8 @@ def load_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops,
                     npz_path = os.path.join(crop_dir, "{}_row_{}_col_{}.npz".format(fov_name, row, col))
                     if os.path.exists(npz_path):
                         temp_npz = np.load(npz_path)
-                        stack[fov_idx, crop_idx, ..., :-1] = temp_npz["X"]
-                        stack[fov_idx, crop_idx, ..., -1:] = temp_npz["y"]
+                        stack[fov_idx:(fov_idx + 1), crop_idx, ..., :-1] = temp_npz["X"]
+                        stack[fov_idx:(fov_idx + 1), crop_idx, ..., -1:] = temp_npz["y"]
                     else:
                         # npz not generated, did not contain any labels, keep blank
                         print("could not find npz {}, skipping".format(npz_path))
@@ -74,7 +74,7 @@ def load_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops,
                     xr_path = os.path.join(crop_dir, "{}_row_{}_col_{}.xr".format(fov_name, row, col))
                     if os.path.exists(xr_path):
                         temp_xr = xr.open_dataarray(xr_path)
-                        stack[fov_idx, crop_idx, ...] = temp_xr
+                        stack[fov_idx:(fov_idx + 1), crop_idx, ...] = temp_xr
                     else:
                         # npz not generated, did not contain any labels, keep blank
                         print("could not find xr {}, skippiing".format(xr_path))

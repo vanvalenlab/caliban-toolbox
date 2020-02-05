@@ -837,7 +837,7 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
                 crop_id = "{}_row_{}_col_{}".format(fov_names[img], row, col)
 
                 # determine if labels are blank
-                labels = cropped_data[img, crop_counter, ..., -1:].values
+                labels = cropped_data[img:(img + 1), crop_counter, ..., -1:].values
                 if np.sum(np.nonzero(labels)) == 0:
 
                     # blank labels get saved to separate folder
@@ -847,10 +847,11 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
 
                         # save images as either npz or xarray
                         if save_format == 'npz':
-                            np.savez(save_path + ".npz", X=cropped_data[img, crop_counter, ..., :-1].values, y=labels)
+                            np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
+                                     y=labels)
 
                         elif save_format == 'xr':
-                            crop_xr = cropped_data[img, crop_counter]
+                            crop_xr = cropped_data[img:(img + 1), crop_counter]
                             crop_xr.to_netcdf(save_path + ".xr")
 
                     # blank labels don't get saved, empty area of tissue
@@ -864,10 +865,11 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
 
                         # save images as either npz or xarray
                         if save_format == 'npz':
-                            np.savez(save_path + ".npz", X=cropped_data[img, crop_counter, ..., :-1].values, y=labels)
+                            np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
+                                     y=labels)
 
                         elif save_format == 'xr':
-                            crop_xr = cropped_data[img, crop_counter]
+                            crop_xr = cropped_data[img:(img + 1), crop_counter]
                             crop_xr.to_netcdf(save_path + ".xr")
 
                 else:
@@ -876,10 +878,11 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
 
                     # save images as either npz or xarray
                     if save_format == 'npz':
-                        np.savez(save_path + ".npz", X=cropped_data[img, crop_counter, ..., :-1].values, y=labels)
+                        np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
+                                 y=labels)
 
                     elif save_format == 'xr':
-                        crop_xr = cropped_data[img, crop_counter]
+                        crop_xr = cropped_data[img:(img + 1), crop_counter]
                         crop_xr.to_netcdf(save_path + ".xr")
 
                 crop_counter += 1
@@ -928,7 +931,11 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
         raise ValueError("data_xr does not have 4 dimensions, found {}".format(data_xr.shape))
 
     if "fovs" not in data_xr.dims:
-        raise ValueError("xarray does not contained fovs index, found {}".format(data_xr.dims))
+        if "points" in data_xr.dims:
+            data_xr = data_xr.rename({"points": "fovs"})
+            print("renaming from points to fovs")
+        else:
+            raise ValueError("xarray does not contained fovs or points index, found {}".format(data_xr.dims))
 
     if "channels" not in data_xr.dims:
         raise ValueError("xarray does not contained channels index, found {}".format(data_xr.dims))
