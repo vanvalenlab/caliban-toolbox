@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 # Install necessary modules
 RUN pip install --no-cache-dir Cython==0.24.1 mock==1.3.0
 RUN pip install git+https://github.com/jfrelinger/cython-munkres-wrapper
-RUN pip install git+git://github.com/angelolab/segmentation.git@v0.2.2
+RUN pip install git+git://github.com/angelolab/segmentation.git@456fb35b5436321fe59bc2fbefcfd8ccfe7f049a
 
 # Copy the requirements.txt and install the dependencies
 COPY setup.py requirements.txt /opt/deepcell-toolbox/
