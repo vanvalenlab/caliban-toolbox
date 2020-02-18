@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -43,12 +43,12 @@ from sklearn.model_selection import train_test_split
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.utils import to_categorical
 
-from deepcell_toolbox.utils.io_utils import get_image
-from deepcell_toolbox.utils.io_utils import get_image_sizes
-from deepcell_toolbox.utils.io_utils import nikon_getfiles
-from deepcell_toolbox.utils.io_utils import get_immediate_subdirs
-from deepcell_toolbox.utils.misc_utils import sorted_nicely
-from deepcell_toolbox.utils.transform_utils import distance_transform_2d
+from caliban_toolbox.utils.io_utils import get_image
+from caliban_toolbox.utils.io_utils import get_image_sizes
+from caliban_toolbox.utils.io_utils import nikon_getfiles
+from caliban_toolbox.utils.io_utils import get_immediate_subdirs
+from caliban_toolbox.utils.misc_utils import sorted_nicely
+from caliban_toolbox.utils.transform_utils import distance_transform_2d
 
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'

@@ -18,7 +18,7 @@ install:
   - pip install pytest pytest-cov==2.5.1 pytest-pep8 coveralls
 
 script:
-  - python -m pytest --cov=deepcell_toolbox --pep8 deepcell_toolbox tests
+  - python -m pytest --cov=caliban_toolbox --pep8 caliban_toolbox tests
 
 jobs:
   include:

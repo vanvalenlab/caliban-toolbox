@@ -33,7 +33,7 @@ from skimage.measure import label
 from tensorflow.python.platform import test
 from tensorflow.python.keras import backend as K
 
-from deepcell_toolbox.utils import transform_utils
+from caliban_toolbox.utils import transform_utils
 
 
 def _get_image(img_h=300, img_w=300):

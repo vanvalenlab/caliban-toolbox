@@ -23,42 +23,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for tracking_utils"""
+"""Tests for misc_utils"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 from tensorflow.python.platform import test
 
-from deepcell_toolbox.utils import tracking_utils
+from caliban_toolbox.utils import misc_utils
 
 
-def _get_image(img_h=300, img_w=300):
-    bias = np.random.rand(img_w, img_h) * 64
-    variance = np.random.rand(img_w, img_h) * (255 - 64)
-    img = np.random.rand(img_w, img_h) * variance + bias
-    return img
+class MiscUtilsTest(test.TestCase):
+    def test_sorted_nicely(self):
+        # test image file sorting
+        expected = ['test_001_dapi', 'test_002_dapi', 'test_003_dapi']
+        unsorted = ['test_003_dapi', 'test_001_dapi', 'test_002_dapi']
+        self.assertListEqual(expected, misc_utils.sorted_nicely(unsorted))
+        # test montage folder sorting
+        expected = ['test_0_0', 'test_1_0', 'test_1_1']
+        unsorted = ['test_1_1', 'test_0_0', 'test_1_0']
+        self.assertListEqual(expected, misc_utils.sorted_nicely(unsorted))
 
-
-class TrackingUtilsTests(test.TestCase):
-
-    def test_count_pairs(self):
-        batches = 1
-        frames = 2
-        classes = 4
-        prob = 0.5
-        expected = batches * frames * classes * (classes + 1) / prob
-
-        # channels_last
-        y = np.random.randint(low=0, high=classes + 1,
-                              size=(batches, frames, 30, 30, 1))
-        pairs = tracking_utils.count_pairs(y, same_probability=prob)
-        self.assertEqual(pairs, expected)
-
-        # channels_first
-        y = np.random.randint(low=0, high=classes + 1,
-                              size=(batches, 1, frames, 30, 30))
-        pairs = tracking_utils.count_pairs(
-            y, same_probability=prob, data_format='channels_first')
-        self.assertEqual(pairs, expected)
+if __name__ == '__main__':
+    test.main()

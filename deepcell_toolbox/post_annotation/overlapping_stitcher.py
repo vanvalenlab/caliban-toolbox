@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -37,7 +37,7 @@ import sys
 import stat
 
 from imageio import imread, imwrite
-from deepcell_toolbox.utils.io_utils import get_image, get_img_names
+from caliban_toolbox.utils.io_utils import get_image, get_img_names
 
 def overlapping_stitcher_core(pieces_dir, 
                                  save_dir, 

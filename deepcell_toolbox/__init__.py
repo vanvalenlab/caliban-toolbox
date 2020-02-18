@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -29,13 +29,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-from deepcell_toolbox import post_annotation
-from deepcell_toolbox import pre_annotation
-from deepcell_toolbox import utils
+from caliban_toolbox import post_annotation
+from caliban_toolbox import pre_annotation
+from caliban_toolbox import utils
 
-from deepcell_toolbox.post_annotation import *
-from deepcell_toolbox.pre_annotation import *
-from deepcell_toolbox.utils import *
+from caliban_toolbox.post_annotation import *
+from caliban_toolbox.pre_annotation import *
+from caliban_toolbox.utils import *
 
 del absolute_import
 del print_function

@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -28,13 +28,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from deepcell_toolbox.pre_annotation import aws_upload
-# from deepcell_toolbox.pre_annotation import chop_into_overlapping_images
-from deepcell_toolbox.pre_annotation import contrast_adjustment
-from deepcell_toolbox.pre_annotation import fig_eight_upload
-from deepcell_toolbox.pre_annotation import montage_makers
-from deepcell_toolbox.pre_annotation import montage_to_csv
-from deepcell_toolbox.pre_annotation import overlapping_chopper
+from caliban_toolbox.pre_annotation import aws_upload
+# from caliban_toolbox.pre_annotation import chop_into_overlapping_images
+from caliban_toolbox.pre_annotation import contrast_adjustment
+from caliban_toolbox.pre_annotation import fig_eight_upload
+from caliban_toolbox.pre_annotation import montage_makers
+from caliban_toolbox.pre_annotation import montage_to_csv
+from caliban_toolbox.pre_annotation import overlapping_chopper
 
 
 del absolute_import

@@ -37,7 +37,7 @@ import numpy as np
 from tensorflow.python.keras import backend as K
 from tensorflow.python.platform import test
 
-from deepcell_toolbox.utils import data_utils
+from caliban_toolbox.utils import data_utils
 
 
 class TestDataUtils(test.TestCase):

@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -39,7 +39,7 @@ from io import BytesIO
 import numpy as np
 from tensorflow.python.keras import backend as K
 
-from deepcell_toolbox.utils.misc_utils import sorted_nicely
+from caliban_toolbox.utils.misc_utils import sorted_nicely
 
 
 def count_pairs(y, same_probability=0.5, data_format=None):

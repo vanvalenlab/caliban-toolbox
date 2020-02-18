@@ -1,14 +1,14 @@
-# DeepCell Toolbox: Data Engineering Tools for Single Cell Analysis
+# Caliban Toolbox: Data Engineering Tools for Single Cell Analysis
 
-[![Build Status](https://travis-ci.com/vanvalenlab/deepcell-toolbox.svg?branch=master)](https://travis-ci.com/vanvalenlab/deepcell-toolbox)
-[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/deepcell-toolbox/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/deepcell-toolbox?branch=master)
+[![Build Status](https://travis-ci.com/vanvalenlab/caliban-toolbox.svg?branch=master)](https://travis-ci.com/vanvalenlab/caliban-toolbox)
+[![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/caliban-toolbox/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/caliban-toolbox?branch=master)
 
-DeepCell Toolbox is a collection of data engineering tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for [DeepCell](https://github.com/vanvalenlab/deepcell-tf). 
+DeepCell Toolbox is a collection of data engineering tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for [DeepCell](https://github.com/vanvalenlab/deepcell-tf).
 
 The process is as follows:
 ![flow](./docs/flowchart.png)
 
-Read the documentation at 
+Read the documentation at
 
 ## Getting Started
 
@@ -17,16 +17,16 @@ DeepCell Data Engineering uses `nvidia-docker` and `tensorflow` to enable GPU pr
 ### Build a local docker container
 
 ```bash
-git clone https://github.com/vanvalenlab/deepcell-data-engineering.git
-cd deepcell-toolbox
-docker build -t $USER/deepcell_toolbox .
+git clone https://github.com/vanvalenlab/caliban-toolbox.git
+cd caliban-toolbox
+docker build -t $USER/caliban_toolbox .
 
 ```
 
 The tensorflow version can be overridden with the build-arg `TF_VERSION`.
 
 ```bash
-docker build --build-arg TF_VERSION=1.9.0-gpu -t $USER/deepcell_toolbox .
+docker build --build-arg TF_VERSION=1.9.0-gpu -t $USER/caliban_toolbox .
 ```
 
 ### Run the new docker image
@@ -39,7 +39,7 @@ docker build --build-arg TF_VERSION=1.9.0-gpu -t $USER/deepcell_toolbox .
 
 NV_GPU='0' nvidia-docker run -it \
   -p 8888:8888 \
-  $USER/deepcell_toolbox:latest
+  $USER/caliban_toolbox:latest
 ```
 
 It can also be helpful to mount the local copy of the repository and the scripts to speed up local development.
@@ -47,22 +47,22 @@ It can also be helpful to mount the local copy of the repository and the scripts
 ```bash
 NV_GPU='0' nvidia-docker run -it \
   -p 8888:8888 \
-  -v $PWD/deepcell_toolbox:/usr/local/lib/python3.5/dist-packages/deepcell_toolbox/ \
+  -v $PWD/caliban_toolbox:/usr/local/lib/python3.5/dist-packages/caliban_toolbox/ \
   -v $PWD/notebooks:/notebooks \
   -v /data:/data \
-  $USER/deepcell_toolbox:latest
+  $USER/caliban_toolbox:latest
 ```
 
 ## Copyright
 
-Copyright © 2016-2019 [The Van Valen Lab](http://www.vanvalen.caltech.edu/) at the California Institute of Technology (Caltech), with support from the Paul Allen Family Foundation, Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.  
+Copyright © 2016-2020 [The Van Valen Lab](http://www.vanvalen.caltech.edu/) at the California Institute of Technology (Caltech), with support from the Paul Allen Family Foundation, Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.  
 All rights reserved.
 
 ## License
 
 This software is licensed under a modified [APACHE2](LICENSE).
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 See [LICENSE](LICENSE) for full details.
 

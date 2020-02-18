@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -29,14 +29,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from deepcell_toolbox.utils import dctb_data_utils
-#from deepcell_toolbox.utils import dctf_data_utils
-#from deepcell_toolbox.utils import retinanet_anchor_utils
-from deepcell_toolbox.utils import io_utils
-from deepcell_toolbox.utils import misc_utils
-from deepcell_toolbox.utils import transform_utils
-from deepcell_toolbox.utils import utils
-from deepcell_toolbox.utils import widget_utils
+from caliban_toolbox.utils import dctb_data_utils
+#from caliban_toolbox.utils import dctf_data_utils
+#from caliban_toolbox.utils import retinanet_anchor_utils
+from caliban_toolbox.utils import io_utils
+from caliban_toolbox.utils import misc_utils
+from caliban_toolbox.utils import transform_utils
+from caliban_toolbox.utils import utils
+from caliban_toolbox.utils import widget_utils
 
 del absolute_import
 del division

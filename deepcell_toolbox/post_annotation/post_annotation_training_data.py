@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -37,7 +37,7 @@ import random
 from imageio import imread
 import numpy as np
 from tensorflow.python.keras import backend as K
-from deepcell_toolbox.utils.io_utils import get_img_names, get_image
+from caliban_toolbox.utils.io_utils import get_img_names, get_image
 
 
 CHANNELS_FIRST = K.image_data_format() == 'channels_first'
