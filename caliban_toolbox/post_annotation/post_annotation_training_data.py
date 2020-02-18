@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -36,7 +36,8 @@ import random
 
 from imageio import imread
 import numpy as np
-from deepcell_toolbox.utils.io_utils import get_img_names, get_image
+
+from caliban_toolbox.utils.io_utils import get_img_names, get_image
 
 
 def reshape_matrix(X, y, reshape_size=256, data_format="channels_last"):
@@ -127,7 +128,7 @@ def post_annotation_load_training_images_3d(training_dir,
     Returns:
         5D tensor of image data
     '''
-    
+
     is_channels_first = data_format == 'channels_first'
     # Unpack size tuples
     image_size_x, image_size_y = image_size
@@ -147,7 +148,7 @@ def post_annotation_load_training_images_3d(training_dir,
 
     for b, movie_folder in enumerate(training_folders):
         for c, raw_folder in enumerate(channel_names):
-    
+
             raw_list = get_img_names(os.path.join(training_dir, movie_folder, raw_folder))
             for f, frame in enumerate(raw_list):
                 image_file = os.path.join(training_dir, movie_folder, raw_folder, frame)
@@ -157,7 +158,7 @@ def post_annotation_load_training_images_3d(training_dir,
                     X[b, f, c, :, :] = image_data
                 else:
                     X[b, f, :, :, c] = image_data
-    
+
     return X
 
 
@@ -186,7 +187,7 @@ def post_annotation_load_annotated_images_3d(training_dir,
     Returns:
         5D tensor of label masks
     '''
-    
+
     is_channels_first = data_format == 'channels_first'
     # Unpack size tuple
     image_size_x, image_size_y = image_size
@@ -194,11 +195,11 @@ def post_annotation_load_annotated_images_3d(training_dir,
     # wrapping single annotation name in list for consistency
     if not isinstance(annotation_folders, list):
         annotation_folders = [annotation_folders]
-    
+
     num_batches = len(training_folders)
-    
+
     if num_frames == None:
-        num_frames = len(get_img_names(os.path.join(training_dir, training_folders[0], channel_names[0])))        
+        num_frames = len(get_img_names(os.path.join(training_dir, training_folders[0], channel_names[0])))
 
     # Initialize feature mask array
     if is_channels_first:
@@ -210,15 +211,15 @@ def post_annotation_load_annotated_images_3d(training_dir,
 
     for b, movie_folder in enumerate(training_folders):
         for l, annotation_folder in enumerate(annotation_folders):
-        
+
             annotation_list = get_img_names(os.path.join(training_dir, movie_folder, annotation_folder))
             for f, frame in enumerate(annotation_list):
                 image_data = get_image(os.path.join(training_dir, movie_folder, annotation_folder, frame))
-            
+
                 if is_channels_first:
                     y[b, f, l, :, :] = image_data
                 else:
-                    y[b, f, :, :, l] = image_data    
+                    y[b, f, :, :, l] = image_data
 
 
     return y
@@ -248,7 +249,7 @@ def post_annotation_make_training_data_3d(training_dir,
             default to the number of images in annotation folder
         reshape_size: if provided, will reshape images to the given size (both x and
             y dimensions will be reshape_size)
-        
+
     Returns:
         None
     '''
@@ -256,7 +257,7 @@ def post_annotation_make_training_data_3d(training_dir,
     test_img_dir  = os.path.join(training_dir, random.choice(training_folders), random.choice(channel_names))
     test_img_path = os.path.join(test_img_dir, random.choice(get_img_names(test_img_dir)))
     test_img = imread(test_img_path)
-    
+
     image_size = test_img.shape
 
     X = post_annotation_load_training_images_3d(training_dir = training_dir,
@@ -276,7 +277,7 @@ def post_annotation_make_training_data_3d(training_dir,
 
     # Save training data in npz format
     np.savez(file_name_save, X=X, y=y)
-    
+
     return None
 
 def post_annotation_load_training_images_2d(training_dir,
@@ -297,7 +298,7 @@ def post_annotation_load_training_images_2d(training_dir,
     Returns:
         4D tensor of image data
     '''
-    
+
     is_channels_first = data_format == 'channels_first'
     # Unpack size tuples
     image_size_x, image_size_y = image_size
@@ -312,9 +313,9 @@ def post_annotation_load_training_images_2d(training_dir,
 
     X = np.zeros(X_shape, dtype=K.floatx())
 
-    
+
     for c, raw_folder in enumerate(channel_names):
-    
+
         raw_list = get_img_names(os.path.join(training_dir, raw_folder))
         for b, img in enumerate(raw_list):
             image_file = os.path.join(training_dir, raw_folder, img)
@@ -346,7 +347,7 @@ def post_annotation_load_annotated_images_2d(training_dir,
     Returns:
         4D tensor of label masks
     '''
-    
+
     is_channels_first = data_format == 'channels_first'
     # Unpack size tuple
     image_size_x, image_size_y = image_size
@@ -354,7 +355,7 @@ def post_annotation_load_annotated_images_2d(training_dir,
     # wrapping single annotation name in list for consistency
     if not isinstance(annotation_folders, list):
         annotation_folders = [annotation_folders]
-    
+
     num_batches = len(get_img_names(os.path.join(training_dir, annotation_folders[0])))
 
     # Initialize feature mask array
@@ -366,15 +367,15 @@ def post_annotation_load_annotated_images_2d(training_dir,
     y = np.zeros(y_shape, dtype='int32')
 
     for l, annotation_folder in enumerate(annotation_folders):
-        
+
         annotation_list = get_img_names(os.path.join(training_dir, annotation_folder))
         for b, img in enumerate(annotation_list):
             image_data = get_image(os.path.join(training_dir, annotation_folder, img))
-            
+
             if is_channels_first:
                 y[b, l, :, :] = image_data
             else:
-                y[b, :, :, l] = image_data    
+                y[b, :, :, l] = image_data
 
 
     return y
@@ -398,16 +399,16 @@ def post_annotation_make_training_data_2d(training_dir,
             annotation feature to load into npz
         reshape_size: if provided, will reshape images to the given size (both x and
             y dimensions will be reshape_size)
-        
+
     Returns:
         None
     '''
-    
+
     # Load one file to get image sizes (assumes all images same size)
     test_img_dir  = os.path.join(training_dir, random.choice(channel_names))
     test_img_path = os.path.join(test_img_dir, random.choice(get_img_names(test_img_dir)))
     test_img = imread(test_img_path)
-    
+
     image_size = test_img.shape
 
     X = post_annotation_load_training_images_2d(training_dir,
@@ -423,9 +424,9 @@ def post_annotation_make_training_data_2d(training_dir,
 
     # Save training data in npz format
     np.savez(file_name_save, X=X, y=y)
-    
+
     return None
-    
+
 def post_annotation_make_training_data(training_dir,
                                        file_name_save,
                                        channel_names,
@@ -437,7 +438,7 @@ def post_annotation_make_training_data(training_dir,
     Wrapper function for other make_training_data functions (2D, 3D)
     Calls one of the above functions based on the dimensionality of the data.
     '''
-    
+
     #validate arguments
     if not isinstance(dimensionality, (int, float)):
         raise ValueError('Data dimensionality should be an integer value, typically 2 or 3. '
@@ -447,7 +448,7 @@ def post_annotation_make_training_data(training_dir,
         raise ValueError('channel_names should be a list of strings (e.g. [\'DAPI\']). '
                          'Found {}'.format(type(channel_names).__name__))
 
-                         
+
     dimensionality = int(dimensionality)
 
     if dimensionality == 2:
@@ -471,4 +472,3 @@ def post_annotation_make_training_data(training_dir,
                                   'dimensionality {}'.format(dimensionality))
 
     return None
-

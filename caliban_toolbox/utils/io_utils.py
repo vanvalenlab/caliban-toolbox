@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -23,28 +23,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for misc_utils"""
+"""
+
+utility functions for reading/writing files
+
+"""
 from __future__ import absolute_import
-from __future__ import division
 from __future__ import print_function
+from __future__ import division
 
-# from tensorflow.python.platform import test
+import os
 
-from deepcell_toolbox.utils import misc_utils
 import numpy as np
+from skimage.io import imread
+from skimage.external.tifffile import TiffFile
+
+from caliban_toolbox.utils.misc_utils import sorted_nicely
 
 
-# class MiscUtilsTest(test.TestCase):
-def test_sorted_nicely():
-    # test image file sorting
-    expected = ['test_001_dapi', 'test_002_dapi', 'test_003_dapi']
-    unsorted = ['test_003_dapi', 'test_001_dapi', 'test_002_dapi']
-    assert(np.array_equal(expected, misc_utils.sorted_nicely(unsorted)))
-    # test montage folder sorting
-    expected = ['test_0_0', 'test_1_0', 'test_1_1']
-    unsorted = ['test_1_1', 'test_0_0', 'test_1_0']
-    assert(np.array_equal(expected, misc_utils.sorted_nicely(unsorted)))
+def get_image(file_name):
+    """
+    Read image from file and load into numpy array
+    """
+    ext = os.path.splitext(file_name.lower())[-1]
+    if ext == '.tif' or ext == '.tiff':
+        return np.float32(TiffFile(file_name).asarray())
+    return np.float32(imread(file_name))
 
-#
-# if __name__ == '__main__':
-#     test.main()
+
+def get_img_names(direc_name):
+    """
+    Return all image filenames in direc_name as sorted list
+    """
+    imglist = os.listdir(direc_name)
+    imgfiles = [i for i in imglist if ".tif" in i or ".png" in i or ".jpg" in i]
+    imgfiles = sorted_nicely(imgfiles)
+    return imgfiles
+
+
+def nikon_getfiles(direc_name, channel_name):
+    """
+    Return all image filenames in direc_name with
+    channel_name in the filename
+    """
+    imglist = os.listdir(direc_name)
+    imgfiles = [i for i in imglist if channel_name in i]
+    imgfiles = sorted_nicely(imgfiles)
+    return imgfiles
+

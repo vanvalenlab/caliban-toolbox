@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 from skimage.io import imread, imshow
 from skimage.external.tifffile import TiffFile, imsave
 
-from deepcell_toolbox.utils.misc_utils import sorted_nicely
+from caliban_toolbox.utils.misc_utils import sorted_nicely
 
 
 class chop_into_overlap_img():

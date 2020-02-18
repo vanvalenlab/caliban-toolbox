@@ -12,4 +12,4 @@ ignore_errors = True
 fail_under = 50
 show_missing = True
 
-omit = deepcell_toolbox/deprecated/*
+omit = caliban_toolbox/deprecated/*

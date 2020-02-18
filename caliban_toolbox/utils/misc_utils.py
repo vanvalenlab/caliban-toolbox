@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -23,20 +23,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Data Engineering Toolbox for DeepCell"""
+"""
 
+miscellaneous utility functions
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-from deepcell_toolbox import post_annotation
-from deepcell_toolbox import pre_annotation
-from deepcell_toolbox import utils
+import re
 
-from deepcell_toolbox.post_annotation import *
-from deepcell_toolbox.pre_annotation import *
-from deepcell_toolbox.utils import *
 
-del absolute_import
-del print_function
-del division
+def sorted_nicely(l):
+    convert = lambda text: int(text) if text.isdigit() else text
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)

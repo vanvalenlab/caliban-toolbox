@@ -36,7 +36,7 @@ import numpy as np
 # from tensorflow.python.platform import test
 from skimage.external import tifffile as tiff
 
-from deepcell_toolbox.utils import io_utils
+from caliban_toolbox.utils import io_utils
 
 
 # def _write_image(filepath, img_w=30, img_h=30):

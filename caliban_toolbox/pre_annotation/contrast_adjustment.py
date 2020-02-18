@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.github.com/vanvalenlab/deepcell-toolbox/LICENSE
+#     http://www.github.com/vanvalenlab/caliban-toolbox/LICENSE
 #
 # The Work provided may be used for non-commercial academic purposes only.
 # For any other use of the Work, including commercial use, please contact:
@@ -36,16 +36,17 @@ import scipy
 import stat
 import sys
 
-from deepcell_toolbox.utils.io_utils import get_image, get_img_names
 from imageio import imread, imwrite
 from scipy import ndimage
 from skimage import filters
+
+from caliban_toolbox.utils.io_utils import get_image, get_img_names
 
 
 def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, v_min, v_max):
     '''
     Contrast adjusts an image using assortment of filters and skimage functions
-    
+
     Args:
         image: image to adjust, as array, with dtype np.float32
         sigma: how much to blur image with gaussian filter (values between 0 and 1 sharpen image)
@@ -57,7 +58,7 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, 
         invert: whether to invert light and dark in the image
         v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
         v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
-        
+
     Returns:
         Contrast adjusted image as a numpy array (np.uint8)
     '''
@@ -94,7 +95,7 @@ def contrast(image, sigma, hist, adapthist, gamma, sobel_option, sobel, invert, 
     image = image.astype(np.uint8)
     #okay to lose precision in these images--they don't get used in training data, just annotation
 
-    image = sk.exposure.rescale_intensity(image, in_range=(v_min, v_max))    
+    image = sk.exposure.rescale_intensity(image, in_range=(v_min, v_max))
 
     return image
 
@@ -102,14 +103,14 @@ def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
     '''
     Constrast adjust images in a given folder, save contrast adjusted images in new folder. Also creates a
         json log to record settings used.
-    
+
     Args:
         base_dir: full path to parent directory that holds raw_folder; json logs folder will be created here
         raw_folder: name of folder (not full path) containing images to be contrast adjusted
         identifier: string, used to name processed images and json log
         contrast_settings: dictionary of settings to use for contrast adjustment
-        is_2D: whether to save images with 2D naming convention 
-    
+        is_2D: whether to save images with 2D naming convention
+
     Returns:
         None
 
@@ -126,7 +127,7 @@ def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
         #add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(process_dir, mode)
-    
+
     #where we will save a log of the settings
     log_dir = os.path.join(base_dir, "json_logs")
     if not os.path.isdir(log_dir):
@@ -164,10 +165,10 @@ def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
             adjusted_name = os.path.join(process_dir, identifier + "_adjusted_img_" + str(j).zfill(3) + ".png")
         else:
             adjusted_name = os.path.join(process_dir, identifier + "_adjusted_frame_" + str(j).zfill(3) + ".png")
-            
+
         imwrite(adjusted_name, adjusted_image)
         print("Saved " + adjusted_name + "; image " + str(j + 1) + " of " + str(number_of_images))
-    
+
     print('Adjusted images have been saved in folder: ' + process_dir )
 
     #log in json for future reference
@@ -188,14 +189,14 @@ def adjust_folder(base_dir, raw_folder, identifier, contrast_settings, is_2D):
         json.dump(log_data, write_file)
 
     print('A record of the settings used has been saved in folder: ' + log_dir)
-    
+
     return None
 
 def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_settings, overlay_settings, combined_settings, is_2D):
     '''
     Constrast adjust images from two folders, overlay images, and save adjusted images in new folder. Also creates a
         json log to record settings used.
-    
+
     Args:
         base_dir: full path to parent directory that holds raw_folder; json logs folder will be created here
         raw_folder: name of first folder (not full path) containing images to be contrast adjusted
@@ -204,8 +205,8 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         raw_settings: dictionary of settings to use for contrast adjustment of first folder
         overlay_settings: dictionary of settings to use for contrast adjustment of second folder
         combined_settings: dictionary of settings to use to overlay two images
-        is_2D: whether to save images with 2D naming convention 
-    
+        is_2D: whether to save images with 2D naming convention
+
     Returns:
         None
 
@@ -300,7 +301,7 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
             adjusted_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_img_" + str(frame).zfill(3) + ".png"
         else:
             adjusted_name = identifier + "_" + raw_folder + "_overlay_" + overlay_folder + "_frame_" + str(frame).zfill(3) + ".png"
-        
+
         adjusted_img_path = os.path.join(save_dir, adjusted_name)
 
         #save image in new folder
@@ -331,6 +332,5 @@ def adjust_overlay(base_dir, raw_folder, overlay_folder, identifier, raw_setting
         json.dump(log_data, write_file)
 
     print('A record of the settings used has been saved in folder: ' + log_dir)
-    
-    return None
 
+    return None

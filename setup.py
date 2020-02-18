@@ -20,7 +20,7 @@ except Exception:
     install_reqs = []
 
 setup(
-    name='deepcell_toolbox',
+    name='caliban_toolbox',
     version='0.1',
     packages=find_packages(),
     install_requires=install_reqs,
@@ -32,5 +32,5 @@ setup(
     license='LICENSE',
     author='Van Valen Lab',
     author_email='vanvalen@caltech.edu',
-    description='Data Engineering Toolbox for DeepCell',
+    description='Data Engineering Toolbox for Caliban',
 )
