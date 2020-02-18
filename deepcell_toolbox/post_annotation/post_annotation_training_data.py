@@ -36,13 +36,10 @@ import random
 
 from imageio import imread
 import numpy as np
-from tensorflow.python.keras import backend as K
 from deepcell_toolbox.utils.io_utils import get_img_names, get_image
 
 
-CHANNELS_FIRST = K.image_data_format() == 'channels_first'
-
-def reshape_matrix(X, y, reshape_size=256):
+def reshape_matrix(X, y, reshape_size=256, data_format="channels_last"):
     '''
     Reshape matrix of dimension 4 to have x and y of size reshape_size.
     Adds overlapping slices to batches.
@@ -52,11 +49,12 @@ def reshape_matrix(X, y, reshape_size=256):
         X: raw 4D image tensor
         y: label mask of 4D image data
         reshape_size: size of the square output tensor
+        data_format: channels_first or channels_last
 
     Returns:
         reshaped `X` and `y` tensors in shape (`reshape_size`, `reshape_size`)
     '''
-    is_channels_first = K.image_data_format() == 'channels_first'
+    is_channels_first = data_format == 'channels_first'
     if X.ndim != 4:
         raise ValueError('reshape_matrix expects X dim to be 4, got', X.ndim)
     elif y.ndim != 4:
@@ -108,7 +106,8 @@ def post_annotation_load_training_images_3d(training_dir,
                             training_folders,
                             channel_names,
                             image_size,
-                            num_frames):
+                            num_frames,
+                            data_format="channels_last"):
     '''
     Load each image in the training_folders into a numpy array.
 
@@ -122,12 +121,14 @@ def post_annotation_load_training_images_3d(training_dir,
         image_size: size of each image as tuple (x, y)
         num_frames: number of frames of movie to load into npz; if None, will
             default to the number of images in annotation folder
+        data_format: channels_first or channels_last
+
 
     Returns:
         5D tensor of image data
     '''
     
-    is_channels_first = K.image_data_format() == 'channels_first'
+    is_channels_first = data_format == 'channels_first'
     # Unpack size tuples
     image_size_x, image_size_y = image_size
 
@@ -137,7 +138,7 @@ def post_annotation_load_training_images_3d(training_dir,
         num_frames = len(get_img_names(os.path.join(training_dir, tranining_folders[0], channel_names[0])))
 
     # Initialize training data array
-    if K.image_data_format() == 'channels_first':
+    if is_channels_first:
         X_shape = (num_batches, num_frames, len(channel_names), image_size_x, image_size_y)
     else:
         X_shape = (num_batches, num_frames, image_size_x, image_size_y, len(channel_names))
@@ -164,7 +165,8 @@ def post_annotation_load_annotated_images_3d(training_dir,
                              training_folders,
                              annotation_folders,
                              image_size,
-                             num_frames):
+                             num_frames,
+                             data_format="channels_last"):
     '''
     Load each annotated image in the training_folders into a numpy array.
 
@@ -178,12 +180,14 @@ def post_annotation_load_annotated_images_3d(training_dir,
         image_size: size of each image as tuple (x, y)
         num_frames: number of frames of movie to load into npz; if None, will
             default to the number of images in annotation folder
+        data_format: channels_first or channels_last
+
 
     Returns:
         5D tensor of label masks
     '''
     
-    is_channels_first = K.image_data_format() == 'channels_first'
+    is_channels_first = data_format == 'channels_first'
     # Unpack size tuple
     image_size_x, image_size_y = image_size
 
@@ -277,7 +281,8 @@ def post_annotation_make_training_data_3d(training_dir,
 
 def post_annotation_load_training_images_2d(training_dir,
                             channel_names,
-                            image_size):
+                            image_size,
+                            data_format="channels_last"):
     '''
     Load each image in the training_dir into a numpy array.
 
@@ -287,19 +292,20 @@ def post_annotation_load_training_images_2d(training_dir,
         channel_names: list of folders where each folder contains a different channel
             of raw data to load into npz
         image_size: size of each image as tuple (x, y)
+        data_format: channels_first or channels_last
 
     Returns:
         4D tensor of image data
     '''
     
-    is_channels_first = K.image_data_format() == 'channels_first'
+    is_channels_first = data_format == 'channels_first'
     # Unpack size tuples
     image_size_x, image_size_y = image_size
 
     num_batches = len(get_img_names(os.path.join(training_dir, channel_names[0])))
 
     # Initialize training data array
-    if K.image_data_format() == 'channels_first':
+    if is_channels_first:
         X_shape = (num_batches, len(channel_names), image_size_x, image_size_y)
     else:
         X_shape = (num_batches, image_size_x, image_size_y, len(channel_names))
@@ -324,7 +330,8 @@ def post_annotation_load_training_images_2d(training_dir,
 
 def post_annotation_load_annotated_images_2d(training_dir,
                              annotation_folders,
-                             image_size):
+                             image_size,
+                             data_format="channels_last"):
     '''
     Load each annotated image in the training_direcs into a numpy array.
 
@@ -334,12 +341,13 @@ def post_annotation_load_annotated_images_2d(training_dir,
         annotation_folders: list of folders where each folder contains a different
             annotation feature to load into npz
         image_size: size of each image as tuple (x, y)
+        data_format: channels_first or channels_last
 
     Returns:
         4D tensor of label masks
     '''
     
-    is_channels_first = K.image_data_format() == 'channels_first'
+    is_channels_first = data_format == 'channels_first'
     # Unpack size tuple
     image_size_x, image_size_y = image_size
 

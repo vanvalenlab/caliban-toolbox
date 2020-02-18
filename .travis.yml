@@ -15,10 +15,10 @@ cache: pip
 install:
   - pip install -r requirements.txt
   # install testing requirements
-  - pip install pytest pytest-cov==2.5.1 pytest-pep8 coveralls
+  - pip install pytest==5.2.0 pytest-cov==2.5.1 pytest-pep8 coveralls
 
 script:
-  - python -m pytest --cov=deepcell_toolbox --pep8 deepcell_toolbox tests
+  - python -m pytest deepcell_toolbox tests
 
 jobs:
   include:
