@@ -228,8 +228,8 @@ def overlay_grid_lines(overlay_img, row_start, row_end, col_start, col_end):
     dotted = dotted * side
 
     # trim dotted vectors to be same length as respective image dimension
-    row_dotted = dotted[:row_len]
-    col_dotted = np.expand_dims(np.array(dotted[:col_len]), axis=-1)
+    row_dotted = np.expand_dims(np.array(dotted[:row_len]), axis=-1)
+    col_dotted = np.expand_dims(np.array(dotted[:col_len]), axis=0)
 
     # expand the thickness to 3 pixel width for better visualization
     row_start = row_start + [x + 1 for x in row_start] + [x + 2 for x in row_start]
@@ -244,10 +244,10 @@ def overlay_grid_lines(overlay_img, row_start, row_end, col_start, col_end):
     col_end = [x + col_sep for x in col_start]
 
     # set the values of start and end indices to be dotted lines
-    overlay_img[row_start, :] = row_dotted
-    overlay_img[row_end, :] = row_dotted
-    overlay_img[:, col_start] = col_dotted
-    overlay_img[:, col_end] = col_dotted
+    overlay_img[row_start, :] = col_dotted
+    overlay_img[row_end, :] = col_dotted
+    overlay_img[:, col_start] = row_dotted
+    overlay_img[:, col_end] = row_dotted
 
     # set the values of the line delineating image crop to be constant value
     overlay_img[row_middle, :] = val
