@@ -34,7 +34,7 @@ import stat
 import sys
 import json
 
-from caliban_toolbox.io_utils import list_npzs_folder
+from caliban_toolbox.utils.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
 import xarray as xr
 
