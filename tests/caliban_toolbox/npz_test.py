@@ -3,8 +3,8 @@ import shutil
 import json
 
 import numpy as np
-from deepcell_toolbox.pre_annotation import npz_preprocessing
-from deepcell_toolbox.post_annotation import npz_postprocessing
+from caliban_toolbox.pre_annotation import npz_preprocessing
+from caliban_toolbox.post_annotation import npz_postprocessing
 import xarray as xr
 
 import importlib
