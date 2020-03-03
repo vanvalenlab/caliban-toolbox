@@ -34,8 +34,7 @@ import stat
 import sys
 import json
 
-from deepcell_toolbox.utils.io_utils import list_npzs_folder
-from tensorflow.python.keras import backend as K
+from caliban_toolbox.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
 import xarray as xr
 
@@ -114,7 +113,7 @@ def slice_npz_batches(full_npz_path, batch_size, save_dir):
     return None
 
 
-def reshape_npz(full_npz_path, x_size, y_size, save_dir, save_individual = True):
+def reshape_npz(full_npz_path, x_size, y_size, save_dir, save_individual=True, ):
     '''
     Reshape a 4D npz (or 5D, if first dimension is 1) to have
     smaller x and y dimensions. There is no overlap between each
@@ -166,8 +165,8 @@ def reshape_npz(full_npz_path, x_size, y_size, save_dir, save_individual = True)
         all_reshaped_raw_shape = (y_reps * x_reps, full_raw.shape[0], y_size, x_size, full_raw.shape[3])
         all_reshaped_ann_shape = (y_reps * x_reps, full_ann.shape[0], y_size, x_size, full_ann.shape[3])
 
-        all_reshaped_raw = np.zeros(reshaped_raw_shape, dtype=K.floatx())
-        all_reshaped_ann = np.zeros(reshaped_ann_shape, dtype = full_ann.dtype)
+        all_reshaped_raw = np.zeros(reshaped_raw_shape)
+        all_reshaped_ann = np.zeros(reshaped_ann_shape)
 
         # counter tracks which index of batch the reshaped array is put into
         counter = 0
@@ -206,8 +205,8 @@ def reshape_npz(full_npz_path, x_size, y_size, save_dir, save_individual = True)
 
             # if splitting into separate files, do so as you go
             else:
-                reshaped_raw = np.zeros(single_reshaped_raw_shape, dtype=K.floatx())
-                reshaped_ann = np.zeros(single_reshaped_ann_shape, dtype = full_ann.dtype)
+                reshaped_raw = np.zeros(single_reshaped_raw_shape)
+                reshaped_ann = np.zeros(single_reshaped_ann_shape)
 
                 reshaped_raw = full_raw[:, y_start:y_end, x_start:x_end,:]
                 reshaped_ann = full_ann[:, y_start:y_end, x_start:x_end,:]
