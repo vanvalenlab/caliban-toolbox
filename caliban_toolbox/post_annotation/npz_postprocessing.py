@@ -104,7 +104,9 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     for img in range(stack.shape[0]):
         crop_counter = 0
         for row in range(len(row_starts)):
+            print("stitching row {}".format(row))
             for col in range(len(col_starts)):
+                print("stitching col {}".format(col))
 
                 # get current crop
                 crop = stack[img, crop_counter, ...]
@@ -126,11 +128,16 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
                     # get cell ids present in stitched image at location of current cell in crop
                     stitched_overlap_vals, stitched_overlap_counts = np.unique(stitched_crop[crop == cell],
                                                                                return_counts=True)
-                    stitched_overlap_vals = stitched_overlap_vals[np.nonzero(stitched_overlap_vals)]
 
-                    # if there are overlaps, determine which is greatest, and replace with that value
+                    # remove IDs and counts corresponding to overlap with ID 0 (background)
+                    stitched_overlap_vals = stitched_overlap_vals[np.nonzero(stitched_overlap_vals)]
+                    stitched_overlap_counts = stitched_overlap_counts[np.nonzero(stitched_overlap_vals)]
+
+                    # if there are overlaps, determine which is greatest in count, and replace with that ID
                     if len(stitched_overlap_vals) > 0:
-                        max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_vals)]
+                        print("cell {} overlaps with another cell".format(cell))
+                        max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_counts)]
+                        print("the max overlap is {}, all overlaps are {}".format(max_overlap, stitched_overlap_vals))
                         crop[crop == cell] = max_overlap
 
                 # combine the crop with the current values in the stitched image
