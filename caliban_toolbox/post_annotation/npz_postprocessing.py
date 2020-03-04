@@ -81,7 +81,7 @@ def load_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops,
     return stack
 
 
-def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_ends):
+def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_ends, relabel_sequential=True):
     """Takes a stack of annotated labels and stitches them together into a single image
 
     Inputs:
@@ -113,6 +113,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
 
                 # increment values to ensure unique labels across final image
                 lowest_allowed_val = np.amax(stitched_image[img, ...])
+                print("lowest allowed val is {}, incrementing".format(lowest_allowed_val))
                 crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
 
                 # get ids of cells in current crop
@@ -130,14 +131,15 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
                                                                                return_counts=True)
 
                     # remove IDs and counts corresponding to overlap with ID 0 (background)
-                    stitched_overlap_vals = stitched_overlap_vals[np.nonzero(stitched_overlap_vals)]
-                    stitched_overlap_counts = stitched_overlap_counts[np.nonzero(stitched_overlap_vals)]
+                    keep_vals = np.nonzero(stitched_overlap_vals)
+                    stitched_overlap_vals = stitched_overlap_vals[keep_vals]
+                    stitched_overlap_counts = stitched_overlap_counts[keep_vals]
 
                     # if there are overlaps, determine which is greatest in count, and replace with that ID
                     if len(stitched_overlap_vals) > 0:
                         print("cell {} overlaps with another cell".format(cell))
                         max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_counts)]
-                        print("the max overlap is {}, all overlaps are {}".format(max_overlap, stitched_overlap_vals))
+                        print("the max overlap is {}, all overlaps are {}, all counts are {}".format(max_overlap, stitched_overlap_vals, stitched_overlap_counts))
                         crop[crop == cell] = max_overlap
 
                 # combine the crop with the current values in the stitched image
@@ -149,13 +151,14 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
                 crop_counter += 1
 
     # relabel images to remove skipped cell_ids
-    for img in range(stitched_image.shape[0]):
-        stitched_image[img, ..., -1], _, _ = relabel_sequential(stitched_image[img, ..., -1])
+    if relabel_sequential:
+        for img in range(stitched_image.shape[0]):
+            stitched_image[img, ..., -1], _, _ = relabel_sequential(stitched_image[img, ..., -1])
 
     return stitched_image
 
 
-def reconstruct_image_stack(crop_dir, save_format="xr"):
+def reconstruct_image_stack(crop_dir, save_format="xr", relabel=True):
     """High level function to combine crops together into a single stitched image
 
     Inputs:
@@ -188,7 +191,7 @@ def reconstruct_image_stack(crop_dir, save_format="xr"):
 
     # stitch crops together into single contiguous image
     stitched_images = stitch_crops(stack=crop_stack, padded_img_shape=padded_shape, row_starts=row_start,
-                                   row_ends=row_end, col_starts=col_start, col_ends=col_end)
+                                   row_ends=row_end, col_starts=col_start, col_ends=col_end, relabel_sequential=relabel)
 
     # crop image down to original size
     stitched_images = stitched_images[:, 0:(-row_padding), 0:(-col_padding), :]
