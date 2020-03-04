@@ -162,7 +162,7 @@ def test_save_crops():
     test_xr[:, non_blank_crops, :, 0, 0] = 27
 
     # save crops to folder
-    base_dir = "tests/deepcell_toolbox/"
+    base_dir = "tests/caliban_toolbox/"
 
     # test that function correctly includes blank crops when saving
     save_dir = os.path.join(base_dir, "test_crop_dir_all")
@@ -212,7 +212,7 @@ def test_crop_multichannel_data():
     test_xr = _blank_xr(fov_num=fov_num, row_num=row_num, col_num=col_num, chan_num=chan_num)
     test_xr[:, :, :, 0] = 1
 
-    base_dir = "tests/deepcell_toolbox/"
+    base_dir = "tests/caliban_toolbox/"
     test_xr.to_netcdf(os.path.join(base_dir, "crop_multichannel_test_xr.xr"))
 
     npz_preprocessing.crop_multichannel_data(xarray_path=os.path.join(base_dir, "crop_multichannel_test_xr.xr"),
@@ -251,15 +251,16 @@ def test_stitch_crops():
     cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr, row_start=starts, row_end=ends,
                                                     col_start=starts, col_end=ends,
                                                     padding=((0, 0), (0, padding), (0, padding), (0, 0)))
+    cropped_labels = cropped[..., -1:].values
 
-    stitched_img = npz_postprocessing.stitch_crops(stack=cropped.values, padded_img_shape=padded, row_starts=starts,
+    stitched_img = npz_postprocessing.stitch_crops(stack=cropped_labels, padded_img_shape=padded, row_starts=starts,
                                                    row_ends=ends, col_starts=starts, col_ends=ends)
 
     # trim padding
     stitched_img = stitched_img[:, :-padding, :-padding, :]
 
     # check that objects are at same location
-    assert(np.all(np.equal(stitched_img[:, :, :, 3] > 0, test_xr.values[:, :, :, 3] > 0)))
+    assert(np.all(np.equal(stitched_img[:, :, :, 0] > 0, test_xr.values[:, :, :, 3] > 0)))
 
     # check that same number of unique objects
     assert(np.all(np.unique(stitched_img) == np.unique(test_xr.values)))
@@ -278,7 +279,7 @@ def test_crop_and_stitch():
                 test_xr[img, (i * 35):(i * 35 + 10 + img * 10), (j * 37):(j * 37 + 8 + img * 10), 3] = cell_idx
             cell_idx += 1
 
-    base_dir = "tests/deepcell_toolbox/"
+    base_dir = "tests/caliban_toolbox/"
     test_xr.to_netcdf(os.path.join(base_dir, "test_xr.xr"))
 
     # crop data
