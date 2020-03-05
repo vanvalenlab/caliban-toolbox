@@ -266,6 +266,43 @@ def test_stitch_crops():
     assert(np.all(np.unique(stitched_img) == np.unique(test_xr.values)))
 
 
+    # test stitching imperfect annotator labels that slightly overlap
+    test_xr2 = _blank_xr(1, 400, 400, 1)
+    side_len = 40
+    cell_num = test_xr2.shape[1] // side_len
+
+    cell_id = 1
+    for row in range(cell_num):
+        for col in range(cell_num):
+            test_xr2[0, row*side_len:(row + 1)*side_len, col*side_len:(col + 1)*side_len, :] = cell_id
+            cell_id += 1
+
+
+    ####
+    row_num, col_num, crop_size, overlap_frac = 400, 400, 100, 0.2
+
+    starts, ends, padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=crop_size,
+                                                                   overlap_frac=overlap_frac)
+
+    # generate a vector of random offsets to jitter the crop window, simulating mismatches between frames
+    row_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
+    col_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
+
+    row_starts, row_ends = starts + row_offset, ends + row_offset
+    col_starts, col_ends = starts + col_offset, ends + col_offset
+
+    cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr2, row_start=row_starts, row_end=row_ends,
+                                                    col_start=col_starts, col_end=col_ends,
+                                                    padding=((0, 0), (0, padding), (0, padding), (0, 0)))
+    cropped_labels = cropped[..., -1:].values
+
+    stitched_img = npz_postprocessing.stitch_crops(stack=cropped_labels, padded_img_shape=padded, row_starts=starts,
+                                                   row_ends=ends, col_starts=starts, col_ends=ends)
+
+    # trim padding
+    stitched_img = stitched_img[:, :-padding, :-padding, :]
+    io.imshow(stitched_img[0, :, :, 0])
+
 # integration test for whole crop + stitch workflow pipeline
 def test_crop_and_stitch():
 
