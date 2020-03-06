@@ -104,16 +104,13 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
     for img in range(stack.shape[0]):
         crop_counter = 0
         for row in range(len(row_starts)):
-            print("stitching row {}".format(row))
             for col in range(len(col_starts)):
-                print("stitching col {}".format(col))
 
                 # get current crop
                 crop = stack[img, crop_counter, ...]
 
                 # increment values to ensure unique labels across final image
                 lowest_allowed_val = np.amax(stitched_image[img, ...])
-                print("lowest allowed val is {}, incrementing".format(lowest_allowed_val))
                 crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
 
                 # get ids of cells in current crop
@@ -137,9 +134,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
 
                     # if there are overlaps, determine which is greatest in count, and replace with that ID
                     if len(stitched_overlap_vals) > 0:
-                        print("cell {} overlaps with another cell".format(cell))
                         max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_counts)]
-                        print("the max overlap is {}, all overlaps are {}, all counts are {}".format(max_overlap, stitched_overlap_vals, stitched_overlap_counts))
                         crop[crop == cell] = max_overlap
 
                 # combine the crop with the current values in the stitched image

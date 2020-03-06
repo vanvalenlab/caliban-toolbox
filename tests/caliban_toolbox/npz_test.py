@@ -268,7 +268,7 @@ def test_stitch_crops():
 
 
     # test stitching imperfect annotator labels that slightly overlap
-    test_xr2 = _blank_xr(1, 400, 400, 1)
+    test_xr2 = _blank_xr(1, 800, 800, 1)
     side_len = 40
     cell_num = test_xr2.shape[1] // side_len
 
@@ -281,18 +281,17 @@ def test_stitch_crops():
             cell_idx += 1
 
     ####
-    row_num, col_num, crop_size, overlap_frac = 400, 400, 100, 0.2
+    row_num, col_num, crop_size, overlap_frac = test_xr2.shape[1], test_xr2.shape[2], 100, 0.2
 
     starts, ends, padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=crop_size,
                                                                    overlap_frac=overlap_frac)
 
     # generate a vector of random offsets to jitter the crop window, simulating mismatches between frames
-    row_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
-    col_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
+    offset_len = 5
+    row_offset = np.append(np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
+    col_offset = np.append(np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
 
-    row_offset = [0, 4, -4, -4,  0]
-    col_offset = [0, 4, 4, -4, 0]
-
+    # modify indices by random offset
     row_starts, row_ends = starts + row_offset, ends + row_offset
     col_starts, col_ends = starts + col_offset, ends + col_offset
 
@@ -314,14 +313,12 @@ def test_stitch_crops():
     # same number of unique objects before and after
     assert(len(np.unique(relabeled)) == len(np.unique(test_xr2[0, :, :, 0])))
 
-    # no cell is smaller than maximum offset
-    min_size = (side_len - 5) ** 2
-    max_size = (side_len + 5) ** 2
+    # no cell is smaller than offset subtracted from each side
+    min_size = (side_len - offset_len * 2) ** 2
+    max_size = (side_len + offset_len * 2) ** 2
 
     assert(np.all(props["area"] <= max_size))
     assert(np.all(props["area"] >= min_size))
-
-    # why is max side_len + offset, but min is side_len -offset -offsset?
 
 
 # integration test for whole crop + stitch workflow pipeline
