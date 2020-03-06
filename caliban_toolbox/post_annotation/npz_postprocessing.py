@@ -81,7 +81,7 @@ def load_crops(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops,
     return stack
 
 
-def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_ends, relabel_sequential=True):
+def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_ends, relabel=True):
     """Takes a stack of annotated labels and stitches them together into a single image
 
     Inputs:
@@ -151,7 +151,7 @@ def stitch_crops(stack, padded_img_shape, row_starts, row_ends, col_starts, col_
                 crop_counter += 1
 
     # relabel images to remove skipped cell_ids
-    if relabel_sequential:
+    if relabel:
         for img in range(stitched_image.shape[0]):
             stitched_image[img, ..., -1], _, _ = relabel_sequential(stitched_image[img, ..., -1])
 
@@ -191,7 +191,7 @@ def reconstruct_image_stack(crop_dir, save_format="xr", relabel=True):
 
     # stitch crops together into single contiguous image
     stitched_images = stitch_crops(stack=crop_stack, padded_img_shape=padded_shape, row_starts=row_start,
-                                   row_ends=row_end, col_starts=col_start, col_ends=col_end, relabel_sequential=relabel)
+                                   row_ends=row_end, col_starts=col_start, col_ends=col_end, relabel=relabel)
 
     # crop image down to original size
     stitched_images = stitched_images[:, 0:(-row_padding), 0:(-col_padding), :]

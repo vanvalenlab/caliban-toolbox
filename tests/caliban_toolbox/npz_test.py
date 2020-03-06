@@ -6,6 +6,7 @@ import numpy as np
 from caliban_toolbox.pre_annotation import npz_preprocessing
 from caliban_toolbox.post_annotation import npz_postprocessing
 import xarray as xr
+import skimage.measure
 
 import importlib
 importlib.reload(npz_preprocessing)
@@ -271,12 +272,13 @@ def test_stitch_crops():
     side_len = 40
     cell_num = test_xr2.shape[1] // side_len
 
-    cell_id = 1
+    cell_id = np.arange(1, cell_num ** 2 + 1)
+    cell_id = np.random.choice(cell_id, cell_num ** 2, replace=False)
+    cell_idx = 0
     for row in range(cell_num):
         for col in range(cell_num):
-            test_xr2[0, row*side_len:(row + 1)*side_len, col*side_len:(col + 1)*side_len, :] = cell_id
-            cell_id += 1
-
+            test_xr2[0, row * side_len:(row + 1) * side_len, col * side_len:(col + 1) * side_len, :] = cell_id[cell_idx]
+            cell_idx += 1
 
     ####
     row_num, col_num, crop_size, overlap_frac = 400, 400, 100, 0.2
@@ -287,6 +289,9 @@ def test_stitch_crops():
     # generate a vector of random offsets to jitter the crop window, simulating mismatches between frames
     row_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
     col_offset = np.append(np.append(0, np.random.randint(-5, 5, len(starts) - 2)), 0)
+
+    row_offset = [0, 4, -4, -4,  0]
+    col_offset = [0, 4, 4, -4, 0]
 
     row_starts, row_ends = starts + row_offset, ends + row_offset
     col_starts, col_ends = starts + col_offset, ends + col_offset
@@ -301,7 +306,23 @@ def test_stitch_crops():
 
     # trim padding
     stitched_img = stitched_img[:, :-padding, :-padding, :]
-    io.imshow(stitched_img[0, :, :, 0])
+
+    relabeled = skimage.measure.label(stitched_img[0, :, :, 0])
+
+    props = skimage.measure.regionprops_table(relabeled, properties=["area", "label"])
+
+    # same number of unique objects before and after
+    assert(len(np.unique(relabeled)) == len(np.unique(test_xr2[0, :, :, 0])))
+
+    # no cell is smaller than maximum offset
+    min_size = (side_len - 5) ** 2
+    max_size = (side_len + 5) ** 2
+
+    assert(np.all(props["area"] <= max_size))
+    assert(np.all(props["area"] >= min_size))
+
+    # why is max side_len + offset, but min is side_len -offset -offsset?
+
 
 # integration test for whole crop + stitch workflow pipeline
 def test_crop_and_stitch():
