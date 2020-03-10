@@ -33,8 +33,8 @@ import stat
 import sys
 import pandas as pd
 
-from deepcell_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_file
-from deepcell_toolbox.post_annotation.download_csv import download_and_unzip
+from caliban_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_file
+from caliban_toolbox.post_annotation.download_csv import download_and_unzip
 
 
 def initial_csv_maker(csv_dir, identifier, stage,
