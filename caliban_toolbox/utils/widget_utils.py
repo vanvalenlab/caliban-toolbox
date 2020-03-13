@@ -212,7 +212,7 @@ def adjust_image(image, adjust_kwargs):
     return image
 
 
-def overlay_images_interactive(img_1, img_2, prop_img_1=1, v_min=0, v_max=255):
+def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
     '''
     Display effects of overlaying two contrast-adjusted images
     
