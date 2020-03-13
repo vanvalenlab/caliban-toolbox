@@ -276,7 +276,7 @@ def overlay_images(img_1, img_2, prop_img_1, v_min, v_max):
     return mod_img
 
 
-def choose_img_from_stack(stack, slice_index, chan_name):
+def choose_img_from_stack(stack, slice_idx, chan_name):
     """Helper function for interatively selecting an image to test out modifications from a stack of images
 
     Inputs
@@ -287,10 +287,9 @@ def choose_img_from_stack(stack, slice_index, chan_name):
     Returns
         slice_index: the slice index that was selected by the user
         chan_index: the chan_index that was selected by the user"""
-    slice_name = stack.points.values[slice_index]
-    img = stack.loc[slice_name, :, :, chan_name]
+    chan_idx = np.where(stack.channels.values == chan_name)[0][0]
+    img = stack[slice_idx, :, :, chan_idx]
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(img, cmap=mpl.cm.gray)
-    return slice_name, chan_name
-
+    return slice_idx, chan_idx
 
