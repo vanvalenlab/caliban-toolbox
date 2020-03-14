@@ -991,3 +991,129 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
 
         return None
 
+
+def compute_montage_indices(stack_len, montage_size):
+    """ Determine how to slice an image across the stack dimension.
+
+    Inputs
+        stack_len: length of the z or t stack to be sliced up
+        montage_size: number of images to be included in each montage
+
+    Outputs:
+        montage_indices: array of coordinates for the locations of each montage
+    """
+
+    # equally spaced according to slice_size
+    montage_indices = np.arange(0, stack_len + 1, montage_size)
+
+    if montage_indices[-1] != stack_len:
+        # if it doesn't divide evenly, make sure last slice includes any remainder
+        montage_indices = np.append(montage_indices, stack_len)
+
+    return montage_indices
+
+
+def montage_helper(input_data, montage_indices):
+    """Slices an image stack into smaller montages according to supplied indices
+
+    Inputs
+        input_data: xarray of [fovs, stacks, rows, cols, channels] to be sliced
+        montage_indices: list of indices for montages
+
+    Outputs:
+        sliced_stack: stack of cropped images of [fovs, stacks, montages, rows, cols, channels] """
+
+    # determine key parameters of crop
+    fov_num, _, row_len, col_len, chan_len = input_data.shape
+    montage_num = len(montage_indices) - 1
+    stack_size = montage_indices[1]
+
+    # create xarray to hold montages
+    montage_stack = np.zeros((fov_num, stack_size, montage_num, row_len, col_len, chan_len))
+    montage_xr = xr.DataArray(data=montage_stack, coords=[input_data.fovs, range(stack_size), range(montage_num),
+                                                          range(row_len), range(col_len), input_data.channels],
+                              dims=["fovs", "stacks", "montages", "rows", "cols", "channels"])
+
+    # loop montage indices to generate montaged data
+    montage_counter = 0
+    for i in range(len(montage_indices) - 1):
+
+        if i != len(montage_indices) - 2:
+            # not the last montage
+            montage_xr[:, :, montage_counter, ...] = input_data[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_counter += 1
+
+        else:
+            # last montage, only index into stack the amount two indices are separated
+            montage_len = montage_indices[i + 1] - montage_indices[i]
+            montage_xr[:, :montage_len, montage_counter, ...] = input_data[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_counter += 1
+
+    return montage_xr
+
+
+def create_montaged_data(input_data, montage_size):
+    """Takes an array of data and splits it up into smaller pieces along the stack dimension
+
+    Inputs
+        input_data: xarray of [fovs, stacks, rows, cols, channels] to be split up
+        montage size: number of slices from stacks dimension to include in each montage
+
+    Outputs
+        montaged_xr: xarray of [fovs, stacks, montages, rows, cols, channels] that has been split"""
+
+    # sanitize inputs
+    if len(input_data.shape) != 5:
+        raise ValueError("invalid input data shape, expected array of len(5), got {}".format(input_data.shape))
+
+    if montage_size > input_data.shape[1]:
+        raise ValueError("montage size is greater than stack length")
+
+    # compute indices for montaging
+    montage_indices = compute_montage_indices(input_data.shape[1], montage_size)
+
+    montage_xr = montage_helper(input_data, montage_indices)
+
+    return montage_xr, montage_indices
+
+
+def save_npzs_for_caliban(input_data, save_dir):
+    """Take an array of processed image data and save as NPZ for caliban
+
+    Inputs
+        input_data: xarray of [fovs, stacks, montages, crops, rows, cols, channels]
+        save_dir: path to save the npz and JSON files
+
+    Outputs
+        None (saves npz and JSON to disk)"""
+
+    if not os.path.isdir(save_dir):
+        os.makedirs(save_dir)
+
+    if input_data.crops.shape == (1, ):
+        # no crops, don't need to loop through
+        num_row_crops = 1
+        num_col_crops = 1
+
+    fov_names = input_data.fovs.values
+    montage_num = input_data.shape[2]
+
+    # loop through all crops in all images
+    for img in range(input_data.shape[0]):
+        for row in range(num_row_crops):
+            for col in range(num_col_crops):
+                for montage in montage_num:
+
+                    # generate identifier for crop
+                    crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[img], row, col, montage)
+
+                    # determine if labels are blank
+                    labels = input_data[img:(img + 1), :, montage, ..., -1:].values
+
+                    # crop is not blank, save based on file_format
+                    save_path = os.path.join(save_dir, crop_id)
+
+                    # save images as either npz or xarray
+                    np.savez(save_path + ".npz", X=input_data[img:(img + 1), :, montage, ..., :-1].values, y=labels)
+
+

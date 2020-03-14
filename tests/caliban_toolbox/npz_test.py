@@ -356,3 +356,126 @@ def test_crop_and_stitch():
     # clean up
     shutil.rmtree(base_dir + "test_folder")
     os.remove(base_dir + "test_xr.xr")
+
+
+def _blank_stack_xr(fov_num, stack_num, row_num, col_num, chan_num):
+    """Test function to generate a blank xarray with the supplied dimensions
+
+    Inputs
+        fov_num: number of distinct FOVs
+        stack_num: number of distinct z stacks
+        row_num: number of rows
+        col_num: number of cols
+        chan_num: number of channels
+
+    Outputs
+        test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
+
+    test_img = np.zeros((fov_num, stack_num, row_num, col_num, chan_num))
+
+    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
+    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
+
+    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_num), range(row_num), range(col_num), channels],
+                           dims=["fovs", "stacks", "rows", "cols", "channels"])
+
+    return test_stack_xr
+
+
+# make sure correct indices are returned
+def test_compute_montage_indices():
+
+    # test when montage divides evenly into stack len
+    stack_len = 40
+    montage_len = 4
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_len)
+    assert np.all(np.equal(montage_indices, np.arange(0, stack_len + 1, montage_len)))
+
+    # test when montage does not divide evenly into stack len
+    stack_len = 42
+    montage_len = 5
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_len)
+
+    expected_montage_indices = np.append(np.arange(0, stack_len, montage_len), stack_len)
+    assert np.all(np.equal(montage_indices, expected_montage_indices))
+
+
+# make sure input xarray is subset correctly
+def test_montage_helper():
+
+    # test output shape with even division of montage
+    stack_len = 40
+    montage_len = 4
+    fov_num = 1
+    row_num = 50
+    col_num = 50
+    chan_num = 3
+
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_len)
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_len,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
+
+    assert montage_output.shape == (fov_num, montage_len, int(np.ceil(stack_len / montage_len)), row_num, col_num, chan_num)
+
+    # test output shape with uneven division of montage
+    stack_len = 40
+    montage_len = 6
+    fov_num = 1
+    row_num = 50
+    col_num = 50
+    chan_num = 3
+
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_len)
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_len,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
+
+    assert montage_output.shape == (fov_num, montage_len, int(np.ceil(stack_len / montage_len)), row_num, col_num, chan_num)
+
+    # test output values
+    stack_len = 40
+    montage_len = 4
+    fov_num = 1
+    row_num = 50
+    col_num = 50
+    chan_num = 3
+
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_len)
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_len,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    # tag 0,x,0,0,0 coord of each image with value of x
+    input_data[0, :, 0, 0, 0] = np.arange(40)
+
+    montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
+
+    # loop through each montage, make sure values increment as expected
+    for i in range(montage_output.shape[1]):
+        assert np.all(np.equal(montage_output[0, :, i, 0, 0, 0], np.arange(i * 4, (i + 1) *4)))
+
+
+# test overall calling function
+def test_create_montaged_data():
+    # test output shape with even division of montage
+    stack_len = 40
+    montage_len = 4
+    fov_num = 1
+    row_num = 50
+    col_num = 50
+    chan_num = 3
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_len,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_len)
+
+    assert montage_xr.shape == (fov_num, montage_len, int(np.ceil(stack_len / montage_len)), row_num, col_num, chan_num)
+
+
+def test_
