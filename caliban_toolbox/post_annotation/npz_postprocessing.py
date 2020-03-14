@@ -344,13 +344,23 @@ def set_channel_colors(combined_xr, plot_colors):
 
 
 def load_montages(montage_dir, montage_log_data):
+    """Load montages from supplied directory into a single array
 
-    fov_num, stack_num, montage_num, row_num, col_num, chan_num = montage_log_data["montage_shape"]
+    Inputs
+        montage_dir: full path to directory containing the montage NPZ files
+        montage_log_data: dictionary of log data from montage creation
+
+    Outputs
+        montage_stack: array of [fovs, montage_slices, montage_num, rows, cols, segmentation_label]"""
+
+    # get parameters from dict
+    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
     fov_names = montage_log_data["fov_names"]
 
-    montage_stack = np.zeros((fov_num, stack_num, montage_num, row_num, col_num, 1))
+    montage_stack = np.zeros((fov_len, montage_slice_len, montage_num, row_len, col_len, 1))
 
-    for fov in range(fov_num):
+    # loop through file name structure to load npzs
+    for fov in range(fov_len):
         for montage in range(montage_num):
             montage_name = "{}_row_{}_col_{}_montage_{}.npz".format(fov_names[fov], 0, 0, montage)
 
@@ -368,17 +378,18 @@ def stitch_montages(montage_stack, montage_log_data):
     """Helper function to stitch montages together back into original sized array
 
     Inputs
-        montage_stack: xarray of shape [fovs, montage_stack, montage_num, rows, cols, 1]
+        montage_stack: xarray of shape [fovs, montage_slices, montage_num, rows, cols, segmentation_label]
         montage_log_data: log data produced from creation of montage stack
 
     Outputs
-        stitched_montages: xarray of shape [fovs, stacks, rows, cols, 1]"""
+        stitched_montages: xarray of shape [fovs, slices, rows, cols, segmentation_label]"""
 
-    fov_num, stack_num, montage_num, row_num, col_num, chan_num = montage_log_data["montage_shape"]
-    montage_indices = montage_log_data["montage_indices"]
-    stack_len = montage_indices[-1]
-    fov_names = montage_log_data["fov_names"]
-    stitched_montages = np.zeros((fov_num, stack_len, row_num, col_num, 1))
+    # get parameters from dict
+    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
+    montage_indices, fov_names = montage_log_data["montage_indices"], montage_log_data["fov_names"]
+    slice_len = montage_indices[-1]
+
+    stitched_montages = np.zeros((fov_len, slice_len, row_len, col_len, 1))
 
     # loop montage indices to generate montaged data
     montage_counter = 0
@@ -396,13 +407,20 @@ def stitch_montages(montage_stack, montage_log_data):
             montage_counter += 1
 
     stitched_xr = xr.DataArray(stitched_montages,
-                               coords=[fov_names, range(stack_len), range(row_num),
-                                       range(col_num), ["segmentation_label"]],
-                               dims=["fovs", "stacks", "rows", "cols", "channels"])
+                               coords=[fov_names, range(slice_len), range(row_len),
+                                       range(col_len), ["segmentation_label"]],
+                               dims=["fovs", "slices", "rows", "cols", "channels"])
     return stitched_xr
 
 
-def reconstruct_montaged_data(save_dir):
+def reconstruct_montage_data(save_dir):
+    """High level function to put pieces of a montage back together
+    Inputs
+        save_dir: full path to directory where montage pieces are stored
+
+    Outputs
+        stitched_xr: xarray of [fovs, slices, rows, cols, segmentation_label] containing stitched labels"""
+
     if not os.path.isdir(save_dir):
         raise FileNotFoundError("montage directory does not exist")
 

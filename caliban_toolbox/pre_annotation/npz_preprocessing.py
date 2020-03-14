@@ -992,47 +992,47 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
         return None
 
 
-def compute_montage_indices(stack_len, montage_size):
+def compute_montage_indices(slice_len, montage_len):
     """ Determine how to slice an image across the stack dimension.
 
     Inputs
-        stack_len: length of the z or t stack to be sliced up
-        montage_size: number of images to be included in each montage
+        slice_len: number of z or t slices
+        montage_len: number of slices to be included in each montage
 
     Outputs:
-        montage_indices: array of coordinates for the locations of each montage
+        montage_indices: array of coordinates for the locations of each montage taken from slices
     """
 
-    # equally spaced according to slice_size
-    montage_indices = np.arange(0, stack_len + 1, montage_size)
+    # equally spaced according to montage_size
+    montage_indices = np.arange(0, slice_len + 1, montage_len)
 
-    if montage_indices[-1] != stack_len:
+    if montage_indices[-1] != slice_len:
         # if it doesn't divide evenly, make sure last slice includes any remainder
-        montage_indices = np.append(montage_indices, stack_len)
+        montage_indices = np.append(montage_indices, slice_len)
 
     return montage_indices
 
 
-def montage_helper(input_data, montage_indices):
+def montage_helper(data_xr, montage_indices):
     """Slices an image stack into smaller montages according to supplied indices
 
     Inputs
-        input_data: xarray of [fovs, stacks, rows, cols, channels] to be sliced
+        data_stack: xarray of [fovs, slices, rows, cols, channels] to be split into montages
         montage_indices: list of indices for montages
 
     Outputs:
-        sliced_stack: stack of cropped images of [fovs, stacks, montages, rows, cols, channels] """
+        montage_xr: xarray of montaged images of [fovs, montage_slices, montage_num, rows, cols, channels]"""
 
     # determine key parameters of crop
-    fov_num, _, row_len, col_len, chan_len = input_data.shape
+    fov_len, slice_len, row_len, col_len, chan_len = data_xr.shape
     montage_num = len(montage_indices) - 1
-    stack_size = montage_indices[1]
+    montage_slice_len = montage_indices[1] - montage_indices[0]
 
     # create xarray to hold montages
-    montage_stack = np.zeros((fov_num, stack_size, montage_num, row_len, col_len, chan_len))
-    montage_xr = xr.DataArray(data=montage_stack, coords=[input_data.fovs, range(stack_size), range(montage_num),
-                                                          range(row_len), range(col_len), input_data.channels],
-                              dims=["fovs", "stacks", "montages", "rows", "cols", "channels"])
+    montage_stack = np.zeros((fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len))
+    montage_xr = xr.DataArray(data=montage_stack, coords=[data_xr.fovs, range(montage_slice_len), range(montage_num),
+                                                          range(row_len), range(col_len), data_xr.channels],
+                              dims=["fovs", "montage_slices", "montage_num", "rows", "cols", "channels"])
 
     # loop montage indices to generate montaged data
     montage_counter = 0
@@ -1040,48 +1040,49 @@ def montage_helper(input_data, montage_indices):
 
         if i != len(montage_indices) - 2:
             # not the last montage
-            montage_xr[:, :, montage_counter, ...] = input_data[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_xr[:, :, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
             montage_counter += 1
 
         else:
             # last montage, only index into stack the amount two indices are separated
             montage_len = montage_indices[i + 1] - montage_indices[i]
-            montage_xr[:, :montage_len, montage_counter, ...] = input_data[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_xr[:, :montage_len, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
             montage_counter += 1
 
     return montage_xr
 
 
-def create_montaged_data(input_data, montage_size):
+def create_montage_data(data_xr, montage_slice_len):
     """Takes an array of data and splits it up into smaller pieces along the stack dimension
 
     Inputs
-        input_data: xarray of [fovs, stacks, rows, cols, channels] to be split up
-        montage size: number of slices from stacks dimension to include in each montage
+        data_xr: xarray of [fovs, slices, rows, cols, channels] to be split up
+        montage_slice_len: number of slices to include in each montage
 
     Outputs
         montaged_xr: xarray of [fovs, stacks, montages, rows, cols, channels] that has been split"""
 
     # sanitize inputs
-    if len(input_data.shape) != 5:
-        raise ValueError("invalid input data shape, expected array of len(5), got {}".format(input_data.shape))
+    if len(data_xr.shape) != 5:
+        raise ValueError("invalid input data shape, expected array of len(5), got {}".format(data_xr.shape))
 
-    if montage_size > input_data.shape[1]:
+    if montage_slice_len > data_xr.shape[1]:
         raise ValueError("montage size is greater than stack length")
 
-    # compute indices for montaging
-    montage_indices = compute_montage_indices(input_data.shape[1], montage_size)
+    # compute indices for montages
+    slice_len = data_xr.shape[1]
+    montage_indices = compute_montage_indices(slice_len, montage_slice_len)
 
-    montage_xr = montage_helper(input_data, montage_indices)
+    montage_xr = montage_helper(data_xr, montage_indices)
 
     return montage_xr, montage_indices
 
 
-def save_npzs_for_caliban(input_data, montage_indices, save_dir):
+def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
-        input_data: xarray of [fovs, stacks, montages, rows, cols, channels]
+        montage_xr: xarray of [fovs, montage_slices, montage_num, rows, cols, channels]
         montage_indices: indices used to generate the montages
         save_dir: path to save the npz and JSON files
 
@@ -1096,11 +1097,11 @@ def save_npzs_for_caliban(input_data, montage_indices, save_dir):
     num_row_crops = 1
     num_col_crops = 1
 
-    fov_num, stack_num, montage_num, row_num, col_num, channel_num = input_data.shape
-    fov_names = input_data.fovs.values
+    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_xr.shape
+    fov_names = montage_xr.fovs.values
 
     # loop through all crops in all images
-    for fov in range(fov_num):
+    for fov in range(fov_len):
         for row in range(num_row_crops):
             for col in range(num_col_crops):
                 for montage in range(montage_num):
@@ -1109,23 +1110,21 @@ def save_npzs_for_caliban(input_data, montage_indices, save_dir):
                     crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[fov], row, col, montage)
 
                     # determine if labels are blank
-                    labels = input_data[fov:(fov + 1), :, montage, :, :, -1:].values
+                    labels = montage_xr[fov:(fov + 1), :, montage, :, :, -1:].values
 
                     # crop is not blank, save based on file_format
                     save_path = os.path.join(save_dir, crop_id)
 
-                    # save images as either npz or xarray
-                    np.savez(save_path + ".npz", X=input_data[fov:(fov + 1), :, montage, :, :, :-1].values, y=labels)
+                    # save images as npz
+                    np.savez(save_path + ".npz", X=montage_xr[fov:(fov + 1), :, montage, :, :, :-1].values, y=labels)
 
 
     montage_log_data = {}
     montage_log_data["montage_indices"] = montage_indices.tolist()
     montage_log_data["fov_names"] = fov_names.tolist()
-    montage_log_data["montage_shape"] = input_data.shape
+    montage_log_data["montage_shape"] = montage_xr.shape
     montage_log_data["montage_num"] = montage_num
 
     log_path = os.path.join(save_dir, "montage_log_data.json")
     with open(log_path, "w") as write_file:
         json.dump(montage_log_data, write_file)
-
-
