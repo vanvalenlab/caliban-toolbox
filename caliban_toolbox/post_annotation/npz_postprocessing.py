@@ -437,3 +437,21 @@ def reconstruct_montage_data(save_dir):
 
     return stitched_xr
 
+
+def reshape_xr(input_xr, dim_names):
+    """Adds additional dimensions of size 1 to an xarray"""
+
+    # TODO: make robust to misspelled dim names. Also allow reordering of existing dims
+    input_vals = input_xr.values
+    new_coords = []
+    for i in range(len(dim_names)):
+        if dim_names[i] in input_xr.dims:
+            # already exists, no need to add
+            new_coords.append(input_xr.coords[dim_names[i]])
+        else:
+            input_vals = np.expand_dims(input_vals, axis=i)
+            new_coords.append(range(1))
+
+    reshaped_xr = xr.DataArray(input_vals, coords=new_coords, dims=dim_names)
+    return reshaped_xr
+

@@ -539,6 +539,8 @@ def test_load_montages():
 
 
 def test_stitch_montages():
+
+    # test case with even division
     fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
     slice_len = 40
 
@@ -562,7 +564,30 @@ def test_stitch_montages():
 
     assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0], tags))
 
-    # TODO check for case where index doesn't divide evenly
+
+    # test case without even division
+    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
+    slice_len = 40
+
+    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+                                 col_len=col_len, chan_len=chan_len)
+
+    # tag upper left hand corner of the label in each image
+    tags = np.arange(slice_len)
+    input_data[0, :, 0, 0, 2] = tags
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    fov_names = input_data.fovs.values
+
+    montage_log_data = {}
+    montage_log_data["montage_indices"] = montage_indices.tolist()
+    montage_log_data["fov_names"] = fov_names.tolist()
+    montage_log_data["montage_shape"] = montage_xr.shape
+    montage_log_data["montage_num"] = montage_num
+
+    stitched_montages = npz_postprocessing.stitch_montages(montage_xr[..., -1:], montage_log_data)
+
+    assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0], tags))
 
 
 def test_reconstruct_montage_data():
@@ -585,5 +610,3 @@ def test_reconstruct_montage_data():
 
     shutil.rmtree(save_dir)
 
-
-# TODO: rename montage data throughout processing to be more informative
