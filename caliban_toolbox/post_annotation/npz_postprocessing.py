@@ -362,3 +362,60 @@ def load_montages(montage_dir, montage_log_data):
                 print("did not find {}, leaving blank".format(montage_name))
 
     return montage_stack
+
+
+def stitch_montages(montage_stack, montage_log_data):
+    """Helper function to stitch montages together back into original sized array
+
+    Inputs
+        montage_stack: xarray of shape [fovs, montage_stack, montage_num, rows, cols, 1]
+        montage_log_data: log data produced from creation of montage stack
+
+    Outputs
+        stitched_montages: xarray of shape [fovs, stacks, rows, cols, 1]"""
+
+    fov_num, stack_num, montage_num, row_num, col_num, chan_num = montage_log_data["montage_shape"]
+    montage_indices = montage_log_data["montage_indices"]
+    stack_len = montage_indices[-1]
+    fov_names = montage_log_data["fov_names"]
+    stitched_montages = np.zeros((fov_num, stack_len, row_num, col_num, 1))
+
+    # loop montage indices to generate montaged data
+    montage_counter = 0
+    for i in range(len(montage_indices) - 1):
+
+        if i != len(montage_indices) - 2:
+            # not the last montage
+            stitched_montages[:, montage_indices[i]:montage_indices[i + 1], :, :, :] = montage_stack[:, :, montage_counter, ...]
+            montage_counter += 1
+
+        else:
+            # last montage, only index into stack the amount two indices are separated
+            montage_len = montage_indices[i + 1] - montage_indices[i]
+            stitched_montages[:, montage_indices[i]:montage_indices[i + 1], :, :, :] = montage_stack[:, :montage_len, montage_counter, ...]
+            montage_counter += 1
+
+    stitched_xr = xr.DataArray(stitched_montages,
+                               coords=[fov_names, range(stack_len), range(row_num),
+                                       range(col_num), ["segmentation_label"]],
+                               dims=["fovs", "stacks", "rows", "cols", "channels"])
+    return stitched_xr
+
+
+def reconstruct_montaged_data(save_dir):
+    if not os.path.isdir(save_dir):
+        raise FileNotFoundError("montage directory does not exist")
+
+    json_file_path = os.path.join(save_dir, "montage_log_data.json")
+    if not os.path.exists(json_file_path):
+        raise FileNotFoundError("json file does not exist")
+
+    with open(json_file_path) as json_file:
+        montage_log_data = json.load(json_file)
+
+    montage_stack = load_montages(save_dir, montage_log_data)
+
+    stitched_xr = stitch_montages(montage_stack, montage_log_data)
+
+    return stitched_xr
+

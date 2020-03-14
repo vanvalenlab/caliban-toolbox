@@ -548,4 +548,53 @@ def test_load_montages():
     shutil.rmtree(save_dir)
 
 
+def test_stitch_montages():
+    stack_len = 40
+    montage_len = 4
+    fov_num = 1
+    row_num = 50
+    col_num = 50
+    chan_num = 3
 
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_len,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    # tag upper left hand corner of the label in each image
+    tags = np.arange(stack_len)
+    input_data[0, :, 0, 0, 2] = tags
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_len)
+    fov_names = input_data.fovs.values
+
+    montage_log_data = {}
+    montage_log_data["montage_indices"] = montage_indices.tolist()
+    montage_log_data["fov_names"] = fov_names.tolist()
+    montage_log_data["montage_shape"] = montage_xr.shape
+    montage_log_data["montage_num"] = montage_xr.shape[2]
+
+    stitched_montages = npz_postprocessing.stitch_montages(montage_xr[..., -1:], montage_log_data)
+
+    assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0], tags))
+
+
+def test_reconstruct_montaged_data():
+    montage_len, fov_num, stack_num, crop_num, row_num, col_num, chan_num = 4, 1, 40, 1, 50, 50, 3
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_num,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    # tag upper left hand corner of the label in each image
+    tags = np.arange(stack_num)
+    input_data[0, :, 0, 0, 2] = tags
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_len)
+
+    save_dir = "tests/caliban_toolbox/test_reconstruct_montaged_data/"
+    npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
+
+    stitched_montages = npz_postprocessing.reconstruct_montaged_data(save_dir)
+    assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0], tags))
+
+    shutil.rmtree(save_dir)
+
+# TODO: rename montage data throughout processing to be more informative
