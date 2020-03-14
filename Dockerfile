@@ -23,5 +23,4 @@ RUN pip install /opt/caliban-toolbox
 # Copy over toolbox notebooks
 COPY notebooks/ /notebooks/
 
-# Change matplotlibrc file to use the Agg backend
 CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--allow-root"]
