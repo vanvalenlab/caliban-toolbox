@@ -1077,11 +1077,12 @@ def create_montaged_data(input_data, montage_size):
     return montage_xr, montage_indices
 
 
-def save_npzs_for_caliban(input_data, save_dir):
+def save_npzs_for_caliban(input_data, montage_indices, save_dir):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
-        input_data: xarray of [fovs, stacks, montages, crops, rows, cols, channels]
+        input_data: xarray of [fovs, stacks, montages, rows, cols, channels]
+        montage_indices: indices used to generate the montages
         save_dir: path to save the npz and JSON files
 
     Outputs
@@ -1090,30 +1091,41 @@ def save_npzs_for_caliban(input_data, save_dir):
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    if input_data.crops.shape == (1, ):
-        # no crops, don't need to loop through
-        num_row_crops = 1
-        num_col_crops = 1
+    # if input_data.crops.shape == (1, ):
+    #     # no crops, don't need to loop through
+    num_row_crops = 1
+    num_col_crops = 1
 
+    fov_num, stack_num, montage_num, row_num, col_num, channel_num = input_data.shape
     fov_names = input_data.fovs.values
-    montage_num = input_data.shape[2]
 
     # loop through all crops in all images
-    for img in range(input_data.shape[0]):
+    for fov in range(fov_num):
         for row in range(num_row_crops):
             for col in range(num_col_crops):
-                for montage in montage_num:
+                for montage in range(montage_num):
 
                     # generate identifier for crop
-                    crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[img], row, col, montage)
+                    crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[fov], row, col, montage)
 
                     # determine if labels are blank
-                    labels = input_data[img:(img + 1), :, montage, ..., -1:].values
+                    labels = input_data[fov:(fov + 1), :, montage, :, :, -1:].values
 
                     # crop is not blank, save based on file_format
                     save_path = os.path.join(save_dir, crop_id)
 
                     # save images as either npz or xarray
-                    np.savez(save_path + ".npz", X=input_data[img:(img + 1), :, montage, ..., :-1].values, y=labels)
+                    np.savez(save_path + ".npz", X=input_data[fov:(fov + 1), :, montage, :, :, :-1].values, y=labels)
+
+
+    montage_log_data = {}
+    montage_log_data["montage_indices"] = montage_indices.tolist()
+    montage_log_data["fov_names"] = fov_names.tolist()
+    montage_log_data["montage_shape"] = input_data.shape
+    montage_log_data["montage_num"] = montage_num
+
+    log_path = os.path.join(save_dir, "montage_log_data.json")
+    with open(log_path, "w") as write_file:
+        json.dump(montage_log_data, write_file)
 
 

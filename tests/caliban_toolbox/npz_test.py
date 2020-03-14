@@ -382,6 +382,33 @@ def _blank_stack_xr(fov_num, stack_num, row_num, col_num, chan_num):
     return test_stack_xr
 
 
+def _blank_montage_stack_xr(fov_num, stack_num, montage_num, crop_num, row_num, col_num, chan_num):
+    """Test function to generate a blank xarray with the supplied dimensions
+
+    Inputs
+        fov_num: number of distinct FOVs
+        stack_num: number of distinct z stacks
+        montage_num: number of distinct montages
+        crop_num: number of distinct crops
+        row_num: number of rows
+        col_num: number of cols
+        chan_num: number of channels
+
+    Outputs
+        test_xr: xarray of [fov_num, stack_num, montage_num, row_num, col_num, chan_num]"""
+
+    test_img = np.zeros((fov_num, stack_num, montage_num, crop_num, row_num, col_num, chan_num))
+
+    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
+    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
+
+    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_num), range(montage_num), range(crop_num),
+                                                        range(row_num), range(col_num), channels],
+                           dims=["fovs", "stacks", "montages", "crops", "rows", "cols", "channels"])
+
+    return test_stack_xr
+
+
 # make sure correct indices are returned
 def test_compute_montage_indices():
 
@@ -478,4 +505,47 @@ def test_create_montaged_data():
     assert montage_xr.shape == (fov_num, montage_len, int(np.ceil(stack_len / montage_len)), row_num, col_num, chan_num)
 
 
-def test_
+def test_save_npzs_for_caliban():
+    montage_len, fov_num, stack_num, crop_num, row_num, col_num, chan_num = 4, 1, 40, 1, 50, 50, 3
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_num,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_len)
+
+    save_dir = "tests/caliban_toolbox/test_save_npzs_for_caliban/"
+    npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
+
+    # check that correct size was saved
+
+    test_npz_labels = np.load(save_dir + "fov1_row_0_col_0_montage_0.npz")["y"]
+
+    assert test_npz_labels.shape == (fov_num, montage_len, row_num, col_num, 1)
+    shutil.rmtree(save_dir)
+
+
+def test_load_montages():
+    montage_len, fov_num, stack_num, crop_num, row_num, col_num, chan_num = 4, 1, 40, 1, 50, 50, 3
+
+    input_data = _blank_stack_xr(fov_num=fov_num, stack_num=stack_num,
+                                 row_num=row_num, col_num=col_num, chan_num=chan_num)
+
+    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_len)
+
+    # tag the upper left hand corner of the label in each montage
+    tags = np.arange(int(np.ceil(stack_num / montage_len)))
+    montage_xr[0, 0, :, 0, 0, 2] = tags
+    save_dir = "tests/caliban_toolbox/test_load_montages/"
+    npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
+
+    with open(save_dir + "montage_log_data.json") as json_file:
+        montage_log_data = json.load(json_file)
+
+    loaded_montages = npz_postprocessing.load_montages(save_dir, montage_log_data)
+
+    assert np.all(np.equal(loaded_montages[0, 0, :, 0, 0, 0], tags))
+
+    shutil.rmtree(save_dir)
+
+
+

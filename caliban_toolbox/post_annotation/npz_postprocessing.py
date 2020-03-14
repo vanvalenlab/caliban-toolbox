@@ -342,3 +342,23 @@ def set_channel_colors(combined_xr, plot_colors):
 
     return reordered_xr
 
+
+def load_montages(montage_dir, montage_log_data):
+
+    fov_num, stack_num, montage_num, row_num, col_num, chan_num = montage_log_data["montage_shape"]
+    fov_names = montage_log_data["fov_names"]
+
+    montage_stack = np.zeros((fov_num, stack_num, montage_num, row_num, col_num, 1))
+
+    for fov in range(fov_num):
+        for montage in range(montage_num):
+            montage_name = "{}_row_{}_col_{}_montage_{}.npz".format(fov_names[fov], 0, 0, montage)
+
+            montage_path = os.path.join(montage_dir, montage_name)
+            try:
+                montage_npz = np.load(montage_path)
+                montage_stack[fov, :, montage, ...] = montage_npz["y"]
+            except FileNotFoundError:
+                print("did not find {}, leaving blank".format(montage_name))
+
+    return montage_stack
