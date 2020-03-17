@@ -1011,11 +1011,11 @@ def montage_helper(data_xr, montage_indices):
     """Slices an image stack into smaller montages according to supplied indices
 
     Inputs
-        data_stack: xarray of [fovs, slices, rows, cols, channels] to be split into montages
+        data_stack: xarray of [fovs, stacks, rows, cols, channels] to be split into montages
         montage_indices: list of indices for montages
 
     Outputs:
-        montage_xr: xarray of montaged images of [fovs, montage_slices, montage_num, rows, cols, channels]"""
+        montage_xr: xarray of montaged images of [fovs, montage_stacks, montage_num, rows, cols, channels]"""
 
     # determine key parameters of crop
     fov_len, slice_len, row_len, col_len, chan_len = data_xr.shape
@@ -1026,7 +1026,7 @@ def montage_helper(data_xr, montage_indices):
     montage_stack = np.zeros((fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len))
     montage_xr = xr.DataArray(data=montage_stack, coords=[data_xr.fovs, range(montage_slice_len), range(montage_num),
                                                           range(row_len), range(col_len), data_xr.channels],
-                              dims=["fovs", "montage_slices", "montage_num", "rows", "cols", "channels"])
+                              dims=["fovs", "montage_stacks", "montage_num", "rows", "cols", "channels"])
 
     # loop montage indices to generate montaged data
     montage_counter = 0
@@ -1046,12 +1046,12 @@ def montage_helper(data_xr, montage_indices):
     return montage_xr
 
 
-def create_montage_data(data_xr, montage_slice_len):
+def create_montage_data(data_xr, montage_stack_len):
     """Takes an array of data and splits it up into smaller pieces along the stack dimension
 
     Inputs
-        data_xr: xarray of [fovs, slices, rows, cols, channels] to be split up
-        montage_slice_len: number of slices to include in each montage
+        data_xr: xarray of [fovs, stacks, rows, cols, channels] to be split up
+        montage_slice_len: number of stacks to include in each montage
 
     Outputs
         montaged_xr: xarray of [fovs, stacks, montages, rows, cols, channels] that has been split"""
@@ -1060,12 +1060,12 @@ def create_montage_data(data_xr, montage_slice_len):
     if len(data_xr.shape) != 5:
         raise ValueError("invalid input data shape, expected array of len(5), got {}".format(data_xr.shape))
 
-    if montage_slice_len > data_xr.shape[1]:
+    if montage_stack_len > data_xr.shape[1]:
         raise ValueError("montage size is greater than stack length")
 
     # compute indices for montages
-    slice_len = data_xr.shape[1]
-    montage_indices = compute_montage_indices(slice_len, montage_slice_len)
+    stack_len = data_xr.shape[1]
+    montage_indices = compute_montage_indices(stack_len, montage_stack_len)
 
     montage_xr = montage_helper(data_xr, montage_indices)
 
@@ -1076,7 +1076,7 @@ def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
-        montage_xr: xarray of [fovs, montage_slices, montage_num, rows, cols, channels]
+        montage_xr: xarray of [fovs, montage_stacks, montage_num, rows, cols, channels]
         montage_indices: indices used to generate the montages
         save_dir: path to save the npz and JSON files
 
@@ -1091,7 +1091,7 @@ def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
     num_row_crops = 1
     num_col_crops = 1
 
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_xr.shape
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = montage_xr.shape
     fov_names = montage_xr.fovs.values
 
     # loop through all crops in all images

@@ -358,7 +358,7 @@ def test_crop_and_stitch():
     os.remove(base_dir + "test_xr.xr")
 
 
-def _blank_stack_xr(fov_len, slice_len, row_len, col_len, chan_len):
+def _blank_stack_xr(fov_len, stack_len, row_len, col_len, chan_len):
     """Test function to generate a blank xarray with the supplied dimensions
 
     Inputs
@@ -371,12 +371,12 @@ def _blank_stack_xr(fov_len, slice_len, row_len, col_len, chan_len):
     Outputs
         test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
 
-    test_img = np.zeros((fov_num, stack_num, row_num, col_num, chan_num))
+    test_img = np.zeros((fov_len, stack_len, row_len, col_len, chan_len))
 
-    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
-    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
+    fovs = ["fov" + str(x) for x in range(1, fov_len + 1)]
+    channels = ["channel" + str(x) for x in range(1, chan_len + 1)]
 
-    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_num), range(row_num), range(col_num), channels],
+    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_len), range(row_len), range(col_len), channels],
                            dims=["fovs", "stacks", "rows", "cols", "channels"])
 
     return test_stack_xr
@@ -431,44 +431,44 @@ def test_compute_montage_indices():
 def test_montage_helper():
 
     # test output shape with even division of montage
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    montage_indices = npz_preprocessing.compute_montage_indices(slice_len, montage_slice_len)
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
 
-    assert montage_output.shape == (fov_len, montage_slice_len, int(np.ceil(slice_len / montage_slice_len)),
+    assert montage_output.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
                                     row_len, col_len, chan_len)
 
     # test output shape with uneven division of montage
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
+    stack_len = 40
 
-    montage_indices = npz_preprocessing.compute_montage_indices(slice_len, montage_slice_len)
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
 
-    assert montage_output.shape == (fov_len, montage_slice_len, int(np.ceil(slice_len / montage_slice_len)),
+    assert montage_output.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
                                     row_len, col_len, chan_len)
 
     # test output values
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    montage_indices = npz_preprocessing.compute_montage_indices(slice_len, montage_slice_len)
+    montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
     # tag upper left hand corner of each image
-    tags = np.arange(slice_len)
+    tags = np.arange(stack_len)
     input_data[0, :, 0, 0, 0] = tags
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
@@ -481,26 +481,26 @@ def test_montage_helper():
 # test overall calling function
 def test_create_montaged_data():
     # test output shape with even division of montage
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
-    assert montage_xr.shape == (fov_len, montage_slice_len, int(np.ceil(slice_len / montage_slice_len)),
+    assert montage_xr.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
                                 row_len, col_len, chan_len)
 
 
 def test_save_npzs_for_caliban():
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
     save_dir = "tests/caliban_toolbox/test_save_npzs_for_caliban/"
     npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
@@ -509,21 +509,21 @@ def test_save_npzs_for_caliban():
 
     test_npz_labels = np.load(save_dir + "fov1_row_0_col_0_montage_0.npz")["y"]
 
-    assert test_npz_labels.shape == (fov_len, montage_slice_len, row_len, col_len, 1)
+    assert test_npz_labels.shape == (fov_len, montage_stack_len, row_len, col_len, 1)
     shutil.rmtree(save_dir)
 
 
 def test_load_montages():
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
     # tag the upper left hand corner of the label in each montage
-    tags = np.arange(int(np.ceil(slice_len / montage_slice_len)))
+    tags = np.arange(int(np.ceil(stack_len / montage_stack_len)))
     montage_xr[0, 0, :, 0, 0, 2] = tags
     save_dir = "tests/caliban_toolbox/test_load_montages/"
     npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
@@ -541,17 +541,17 @@ def test_load_montages():
 def test_stitch_montages():
 
     # test case with even division
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
     # tag upper left hand corner of the label in each image
-    tags = np.arange(slice_len)
+    tags = np.arange(stack_len)
     input_data[0, :, 0, 0, 2] = tags
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
     fov_names = input_data.fovs.values
 
     montage_log_data = {}
@@ -566,17 +566,17 @@ def test_stitch_montages():
 
 
     # test case without even division
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
 
     # tag upper left hand corner of the label in each image
-    tags = np.arange(slice_len)
+    tags = np.arange(stack_len)
     input_data[0, :, 0, 0, 2] = tags
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
     fov_names = input_data.fovs.values
 
     montage_log_data = {}
@@ -591,21 +591,21 @@ def test_stitch_montages():
 
 
 def test_reconstruct_montage_data():
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
-    slice_len = 40
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, slice_len=slice_len, row_len=row_len,
+    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
                                  col_len=col_len, chan_len=chan_len)
     # tag upper left hand corner of the label in each image
-    tags = np.arange(slice_len)
+    tags = np.arange(stack_len)
     input_data[0, :, 0, 0, 2] = tags
 
-    montage_xr, montage_indices = npz_preprocessing.create_montaged_data(input_data, montage_slice_len)
+    montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
     save_dir = "tests/caliban_toolbox/test_reconstruct_montage_data/"
     npz_preprocessing.save_npzs_for_caliban(montage_xr, montage_indices, save_dir)
 
-    stitched_montages = npz_postprocessing.reconstruct_montaged_data(save_dir)
+    stitched_montages = npz_postprocessing.reconstruct_montage_data(save_dir)
     assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0], tags))
 
     shutil.rmtree(save_dir)

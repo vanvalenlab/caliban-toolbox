@@ -354,10 +354,10 @@ def load_montages(montage_dir, montage_log_data):
         montage_stack: array of [fovs, montage_slices, montage_num, rows, cols, segmentation_label]"""
 
     # get parameters from dict
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
     fov_names = montage_log_data["fov_names"]
 
-    montage_stack = np.zeros((fov_len, montage_slice_len, montage_num, row_len, col_len, 1))
+    montage_stack = np.zeros((fov_len, montage_stack_len, montage_num, row_len, col_len, 1))
 
     # loop through file name structure to load npzs
     for fov in range(fov_len):
@@ -385,7 +385,7 @@ def stitch_montages(montage_stack, montage_log_data):
         stitched_montages: xarray of shape [fovs, slices, rows, cols, segmentation_label]"""
 
     # get parameters from dict
-    fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
+    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = montage_log_data["montage_shape"]
     montage_indices, fov_names = montage_log_data["montage_indices"], montage_log_data["fov_names"]
     slice_len = montage_indices[-1]
 
@@ -436,22 +436,3 @@ def reconstruct_montage_data(save_dir):
     stitched_xr = stitch_montages(montage_stack, montage_log_data)
 
     return stitched_xr
-
-
-def reshape_xr(input_xr, dim_names):
-    """Adds additional dimensions of size 1 to an xarray"""
-
-    # TODO: make robust to misspelled dim names. Also allow reordering of existing dims
-    input_vals = input_xr.values
-    new_coords = []
-    for i in range(len(dim_names)):
-        if dim_names[i] in input_xr.dims:
-            # already exists, no need to add
-            new_coords.append(input_xr.coords[dim_names[i]])
-        else:
-            input_vals = np.expand_dims(input_vals, axis=i)
-            new_coords.append(range(1))
-
-    reshaped_xr = xr.DataArray(input_vals, coords=new_coords, dims=dim_names)
-    return reshaped_xr
-
