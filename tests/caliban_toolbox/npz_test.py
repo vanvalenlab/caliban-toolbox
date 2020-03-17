@@ -13,11 +13,14 @@ importlib.reload(npz_preprocessing)
 importlib.reload(npz_postprocessing)
 
 
-def _blank_xr(fov_num, row_num, col_num, chan_num):
+def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len):
     """Test function to generate a blank xarray with the supplied dimensions
 
     Inputs
         fov_num: number of distinct FOVs
+        stack_num: number of distinct z stacks
+        crop_num: number of x/y crops
+        slice_num: number of z/t slices
         row_num: number of rows
         col_num: number of cols
         chan_num: number of channels
@@ -25,39 +28,16 @@ def _blank_xr(fov_num, row_num, col_num, chan_num):
     Outputs
         test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
 
-    test_img = np.zeros((fov_num, row_num, col_num, chan_num))
+    test_img = np.zeros((fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len))
 
-    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
-    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
+    fovs = ["fov" + str(x) for x in range(1, fov_len + 1)]
+    channels = ["channel" + str(x) for x in range(1, chan_len + 1)]
 
-    test_xr = xr.DataArray(data=test_img, coords=[fovs, range(row_num), range(col_num), channels],
-                           dims=["fovs", "rows", "cols", "channels"])
+    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_len), range(crop_num), range(slice_num),
+                                                        range(row_len), range(col_len), channels],
+                           dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
 
-    return test_xr
-
-
-def _blank_cropped_xr(fov_num, crop_num, row_len, col_len, chan_num):
-    """Test function to generate a blank xarray with the supplied dimensions
-
-    Inputs
-        fov_num: number of distinct FOVs
-        crop_num: number of distinct crops
-        row_len: number of rows
-        col_len: number of cols
-        chan_num: number of channels
-
-    Outputs
-        test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
-
-    test_img = np.zeros((fov_num, crop_num, row_len, col_len, chan_num))
-
-    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
-    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
-
-    test_xr = xr.DataArray(data=test_img, coords=[fovs, range(crop_num), range(row_len), range(col_len), channels],
-                           dims=["fovs", "crops", "rows", "cols", "channels"])
-
-    return test_xr
+    return test_stack_xr
 
 
 # tests for npz version of the pipeline
@@ -92,61 +72,62 @@ def test_compute_crop_indices():
 def test_crop_helper():
 
     # img params
-    fov_num, row_num, col_num, chan_num = 2, 200, 200, 1
+    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 200, 200, 1
     crop_size, overlap_frac = 200, 0.2
 
     # test only one crop
-    test_xr = _blank_xr(fov_num=fov_num, row_num=row_num, col_num=col_num, chan_num=chan_num)
+    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                             row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    starts, ends, padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=crop_size,
+    starts, ends, padding = npz_preprocessing.compute_crop_indices(img_len=row_len, crop_size=crop_size,
                                                                                overlap_frac=overlap_frac)
     cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr, row_start=starts, row_end=ends,
                                                     col_start=starts, col_end=ends,
-                                                    padding=((0, 0), (0, padding), (0, padding), (0, 0)))
+                                                    padding=(padding, padding))
 
-    assert(cropped.shape == (fov_num, 1, row_num, col_num, chan_num))
+    assert(cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
 
     # test crops of different row/col dimensions
     row_crop, col_crop = 50, 40
-    row_starts, row_ends, row_padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=row_crop,
+    row_starts, row_ends, row_padding = npz_preprocessing.compute_crop_indices(img_len=row_len, crop_size=row_crop,
                                                                                overlap_frac=overlap_frac)
 
-    col_starts, col_ends, col_padding = npz_preprocessing.compute_crop_indices(img_len=col_num, crop_size=col_crop,
+    col_starts, col_ends, col_padding = npz_preprocessing.compute_crop_indices(img_len=col_len, crop_size=col_crop,
                                                                                overlap_frac=overlap_frac)
 
     cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr, row_start=row_starts, row_end=row_ends,
                                                     col_start=col_starts, col_end=col_ends,
-                                                    padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
+                                                    padding=(row_padding, col_padding))
 
-    assert(cropped.shape == (fov_num, 30, row_crop, col_crop, chan_num))
+    assert(cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
 
     # test that correct region of image is being cropped
     row_crop, col_crop = 40, 40
 
     # assign each pixel in the image a unique value
-    linear_sequence = np.arange(0, fov_num * row_num * col_num * chan_num)
-    linear_sequence_reshaped = np.reshape(linear_sequence, (fov_num, row_num, col_num, chan_num))
-    test_xr[:, :, :, :] = linear_sequence_reshaped
+    linear_sequence = np.arange(0, fov_len * 1 * 1 * row_len * col_len * chan_len)
+    linear_sequence_reshaped = np.reshape(linear_sequence, (fov_len, 1, 1, 1, row_len, col_len, chan_len))
+    test_xr[:, :, :, :, :, :, :] = linear_sequence_reshaped
 
     # crop the image
-    row_starts, row_ends, row_padding = npz_preprocessing.compute_crop_indices(img_len=row_num, crop_size=row_crop,
+    row_starts, row_ends, row_padding = npz_preprocessing.compute_crop_indices(img_len=row_len, crop_size=row_crop,
                                                                                overlap_frac=overlap_frac)
 
-    col_starts, col_ends, col_padding = npz_preprocessing.compute_crop_indices(img_len=col_num, crop_size=col_crop,
+    col_starts, col_ends, col_padding = npz_preprocessing.compute_crop_indices(img_len=col_len, crop_size=col_crop,
                                                                                overlap_frac=overlap_frac)
 
     cropped, padded = npz_preprocessing.crop_helper(input_data=test_xr, row_start=row_starts, row_end=row_ends,
                                                     col_start=col_starts, col_end=col_ends,
-                                                    padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
+                                                    padding=(row_padding, col_padding))
 
     # check that the values of each crop match the value in uncropped image
     for img in range(test_xr.shape[0]):
         crop_counter = 0
         for row in range(len(row_starts)):
             for col in range(len(col_starts)):
-                crop = cropped[img, crop_counter, :, :, 0].values
+                crop = cropped[img, 0, crop_counter, 0, :, :, 0].values
 
-                original_image_crop = test_xr[img, row_ends[row]:row_ends[row], col_starts[col]:col_ends[col], :].values
+                original_image_crop = test_xr[img, 0, 0, 0, row_ends[row]:row_ends[row], col_starts[col]:col_ends[col], :].values
                 assert(np.all(crop == original_image_crop))
 
                 crop_counter += 1
@@ -207,28 +188,23 @@ def test_save_crops():
 
 
 def test_crop_multichannel_data():
+    # img params
+    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 200, 200, 1
+    crop_size = (50, 50)
+    overlap_frac = 0.2
 
-    # create test_xr, give all crops constant values
-    fov_num, row_num, col_num, chan_num = 2, 200, 200, 1
-    test_xr = _blank_xr(fov_num=fov_num, row_num=row_num, col_num=col_num, chan_num=chan_num)
-    test_xr[:, :, :, 0] = 1
+    # test only one crop
+    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                             row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    base_dir = "tests/caliban_toolbox/"
-    test_xr.to_netcdf(os.path.join(base_dir, "crop_multichannel_test_xr.xr"))
+    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=test_xr, crop_size=crop_size,
+                                                                         overlap_frac=overlap_frac, blank_labels="include",
+                                                                         test_parameters=False)
 
-    npz_preprocessing.crop_multichannel_data(xarray_path=os.path.join(base_dir, "crop_multichannel_test_xr.xr"),
-                                             folder_save=os.path.join(base_dir, "crop_multichannel_test"),
-                                             crop_size=(50, 50), overlap_frac=0.2, blank_labels="include",
-                                             save_format="xr", relabel=True)
+    assert (np.all(log_data["fov_names"] == test_xr.fovs.values))
 
-    # unpack JSON data
-    with open(os.path.join(base_dir, "crop_multichannel_test", "log_data.json")) as json_file:
-        log_data = json.load(json_file)
-
-    assert(np.all(log_data["fov_names"] == test_xr.fovs.values))
-
-    shutil.rmtree(os.path.join(base_dir, "crop_multichannel_test"))
-    os.remove((os.path.join(base_dir, "crop_multichannel_test_xr.xr")))
+    expected_crop_num = len(npz_preprocessing.compute_crop_indices(row_len, crop_size[0], overlap_frac)[0]) ** 2
+    assert (data_xr_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num, crop_size[0], crop_size[1], chan_len))
 
 
 def test_stitch_crops():
@@ -358,57 +334,6 @@ def test_crop_and_stitch():
     os.remove(base_dir + "test_xr.xr")
 
 
-def _blank_stack_xr(fov_len, stack_len, row_len, col_len, chan_len):
-    """Test function to generate a blank xarray with the supplied dimensions
-
-    Inputs
-        fov_num: number of distinct FOVs
-        stack_num: number of distinct z stacks
-        row_num: number of rows
-        col_num: number of cols
-        chan_num: number of channels
-
-    Outputs
-        test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
-
-    test_img = np.zeros((fov_len, stack_len, row_len, col_len, chan_len))
-
-    fovs = ["fov" + str(x) for x in range(1, fov_len + 1)]
-    channels = ["channel" + str(x) for x in range(1, chan_len + 1)]
-
-    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_len), range(row_len), range(col_len), channels],
-                           dims=["fovs", "stacks", "rows", "cols", "channels"])
-
-    return test_stack_xr
-
-
-def _blank_montage_stack_xr(fov_num, stack_num, montage_num, crop_num, row_num, col_num, chan_num):
-    """Test function to generate a blank xarray with the supplied dimensions
-
-    Inputs
-        fov_num: number of distinct FOVs
-        stack_num: number of distinct z stacks
-        montage_num: number of distinct montages
-        crop_num: number of distinct crops
-        row_num: number of rows
-        col_num: number of cols
-        chan_num: number of channels
-
-    Outputs
-        test_xr: xarray of [fov_num, stack_num, montage_num, row_num, col_num, chan_num]"""
-
-    test_img = np.zeros((fov_num, stack_num, montage_num, crop_num, row_num, col_num, chan_num))
-
-    fovs = ["fov" + str(x) for x in range(1, fov_num + 1)]
-    channels = ["channel" + str(x) for x in range(1, chan_num + 1)]
-
-    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_num), range(montage_num), range(crop_num),
-                                                        range(row_num), range(col_num), channels],
-                           dims=["fovs", "stacks", "montages", "crops", "rows", "cols", "channels"])
-
-    return test_stack_xr
-
-
 # make sure correct indices are returned
 def test_compute_montage_indices():
 
@@ -431,74 +356,74 @@ def test_compute_montage_indices():
 def test_montage_helper():
 
     # test output shape with even division of montage
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = 1, 4, 1, 10, 50, 50, 3
     stack_len = 40
 
     montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
-                                 col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=montage_num,
+                                row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
 
-    assert montage_output.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
+    assert montage_output.shape == (fov_len, montage_stack_len, crop_num, int(np.ceil(stack_len / montage_stack_len)),
                                     row_len, col_len, chan_len)
 
     # test output shape with uneven division of montage
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 6, 10, 50, 50, 3
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = 1, 6, 1, 10, 50, 50, 3
     stack_len = 40
 
     montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
-                                 col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=montage_num,
+                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
 
-    assert montage_output.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
+    assert montage_output.shape == (fov_len, montage_stack_len, crop_num, (np.ceil(stack_len / montage_stack_len)),
                                     row_len, col_len, chan_len)
 
     # test output values
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = 1, 4, 1, 10, 50, 50, 3
     stack_len = 40
 
     montage_indices = npz_preprocessing.compute_montage_indices(stack_len, montage_stack_len)
 
-    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
-                                 col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=montage_num,
+                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     # tag upper left hand corner of each image
     tags = np.arange(stack_len)
-    input_data[0, :, 0, 0, 0] = tags
+    input_data[0, :, 0, 0, 0, 0, 0] = tags
 
     montage_output = npz_preprocessing.montage_helper(input_data, montage_indices)
 
     # loop through each montage, make sure values increment as expected
     for i in range(montage_output.shape[1]):
-        assert np.all(np.equal(montage_output[0, :, i, 0, 0, 0], tags[i * 4:(i + 1) * 4]))
+        assert np.all(np.equal(montage_output[0, :, 0, i, 0, 0, 0], tags[i * 4:(i + 1) * 4]))
 
 
 # test overall calling function
-def test_create_montaged_data():
+def test_create_montage_data():
     # test output shape with even division of montage
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = 1, 4, 1, 10, 50, 50, 3
     stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
-                                 col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=montage_num,
+                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
-    assert montage_xr.shape == (fov_len, montage_stack_len, int(np.ceil(stack_len / montage_stack_len)),
+    assert montage_xr.shape == (fov_len, montage_stack_len, crop_num, int(np.ceil(stack_len / montage_stack_len)),
                                 row_len, col_len, chan_len)
 
 
 def test_save_npzs_for_caliban():
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = 1, 4, 10, 50, 50, 3
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = 1, 4, 1, 10, 50, 50, 3
     stack_len = 40
 
-    input_data = _blank_stack_xr(fov_len=fov_len, stack_len=stack_len, row_len=row_len,
-                                 col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=montage_stack_len,
+                                row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     montage_xr, montage_indices = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
@@ -507,9 +432,11 @@ def test_save_npzs_for_caliban():
 
     # check that correct size was saved
 
-    test_npz_labels = np.load(save_dir + "fov1_row_0_col_0_montage_0.npz")["y"]
+    test_npz_labels = np.load(save_dir + "fov1_row_0_col_0_montage_0.npz")
 
-    assert test_npz_labels.shape == (fov_len, montage_stack_len, row_len, col_len, 1)
+    assert test_npz_labels["y"].shape == (fov_len, montage_stack_len, row_len, col_len, 1)
+
+    assert test_npz_labels["y"].shape[:-1] == test_npz_labels["X"].shape[:-1]
     shutil.rmtree(save_dir)
 
 

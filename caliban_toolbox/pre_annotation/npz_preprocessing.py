@@ -769,40 +769,39 @@ def crop_helper(input_data, row_start, row_end, col_start, col_end, padding):
     """Crops an image into pieces according to supplied coordinates
 
     Inputs
-        input_data: xarray of [fovs, rows, cols, channels] to be cropped
+        input_data: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be cropped
         row_start: list of indices where row crops start
         row_end: list of indices where row crops end
         col_start: list of indices where col crops start
         col_end: list of indices where col crops end
-        padding: tuple of ((fov_start, fov_end), (row_left, row_right),
-                           (col_top, col_bottom), (channel_start, channel_end))
-                which specifies the amount of padding to add the final image
+        padding: tuple of (row_pad, col_pad) which specifies the amount of padding to add the final image
 
     Outputs:
         cropped_stack: stack of cropped images of [fovs, crops, rows, cols, channels]
         padded_image_shape: shape of the final padded image"""
 
     # determine key parameters of crop
+    fov_len, stack_len, _, slice_num, _, _, chan_len = input_data.shape
     crop_num = len(row_start) * len(col_start)
-    fov_num = input_data.shape[0]
-    chan_num = input_data.shape[-1]
     crop_size_row = row_end[0] - row_start[0]
     crop_size_col = col_end[0] - col_start[0]
 
     # create xarray to hold crops
-    cropped_stack = np.zeros((fov_num, crop_num, crop_size_row, crop_size_col, chan_num))
-    cropped_xr = xr.DataArray(data=cropped_stack, coords=[input_data.fovs, range(crop_num), range(crop_size_row),
+    cropped_stack = np.zeros((fov_len, stack_len, crop_num, slice_num, crop_size_row, crop_size_col, chan_len))
+    cropped_xr = xr.DataArray(data=cropped_stack, coords=[input_data.fovs, input_data.stacks, range(crop_num),
+                                                          input_data.slices, range(crop_size_row),
                                                           range(crop_size_col), input_data.channels],
-                              dims=["fovs", "crops", "rows", "cols", "channels"])
+                              dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
 
-    # pad the input to account for last crop
-    padded_input = np.pad(input_data, padding, mode="constant", constant_values=0)
+    # pad the input to account for imperfectly overlapping final crop in rows and cols
+    formatted_padding = ((0, 0), (0, 0), (0, 0), (0, 0), (0, padding[0]), (0, padding[1]), (0, 0))
+    padded_input = np.pad(input_data, formatted_padding, mode="constant", constant_values=0)
 
     # loop through rows and cols to generate crops
     crop_counter = 0
     for i in range(len(row_start)):
         for j in range(len(col_start)):
-            cropped_xr[:, crop_counter, ...] = padded_input[:, row_start[i]:row_end[i], col_start[j]:col_end[j], :]
+            cropped_xr[:, :, crop_counter, ...] = padded_input[:, :, 0, :, row_start[i]:row_end[i], col_start[j]:col_end[j], :]
             crop_counter += 1
 
     return cropped_xr, padded_input.shape
@@ -887,22 +886,18 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
                 crop_counter += 1
 
 
-def crop_multichannel_data(data_xr, folder_save, crop_size, overlap_frac, blank_labels="skip",
-                           save_format="xr", relabel=True, test_parameters=False):
+def crop_multichannel_data(data_xr, crop_size, overlap_frac, blank_labels="skip", test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Inputs
         data_xr: xarray to be cropped
-        folder_save: full path to folder to save crops into
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
         blank_labels: flag to determine what to do with empty labels. One of [skip, include, separate]
-        save_format: determines whether the crops will be saved as xr or npz files
-        relabel: boolean specifying wheether each crop will be relabeled independently from 1
         test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
     Outputs:
-        None, saves crops to specified directory"""
+        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, chans"""
 
     # sanitize inputs
     if len(crop_size) != 2:
@@ -911,53 +906,30 @@ def crop_multichannel_data(data_xr, folder_save, crop_size, overlap_frac, blank_
     if not crop_size[0] > 0 and crop_size[1] > 0:
         raise ValueError("crop_size entries must be positive numbers")
 
-    if not overlap_frac >= 0 and overlap_frac < 1:
+    if overlap_frac < 0 or overlap_frac > 1:
         raise ValueError("overlap_frac must be between 0 and 1")
 
     if blank_labels not in ["skip", "include", "separate"]:
         raise ValueError("blank_labels must be one of ['skip', 'include', 'separate'], got {}".format(blank_labels))
 
-    if save_format not in ["xr", "npz"]:
-        raise ValueError("save_format must be one of ['xr', 'npz'], got {}".format(save_format))
-
-    if len(data_xr.shape) != 4:
-        raise ValueError("data_xr does not have 4 dimensions, found {}".format(data_xr.shape))
-
-    if "fovs" not in data_xr.dims:
-        if "points" in data_xr.dims:
-            data_xr = data_xr.rename({"points": "fovs"})
-            print("renaming from points to fovs")
-        else:
-            raise ValueError("xarray does not contained fovs or points index, found {}".format(data_xr.dims))
-
-    if "channels" not in data_xr.dims:
-        raise ValueError("xarray does not contained channels index, found {}".format(data_xr.dims))
+    if list(data_xr.dims) != ["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"]:
+        raise ValueError("data_xr does not have expected dims, found {}".format(data_xr.dims))
 
     # check if testing or running all samples
     if test_parameters:
         data_xr = data_xr[:1, ...]
 
     # compute the start and end coordinates for the row and column crops
-    row_start, row_end, row_padding = compute_crop_indices(img_len=data_xr.shape[1], crop_size=crop_size[0],
+    row_start, row_end, row_padding = compute_crop_indices(img_len=data_xr.shape[4], crop_size=crop_size[0],
                                                                            overlap_frac=overlap_frac)
 
-    col_start, col_end, col_padding = compute_crop_indices(img_len=data_xr.shape[2], crop_size=crop_size[1],
+    col_start, col_end, col_padding = compute_crop_indices(img_len=data_xr.shape[5], crop_size=crop_size[1],
                                                            overlap_frac=overlap_frac)
 
     # crop images
     data_xr_cropped, padded_shape = crop_helper(data_xr, row_start=row_start, row_end=row_end, col_start=col_start,
                                                 col_end=col_end,
-                                                padding=((0, 0), (0, row_padding), (0, col_padding), (0, 0)))
-
-    # relabel each crop so that all ids from 1 to n are present
-    if relabel:
-        for img in range(data_xr_cropped.shape[0]):
-            for crop in range(data_xr_cropped.shape[1]):
-                data_xr_cropped[img, crop, ..., -1], _, _ = relabel_sequential(data_xr_cropped[img, crop, ..., -1].values)
-
-    # save each resulting crop into a separate file
-    if not os.path.isdir(folder_save):
-        os.makedirs(folder_save)
+                                                padding=(row_padding, col_padding))
 
     # save relevant parameters for reconstructing image
     fov_names = data_xr.fovs.values
@@ -972,18 +944,7 @@ def crop_multichannel_data(data_xr, folder_save, crop_size, overlap_frac, blank_
     log_data["fov_names"] = fov_names.tolist()
     log_data["chan_names"] = data_xr.channels.values.tolist()
 
-    # don't save to disk, return values
-    if test_parameters:
-        return data_xr_cropped, log_data
-    else:
-        save_crops(cropped_data=data_xr_cropped, fov_names=fov_names, num_row_crops=len(row_start),
-                   num_col_crops=len(col_start), save_dir=folder_save, save_format=save_format, blank_labels=blank_labels)
-        log_path = os.path.join(folder_save, "log_data.json")
-
-        with open(log_path, "w") as write_file:
-            json.dump(log_data, write_file)
-
-        return None
+    return data_xr_cropped, log_data
 
 
 def compute_montage_indices(slice_len, montage_len):
@@ -1011,22 +972,23 @@ def montage_helper(data_xr, montage_indices):
     """Slices an image stack into smaller montages according to supplied indices
 
     Inputs
-        data_stack: xarray of [fovs, stacks, rows, cols, channels] to be split into montages
+        data_stack: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split into montages
         montage_indices: list of indices for montages
 
     Outputs:
-        montage_xr: xarray of montaged images of [fovs, montage_stacks, montage_num, rows, cols, channels]"""
+        montage_xr: xarray of montaged images of [fovs, montage_stacks, crops, montage_num, rows, cols, channels]"""
 
     # determine key parameters of crop
-    fov_len, slice_len, row_len, col_len, chan_len = data_xr.shape
+    fov_len, slice_len, crop_num, _, row_len, col_len, chan_len = data_xr.shape
     montage_num = len(montage_indices) - 1
     montage_slice_len = montage_indices[1] - montage_indices[0]
 
     # create xarray to hold montages
-    montage_stack = np.zeros((fov_len, montage_slice_len, montage_num, row_len, col_len, chan_len))
-    montage_xr = xr.DataArray(data=montage_stack, coords=[data_xr.fovs, range(montage_slice_len), range(montage_num),
-                                                          range(row_len), range(col_len), data_xr.channels],
-                              dims=["fovs", "montage_stacks", "montage_num", "rows", "cols", "channels"])
+    montage_stack = np.zeros((fov_len, montage_slice_len, crop_num, montage_num, row_len, col_len, chan_len))
+    montage_xr = xr.DataArray(data=montage_stack, coords=[data_xr.fovs, range(montage_slice_len), range(crop_num),
+                                                          range(montage_num), range(row_len), range(col_len),
+                                                          data_xr.channels],
+                              dims=["fovs", "montage_stacks", "crop_num", "montage_num", "rows", "cols", "channels"])
 
     # loop montage indices to generate montaged data
     montage_counter = 0
@@ -1034,13 +996,13 @@ def montage_helper(data_xr, montage_indices):
 
         if i != len(montage_indices) - 2:
             # not the last montage
-            montage_xr[:, :, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_xr[:, :, :, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, 0, :, :, :].values
             montage_counter += 1
 
         else:
             # last montage, only index into stack the amount two indices are separated
             montage_len = montage_indices[i + 1] - montage_indices[i]
-            montage_xr[:, :montage_len, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, :, :].values
+            montage_xr[:, :montage_len, :, montage_counter, ...] = data_xr[:, montage_indices[i]:montage_indices[i + 1], :, 0, :, :, :].values
             montage_counter += 1
 
     return montage_xr
@@ -1050,15 +1012,15 @@ def create_montage_data(data_xr, montage_stack_len):
     """Takes an array of data and splits it up into smaller pieces along the stack dimension
 
     Inputs
-        data_xr: xarray of [fovs, stacks, rows, cols, channels] to be split up
+        data_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split up
         montage_slice_len: number of stacks to include in each montage
 
     Outputs
-        montaged_xr: xarray of [fovs, stacks, montages, rows, cols, channels] that has been split"""
+        montaged_xr: xarray of [fovs, stacks, crops, montages, rows, cols, channels] that has been split"""
 
     # sanitize inputs
-    if len(data_xr.shape) != 5:
-        raise ValueError("invalid input data shape, expected array of len(5), got {}".format(data_xr.shape))
+    if len(data_xr.shape) != 7:
+        raise ValueError("invalid input data shape, expected array of len(7), got {}".format(data_xr.shape))
 
     if montage_stack_len > data_xr.shape[1]:
         raise ValueError("montage size is greater than stack length")
@@ -1076,7 +1038,7 @@ def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
-        montage_xr: xarray of [fovs, montage_stacks, montage_num, rows, cols, channels]
+        montage_xr: xarray of [fovs, montage_stacks, crop_num, montage_num, rows, cols, channels]
         montage_indices: indices used to generate the montages
         save_dir: path to save the npz and JSON files
 
@@ -1086,12 +1048,10 @@ def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    # if input_data.crops.shape == (1, ):
-    #     # no crops, don't need to loop through
     num_row_crops = 1
     num_col_crops = 1
 
-    fov_len, montage_stack_len, montage_num, row_len, col_len, chan_len = montage_xr.shape
+    fov_len, montage_stack_len, crop_num, montage_num, row_len, col_len, chan_len = montage_xr.shape
     fov_names = montage_xr.fovs.values
 
     # loop through all crops in all images
@@ -1104,13 +1064,13 @@ def save_npzs_for_caliban(montage_xr, montage_indices, save_dir):
                     crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[fov], row, col, montage)
 
                     # determine if labels are blank
-                    labels = montage_xr[fov:(fov + 1), :, montage, :, :, -1:].values
+                    labels = montage_xr[fov:(fov + 1), :, 0, montage, :, :, -1:].values
 
                     # crop is not blank, save based on file_format
                     save_path = os.path.join(save_dir, crop_id)
 
                     # save images as npz
-                    np.savez(save_path + ".npz", X=montage_xr[fov:(fov + 1), :, montage, :, :, :-1].values, y=labels)
+                    np.savez(save_path + ".npz", X=montage_xr[fov:(fov + 1), :, 0, montage, :, :, :-1].values, y=labels)
 
 
     montage_log_data = {}
