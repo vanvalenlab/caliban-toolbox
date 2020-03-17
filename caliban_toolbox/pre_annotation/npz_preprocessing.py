@@ -887,12 +887,12 @@ def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, 
                 crop_counter += 1
 
 
-def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, blank_labels="skip",
+def crop_multichannel_data(data_xr, folder_save, crop_size, overlap_frac, blank_labels="skip",
                            save_format="xr", relabel=True, test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Inputs
-        xarray_path: full path to xarray that will be loaded
+        data_xr: xarray to be cropped
         folder_save: full path to folder to save crops into
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
@@ -905,9 +905,6 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
         None, saves crops to specified directory"""
 
     # sanitize inputs
-    if not os.path.isfile(xarray_path):
-        raise FileNotFoundError("Could not find supplied file at {}".format(xarray_path))
-
     if len(crop_size) != 2:
         raise ValueError("crop_size must be a tuple of (row_crop, col_crop), got {}".format(crop_size))
 
@@ -922,9 +919,6 @@ def crop_multichannel_data(xarray_path, folder_save, crop_size, overlap_frac, bl
 
     if save_format not in ["xr", "npz"]:
         raise ValueError("save_format must be one of ['xr', 'npz'], got {}".format(save_format))
-
-    # load the npz to be cropped
-    data_xr = xr.open_dataarray(xarray_path)
 
     if len(data_xr.shape) != 4:
         raise ValueError("data_xr does not have 4 dimensions, found {}".format(data_xr.shape))
