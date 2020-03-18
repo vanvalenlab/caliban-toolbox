@@ -423,8 +423,24 @@ def test_save_npzs_for_caliban():
     assert saved_log_data["original_shape"] == list(input_data.shape)
     shutil.rmtree(save_dir)
 
-    # check that arguments specifying what to do with blank crops are working
+    # check that combined crop and montage saving works
+    crop_size = (10, 10)
+    overlap_frac = 0.2
+    data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=montage_xr, crop_size=crop_size,
+                                                                         overlap_frac=overlap_frac,
+                                                                         test_parameters=False)
 
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                            log_data={**log_data, **log_data_crop}, save_dir=save_dir,
+                                            blank_labels="include", save_format="npz")
+    expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
+    files = os.listdir(save_dir)
+    files = [file for file in files if "npz" in file]
+
+    assert len(files) == expected_crop_num
+    shutil.rmtree(save_dir)
+
+    # check that arguments specifying what to do with blank crops are working
     # set specified crops to not be blank
     montage_xr[0, 0, 0, [1, 4, 7], 0, 0, -1] = 27
     np.sum(np.nonzero(montage_xr.values))

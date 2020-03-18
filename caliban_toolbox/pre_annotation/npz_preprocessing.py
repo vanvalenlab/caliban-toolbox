@@ -807,93 +807,13 @@ def crop_helper(input_data, row_start, row_end, col_start, col_end, padding):
     return cropped_xr, padded_input.shape
 
 
-def save_crops(cropped_data, fov_names, num_row_crops, num_col_crops, save_dir, save_format, blank_labels):
-    """Takes a stack of cropped images and saves each individually
-
-    Inputs
-        cropped_data: the cropped xarray of imaging data [fovs, crops, rows, cols, channels]
-        fov_names: the name of each distinct FOV
-        num_row_crops: the number of crops in the row dimension
-        num_col_crops: the number of crops in the col dimension
-        save_dir: the directory to save cropped images
-        save_format: determine whether to use 'npz' or 'xr' format for saving
-        blank_labels: decide what to do about crops without any labels
-
-    Outputs:
-        None, saves directly to directory"""
-
-    if blank_labels == "separate":
-        os.makedirs(os.path.join(save_dir, "separate"))
-
-    # loop through all crops in all images
-    for img in range(cropped_data.shape[0]):
-        crop_counter = 0
-        for row in range(num_row_crops):
-            for col in range(num_col_crops):
-
-                # generate identifier for crop
-                crop_id = "{}_row_{}_col_{}".format(fov_names[img], row, col)
-
-                # determine if labels are blank
-                labels = cropped_data[img:(img + 1), crop_counter, ..., -1:].values
-                if np.sum(np.nonzero(labels)) == 0:
-
-                    # blank labels get saved to separate folder
-                    if blank_labels == "separate":
-                        print("{} is blank, saving to separate folder".format(crop_id))
-                        save_path = os.path.join(save_dir, blank_labels, crop_id)
-
-                        # save images as either npz or xarray
-                        if save_format == 'npz':
-                            np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
-                                     y=labels)
-
-                        elif save_format == 'xr':
-                            crop_xr = cropped_data[img:(img + 1), crop_counter]
-                            crop_xr.to_netcdf(save_path + ".xr")
-
-                    # blank labels don't get saved, empty area of tissue
-                    elif blank_labels == "skip":
-                        print("{} is blank, skipping saving".format(crop_id))
-
-                    # blank labels get saved along with other crops
-                    elif blank_labels == "include":
-                        print("{} is blank, saving to folder".format(crop_id))
-                        save_path = os.path.join(save_dir, crop_id)
-
-                        # save images as either npz or xarray
-                        if save_format == 'npz':
-                            np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
-                                     y=labels)
-
-                        elif save_format == 'xr':
-                            crop_xr = cropped_data[img:(img + 1), crop_counter]
-                            crop_xr.to_netcdf(save_path + ".xr")
-
-                else:
-                    # crop is not blank, save based on file_format
-                    save_path = os.path.join(save_dir, crop_id)
-
-                    # save images as either npz or xarray
-                    if save_format == 'npz':
-                        np.savez(save_path + ".npz", X=cropped_data[img:(img + 1), crop_counter, ..., :-1].values,
-                                 y=labels)
-
-                    elif save_format == 'xr':
-                        crop_xr = cropped_data[img:(img + 1), crop_counter]
-                        crop_xr.to_netcdf(save_path + ".xr")
-
-                crop_counter += 1
-
-
-def crop_multichannel_data(data_xr, crop_size, overlap_frac, blank_labels="skip", test_parameters=False):
+def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Inputs
         data_xr: xarray to be cropped
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
-        blank_labels: flag to determine what to do with empty labels. One of [skip, include, separate]
         test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
     Outputs:
@@ -909,11 +829,8 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, blank_labels="skip"
     if overlap_frac < 0 or overlap_frac > 1:
         raise ValueError("overlap_frac must be between 0 and 1")
 
-    if blank_labels not in ["skip", "include", "separate"]:
-        raise ValueError("blank_labels must be one of ['skip', 'include', 'separate'], got {}".format(blank_labels))
-
-    if list(data_xr.dims) != ["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"]:
-        raise ValueError("data_xr does not have expected dims, found {}".format(data_xr.dims))
+    # if list(data_xr.dims) != ["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"]:
+    #     raise ValueError("data_xr does not have expected dims, found {}".format(data_xr.dims))
 
     # check if testing or running all samples
     if test_parameters:
@@ -932,13 +849,13 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, blank_labels="skip"
                                                 padding=(row_padding, col_padding))
 
     # save relevant parameters for reconstructing image
-    log_data = dict
+    log_data = {}
     log_data["row_start"] = row_start.tolist()
     log_data["row_end"] = row_end.tolist()
     log_data["num_row_crops"] = len(row_start)
     log_data["col_start"] = col_start.tolist()
     log_data["col_end"] = col_end.tolist()
-    log_data["num_col_crops"] = len (col_start)
+    log_data["num_col_crops"] = len(col_start)
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
 
@@ -996,7 +913,7 @@ def montage_helper(data_xr, montage_start_indices, montage_end_indices):
     montage_xr = xr.DataArray(data=montage_stack, coords=[data_xr.fovs, range(montage_slice_len), range(crop_num),
                                                           range(montage_num), range(row_len), range(col_len),
                                                           data_xr.channels],
-                              dims=["fovs", "stacks", "crop_num", "montage_num", "rows", "cols", "channels"])
+                              dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
 
     # loop montage indices to generate montaged data
     montage_counter = 0
@@ -1071,6 +988,9 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
     fov_names = original_xr.fovs.values
     fov_len = len(fov_names)
+
+    if blank_labels not in ["skip", "include", "separate"]:
+        raise ValueError("blank_labels must be one of ['skip', 'include', 'separate'], got {}".format(blank_labels))
 
     if blank_labels == "separate":
         os.makedirs(os.path.join(save_dir, "separate"))
