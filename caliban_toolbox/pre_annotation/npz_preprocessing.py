@@ -1050,7 +1050,7 @@ def create_montage_data(data_xr, montage_stack_len, montage_overlap=0):
     return montage_xr, log_data
 
 
-def save_npzs_for_caliban(resized_xr, original_xr, log_data, save_dir):
+def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels="include", save_format="npz"):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
@@ -1072,23 +1072,67 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data, save_dir):
     fov_names = original_xr.fovs.values
     fov_len = len(fov_names)
 
+    if blank_labels == "separate":
+        os.makedirs(os.path.join(save_dir, "separate"))
+
     # loop through all crops in all images
     for fov in range(fov_len):
+        crop_counter = 0
         for row in range(num_row_crops):
             for col in range(num_col_crops):
                 for montage in range(num_montages):
-
                     # generate identifier for crop
-                    crop_id = "{}_row_{}_col_{}_montage_{}".format(fov_names[fov], row, col, montage)
+                    npz_id = "fov_{}_row_{}_col_{}_montage_{}".format(fov_names[fov], row, col, montage)
 
-                    # determine if labels are blank
-                    labels = resized_xr[fov:(fov + 1), :, 0, montage, :, :, -1:].values
+                    # subset xarray based on supplied indices
+                    current_xr = resized_xr[fov:(fov + 1), :, crop_counter, montage,  ...]
+                    labels = current_xr[..., -1:].values
+                    channels = current_xr[..., :-1].values
 
-                    # crop is not blank, save based on file_format
-                    save_path = os.path.join(save_dir, crop_id)
+                    # determine if labels are blank, and if so what to do with npz
+                    if np.sum(labels) == 0:
 
-                    # save images as npz
-                    np.savez(save_path + ".npz", X=resized_xr[fov:(fov + 1), :, 0, montage, :, :, :-1].values, y=labels)
+                        # blank labels get saved to separate folder
+                        if blank_labels == "separate":
+                            print("{} is blank, saving to separate folder".format(npz_id))
+                            save_path = os.path.join(save_dir, blank_labels, npz_id)
+
+                            # save images as either npz or xarray
+                            if save_format == 'npz':
+                                np.savez(save_path + ".npz", X=channels, y=labels)
+
+                            elif save_format == 'xr':
+                                current_xr.to_netcdf(save_path + ".xr")
+
+                        # blank labels don't get saved, empty area of tissue
+                        elif blank_labels == "skip":
+                            print("{} is blank, skipping saving".format(npz_id))
+
+                        # blank labels get saved along with other crops
+                        elif blank_labels == "include":
+                            print("{} is blank, saving to folder".format(npz_id))
+                            save_path = os.path.join(save_dir, npz_id)
+
+                            # save images as either npz or xarray
+                            if save_format == 'npz':
+                                np.savez(save_path + ".npz", X=channels, y=labels)
+
+                            elif save_format == 'xr':
+                                current_xr.to_netcdf(save_path + ".xr")
+
+                    else:
+                        # crop is not blank, save based on file_format
+                        print("labels are not blank, saving")
+                        save_path = os.path.join(save_dir, npz_id)
+
+                        # save images as either npz or xarray
+                        if save_format == 'npz':
+                            np.savez(save_path + ".npz", X=channels, y=labels)
+
+                        elif save_format == 'xr':
+                            current_xr.to_netcdf(save_path + ".xr")
+
+                crop_counter += 1
 
     log_data["original_shape"] = original_xr.shape
 

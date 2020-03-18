@@ -1,6 +1,7 @@
 import os
 import shutil
 import json
+import copy
 
 import numpy as np
 from caliban_toolbox.pre_annotation import npz_preprocessing
@@ -131,60 +132,6 @@ def test_crop_helper():
                 assert(np.all(crop == original_image_crop))
 
                 crop_counter += 1
-
-
-def test_save_crops():
-
-    # create fake stack of crops
-    fov_num, crop_num, row_len, col_len, chan_num = 2, 25, 50, 40, 1
-    test_xr = _blank_cropped_xr(fov_num, crop_num, row_len, col_len, chan_num)
-
-    # set specified crops to not be blank
-    non_blank_crops = np.random.choice(range(int(crop_num)), size=15, replace=False)
-    test_xr[:, non_blank_crops, :, 0, 0] = 27
-
-    # save crops to folder
-    base_dir = "tests/caliban_toolbox/"
-
-    # test that function correctly includes blank crops when saving
-    save_dir = os.path.join(base_dir, "test_crop_dir_all")
-    os.makedirs(save_dir)
-    npz_preprocessing.save_crops(cropped_data=test_xr, fov_names=test_xr.fovs.values, num_row_crops=5, num_col_crops=5,
-                                 save_dir=save_dir, save_format="xr", blank_labels="include")
-
-    # check that there is the expected number of files saved to directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "xr" in file]
-    assert len(files) == fov_num * crop_num
-    shutil.rmtree(save_dir)
-
-    # test that function correctly skips blank crops when saving
-    save_dir = os.path.join(base_dir, "test_crop_dir_non_blank")
-    os.makedirs(save_dir)
-    npz_preprocessing.save_crops(cropped_data=test_xr, fov_names=test_xr.fovs.values, num_row_crops=5, num_col_crops=5,
-                                 save_dir=save_dir, save_format="xr", blank_labels="skip")
-
-    #  check that expected number of files in directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "xr" in file]
-    assert len(files) == fov_num * len(non_blank_crops)
-    shutil.rmtree(save_dir)
-
-    # test that function correctly saves blank crops to separate folder
-    save_dir = os.path.join(base_dir, "test_crop_dir_separate")
-    os.makedirs(save_dir)
-    npz_preprocessing.save_crops(cropped_data=test_xr, fov_names=test_xr.fovs.values, num_row_crops=5, num_col_crops=5,
-                                 save_dir=save_dir, save_format="xr", blank_labels="separate")
-
-    # check that expected number of files in each directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "xr" in file]
-    assert len(files) == fov_num * len(non_blank_crops)
-
-    files = os.listdir(os.path.join(save_dir, "separate"))
-    files = [file for file in files if "xr" in file]
-    assert len(files) == fov_num * (crop_num - len(non_blank_crops))
-    shutil.rmtree(save_dir)
 
 
 def test_crop_multichannel_data():
@@ -458,21 +405,65 @@ def test_save_npzs_for_caliban():
     montage_xr, log_data = npz_preprocessing.create_montage_data(input_data, montage_stack_len)
 
     save_dir = "tests/caliban_toolbox/test_save_npzs_for_caliban/"
-    npz_preprocessing.save_npzs_for_caliban(montage_xr, input_data, log_data, save_dir)
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=montage_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                            save_dir=save_dir, blank_labels="include", save_format="npz")
 
     # check that correct size was saved
 
-    test_npz_labels = np.load(save_dir + "fov1_row_0_col_0_montage_0.npz")
+    test_npz_labels = np.load(save_dir + "fov_fov1_row_0_col_0_montage_0.npz")
 
     assert test_npz_labels["y"].shape == (fov_len, montage_stack_len, row_len, col_len, 1)
 
     assert test_npz_labels["y"].shape[:-1] == test_npz_labels["X"].shape[:-1]
 
-    # check that json saved succesfully
+    # check that json saved successfully
     with open(os.path.join(save_dir, "log_data.json")) as json_file:
         saved_log_data = json.load(json_file)
 
     assert saved_log_data["original_shape"] == list(input_data.shape)
+    shutil.rmtree(save_dir)
+
+    # check that arguments specifying what to do with blank crops are working
+
+    # set specified crops to not be blank
+    montage_xr[0, 0, 0, [1, 4, 7], 0, 0, -1] = 27
+    np.sum(np.nonzero(montage_xr.values))
+
+    expected_crop_num = montage_xr.shape[2] * montage_xr.shape[3]
+
+    # test that function correctly includes blank crops when saving
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=montage_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                            save_dir=save_dir, blank_labels="include", save_format="npz")
+
+    # check that there is the expected number of files saved to directory
+    files = os.listdir(save_dir)
+    files = [file for file in files if "npz" in file]
+
+    assert len(files) == expected_crop_num
+    shutil.rmtree(save_dir)
+
+    # test that function correctly skips blank crops when saving
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=montage_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                            save_dir=save_dir, save_format="npz", blank_labels="skip")
+
+    #  check that expected number of files in directory
+    files = os.listdir(save_dir)
+    files = [file for file in files if "npz" in file]
+    assert len(files) == 3
+    shutil.rmtree(save_dir)
+
+    # test that function correctly saves blank crops to separate folder
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=montage_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                            save_dir=save_dir, save_format="npz", blank_labels="separate")
+
+    # check that expected number of files in each directory
+    files = os.listdir(save_dir)
+    files = [file for file in files if "npz" in file]
+    assert len(files) == 3
+
+    files = os.listdir(os.path.join(save_dir, "separate"))
+    files = [file for file in files if "npz" in file]
+    assert len(files) == expected_crop_num - 3
     shutil.rmtree(save_dir)
 
 
