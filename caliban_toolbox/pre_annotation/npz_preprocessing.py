@@ -852,12 +852,15 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
     log_data = {}
     log_data["row_start"] = row_start.tolist()
     log_data["row_end"] = row_end.tolist()
+    log_data["row_crop_size"] = crop_size[0]
     log_data["num_row_crops"] = len(row_start)
     log_data["col_start"] = col_start.tolist()
     log_data["col_end"] = col_end.tolist()
+    log_data["col_crop_size"] = crop_size[1]
     log_data["num_col_crops"] = len(col_start)
     log_data["row_padding"] = int(row_padding)
     log_data["col_padding"] = int(col_padding)
+    log_data["num_crops"] = data_xr_cropped.shape[2]
 
     return data_xr_cropped, log_data
 
@@ -904,7 +907,11 @@ def montage_helper(data_xr, montage_start_indices, montage_end_indices):
         montage_xr: xarray of montaged images of [fovs, montage_stacks, crops, montage_num, rows, cols, channels]"""
 
     # determine key parameters of crop
-    fov_len, slice_len, crop_num, _, row_len, col_len, chan_len = data_xr.shape
+    fov_len, slice_len, crop_num, input_montage_num, row_len, col_len, chan_len = data_xr.shape
+
+    if input_montage_num > 1:
+        raise ValueError("Input array already contains montage data")
+
     montage_num = len(montage_start_indices)
     montage_slice_len = montage_end_indices[0] - montage_start_indices[0]
 
@@ -982,9 +989,9 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    num_row_crops = log_data.pop("num_row_crops", 1)
-    num_col_crops = log_data.pop("num_col_crops", 1)
-    num_montages = log_data.pop("num_montages", 1)
+    num_row_crops = log_data.get("num_row_crops", 1)
+    num_col_crops = log_data.get("num_col_crops", 1)
+    num_montages = log_data.get("num_montages", 1)
 
     fov_names = original_xr.fovs.values
     fov_len = len(fov_names)
