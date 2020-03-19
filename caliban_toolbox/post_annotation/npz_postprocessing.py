@@ -34,24 +34,26 @@ from skimage.segmentation import relabel_sequential
 from segmentation.utils import data_utils
 
 
-def load_npzs(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, num_col_crops, stack_len, num_montages,
-              save_format):
+def load_npzs(crop_dir, log_data):
     """Reads all of the cropped images from a directory, and aggregates them into a single stack
 
     Inputs:
         crop_dir: path to directory with cropped npz or xarray files
-        fov_names: list of unique fov names in dataset
-        row_crop_size: size of the crops in rows dimension
-        col_crop_size: size of the crops in cols dimension
-        num_row_crops: number of crops in rows dimension
-        num_col_cops: number of crops in cols dimension
-        save_format: format in which the crops were saved
+        log_data: dictionary of parameters generated during data saving
 
     Outputs:
         stack: combined array of all labeled images"""
 
-    stack = np.zeros((len(fov_names), stack_len, num_col_crops*num_row_crops, num_montages,
-                      row_crop_size, col_crop_size, 1))
+    fov_names = log_data["fov_names"]
+    num_crops, num_montages = log_data.get("num_crops", 1), log_data.get("num_montages", 1)
+    num_row_crops, num_col_crops = log_data.get("num_row_crops", 1), log_data.get("num_col_crops", 1)
+    fov_len, stack_len, _, _, row_size, col_size, _ = log_data["original_shape"]
+    montage_stack_len = log_data.get("montage_stack_len", stack_len)
+
+    row_crop_size, col_crop_size = log_data.get("row_crop_size", row_size), log_data.get("col_crop_size", col_size)
+    save_format = log_data["save_format"]
+
+    stack = np.zeros((fov_len, montage_stack_len, num_crops, num_montages, row_crop_size, col_crop_size, 1))
 
     # loop through all npz files
     for fov_idx, fov_name in enumerate(fov_names):
@@ -70,7 +72,7 @@ def load_npzs(crop_dir, fov_names, row_crop_size, col_crop_size, num_row_crops, 
                             if montage == num_montages - 1:
                                 current_stack_len = temp_npz["X"].shape[1]
                             else:
-                                current_stack_len = stack_len
+                                current_stack_len = montage_stack_len
 
                             stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, montage, ...] = temp_npz["y"]
                         else:
@@ -421,7 +423,5 @@ def reconstruct_montage_data(save_dir):
     stitched_xr = stitch_montages(montage_stack, montage_log_data)
 
     return stitched_xr
-
-    # TODO: refactor load_npzs to take in log_data instead of specific arguments
 
     # TODO: remove redundant calculation of parameters, insert into log data, make sure calculations are removed

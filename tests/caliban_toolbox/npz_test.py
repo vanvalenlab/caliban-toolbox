@@ -496,7 +496,7 @@ def test_load_montages():
     data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=montage_xr, crop_size=crop_size,
                                                                               overlap_frac=overlap_frac,
                                                                               test_parameters=False)
-    print(data_xr_cropped.shape)
+    combined_log_data = {**log_data, **log_data_crop}
     # tag the upper left hand corner of the label in each montage
     montage_tags = np.arange(data_xr_cropped.shape[3])
     crop_tags = np.arange(data_xr_cropped.shape[2])
@@ -505,16 +505,13 @@ def test_load_montages():
     save_dir = "tests/caliban_toolbox/test_load_montages/"
 
     npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                            log_data={**log_data, **log_data_crop}, save_dir=save_dir,
+                                            log_data=combined_log_data, save_dir=save_dir,
                                             blank_labels="include", save_format="npz")
 
-    # get parameters
-    row_crop_size, col_crop_size = crop_size[0], crop_size[1]
-    num_row_crops, num_col_crops = log_data_crop["num_row_crops"], log_data_crop["num_col_crops"]
-    num_montages = log_data["num_montages"]
+    with open(os.path.join(save_dir, "log_data.json")) as json_file:
+        saved_log_data = json.load(json_file)
 
-    loaded_montages = npz_postprocessing.load_npzs(save_dir, input_data.fovs.values, row_crop_size, col_crop_size,
-                                                   num_row_crops, num_col_crops, montage_stack_len, num_montages, "npz")
+    loaded_montages = npz_postprocessing.load_npzs(save_dir, saved_log_data)
 
     assert np.all(np.equal(loaded_montages[0, 0, :, 0, 0, 0, 0], crop_tags))
     assert np.all(np.equal(loaded_montages[0, 0, 0, :, 0, 0, 0], montage_tags))
@@ -542,17 +539,13 @@ def test_load_montages():
     data_xr_cropped[0, 0, 0, :, 0, 0, 2] = montage_tags
     save_dir = "tests/caliban_toolbox/test_load_montages/"
 
+    combined_log_data = {**log_data, **log_data_crop}
+
     npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                            log_data={**log_data, **log_data_crop}, save_dir=save_dir,
+                                            log_data=combined_log_data, save_dir=save_dir,
                                             blank_labels="include", save_format="npz")
 
-    # get parameters
-    row_crop_size, col_crop_size = crop_size[0], crop_size[1]
-    num_row_crops, num_col_crops = log_data_crop["num_row_crops"], log_data_crop["num_col_crops"]
-    num_montages = log_data["num_montages"]
-
-    loaded_montages = npz_postprocessing.load_npzs(save_dir, input_data.fovs.values, row_crop_size, col_crop_size,
-                                                   num_row_crops, num_col_crops, montage_stack_len, num_montages, "npz")
+    loaded_montages = npz_postprocessing.load_npzs(save_dir, combined_log_data)
 
     assert np.all(np.equal(loaded_montages[0, 0, :, 0, 0, 0, 0], crop_tags))
     assert np.all(np.equal(loaded_montages[0, 0, 0, :, 0, 0, 0], montage_tags))
@@ -632,6 +625,7 @@ def test_reconstruct_montage_data():
     npz_preprocessing.save_npzs_for_caliban(resized_xr=montage_xr, original_xr=input_data,
                                             log_data={**montage_log_data}, save_dir=save_dir, blank_labels="include",
                                             save_format="npz")
+
     stitched_montages = npz_postprocessing.reconstruct_montage_data(save_dir)
     assert np.all(np.equal(stitched_montages[0, :, 0, 0, 0, 0, 0], tags))
 

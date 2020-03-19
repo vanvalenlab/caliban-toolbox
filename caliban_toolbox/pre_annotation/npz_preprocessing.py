@@ -1061,7 +1061,12 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
                 crop_counter += 1
 
+    log_data["fov_names"] = fov_names.tolist()
+    log_data["channel_names"] = original_xr.channels.values.tolist()
     log_data["original_shape"] = original_xr.shape
+    log_data["montage_stack_len"] = resized_xr.shape[1]
+    log_data["save_format"] = save_format
+
 
     log_path = os.path.join(save_dir, "log_data.json")
     with open(log_path, "w") as write_file:
