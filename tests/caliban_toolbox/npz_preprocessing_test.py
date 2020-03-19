@@ -138,7 +138,7 @@ def test_crop_multichannel_data():
 
     # test only one crop
     test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                             row_len=row_len, col_len=col_len, chan_len=chan_len)
+                             row_len=row_len, col_len=col_len, chan_len=channel_len)
 
     data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=test_xr, crop_size=crop_size,
                                                                          overlap_frac=overlap_frac, test_parameters=False)
