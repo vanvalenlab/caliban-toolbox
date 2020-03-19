@@ -30,7 +30,6 @@ import json
 
 import xarray as xr
 
-from skimage.segmentation import relabel_sequential
 from segmentation.utils import data_utils
 
 
@@ -45,53 +44,53 @@ def load_npzs(crop_dir, log_data):
         stack: combined array of all labeled images"""
 
     fov_names = log_data["fov_names"]
-    num_crops, num_montages = log_data.get("num_crops", 1), log_data.get("num_montages", 1)
+    num_crops, num_slices = log_data.get("num_crops", 1), log_data.get("num_slices", 1)
     num_row_crops, num_col_crops = log_data.get("num_row_crops", 1), log_data.get("num_col_crops", 1)
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data["original_shape"]
-    montage_stack_len = log_data.get("montage_stack_len", stack_len)
+    slice_stack_len = log_data.get("slice_stack_len", stack_len)
 
     row_crop_size, col_crop_size = log_data.get("row_crop_size", row_size), log_data.get("col_crop_size", col_size)
     save_format = log_data["save_format"]
 
-    stack = np.zeros((fov_len, montage_stack_len, num_crops, num_montages, row_crop_size, col_crop_size, 1))
+    stack = np.zeros((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size, 1))
 
     # loop through all npz files
     for fov_idx, fov_name in enumerate(fov_names):
         crop_idx = 0
         for row in range(num_row_crops):
             for col in range(num_col_crops):
-                for montage in range(num_montages):
+                for slice in range(num_slices):
 
                     # load NPZs
                     if save_format == "npz":
-                        npz_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_montage_{}.npz".format(fov_name, row, col, montage))
+                        npz_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_slice_{}.npz".format(fov_name, row, col, slice))
                         if os.path.exists(npz_path):
                             temp_npz = np.load(npz_path)
 
-                            # last montage may be truncated, modify index
-                            if montage == num_montages - 1:
+                            # last slice may be truncated, modify index
+                            if slice == num_slices - 1:
                                 current_stack_len = temp_npz["X"].shape[1]
                             else:
-                                current_stack_len = montage_stack_len
+                                current_stack_len = slice_stack_len
 
-                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, montage, ...] = temp_npz["y"]
+                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_npz["y"]
                         else:
                             # npz not generated, did not contain any labels, keep blank
                             print("could not find npz {}, skipping".format(npz_path))
 
                     # load xarray
                     elif save_format == "xr":
-                        xr_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_montage_{}.npz".format(fov_name, row, col, montage))
+                        xr_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_slice_{}.npz".format(fov_name, row, col, slice))
                         if os.path.exists(xr_path):
                             temp_xr = xr.open_dataarray(xr_path)
 
-                            # last montage may be truncated, modify index
-                            if montage == num_montages - 1:
+                            # last slice may be truncated, modify index
+                            if slice == num_slices - 1:
                                 current_stack_len = temp_xr.shape[1]
                             else:
                                 current_stack_len = stack_len
 
-                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, montage, ...] = temp_xr[..., -1:]
+                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_xr[..., -1:]
                         else:
                             # npz not generated, did not contain any labels, keep blank
                             print("could not find xr {}, skipping".format(xr_path))
@@ -109,15 +108,15 @@ def stitch_crops(annotated_data, log_data):
         log_data: dictionary of parameters for reconstructing original image data
 
     Outputs:
-        stitched_image: stitched labels image, sequentially relabeled"""
+        stitched_image: stitched labels of [fovs, stacks, crops, slices, rows, cols, channels] """
 
     # Initialize image with single dimension for channels
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data["original_shape"]
     row_padding, col_padding = log_data.get("row_padding", 0), log_data.get("col_padding", 0)
     stitched_labels = np.zeros((fov_len, stack_len, 1, 1, row_size + row_padding, col_size + col_padding, 1))
 
-    row_start, row_end = log_data["row_start"], log_data["row_end"]
-    col_start, col_end = log_data["col_start"], log_data["col_end"]
+    row_starts, row_ends = log_data["row_starts"], log_data["row_ends"]
+    col_starts, col_ends = log_data["col_starts"], log_data["col_ends"]
 
     if annotated_data.shape[3] != 1:
         raise ValueError("Stacks must be combined before stitching can occur")
@@ -126,8 +125,8 @@ def stitch_crops(annotated_data, log_data):
     for fov in range(fov_len):
         for stack in range(stack_len):
             crop_counter = 0
-            for row in range(len(row_start)):
-                for col in range(len(col_start)):
+            for row in range(len(row_starts)):
+                for col in range(len(col_starts)):
 
                     # get current crop
                     crop = annotated_data[fov, stack, crop_counter, 0, :, :, 0]
@@ -141,7 +140,7 @@ def stitch_crops(annotated_data, log_data):
                     potential_overlap_cells = potential_overlap_cells[np.nonzero(potential_overlap_cells)]
 
                     # get values of stitched image at location where crop will be placed
-                    stitched_crop = stitched_labels[fov, stack, 0, 0, row_start[row]:row_end[row], col_start[col]:col_end[col], 0]
+                    stitched_crop = stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], 0]
 
                     # loop through each cell in the crop to determine if it overlaps with another cell in full image
                     for cell in potential_overlap_cells:
@@ -164,7 +163,7 @@ def stitch_crops(annotated_data, log_data):
                     combined_crop = np.where(stitched_crop > 0, stitched_crop, crop)
 
                     # use this combined crop to update the values of stitched image
-                    stitched_labels[fov, stack, 0, 0, row_start[row]:row_end[row], col_start[col]:col_end[col], 0] = combined_crop
+                    stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], 0] = combined_crop
 
                     crop_counter += 1
 
@@ -354,15 +353,15 @@ def set_channel_colors(combined_xr, plot_colors):
     return reordered_xr
 
 
-def stitch_montages(montage_stack, log_data):
-    """Helper function to stitch montages together back into original sized array
+def stitch_slices(slice_stack, log_data):
+    """Helper function to stitch slices together back into original sized array
 
     Inputs
-        montage_stack: xarray of shape [fovs, montage_slices, crop_num, montage_num, rows, cols, segmentation_label]
-        montage_log_data: log data produced from creation of montage stack
+        slice_stack: xarray of shape [fovs, stacks, crops, slices, rows, cols, segmentation_label]
+        slice_log_data: log data produced from creation of slice stack
 
     Outputs
-        stitched_montages: xarray of shape [fovs, slices, rows, cols, segmentation_label]"""
+        stitched_slices: xarray of shape [fovs, stacks, crops, slices, rows, cols, segmentation_label]"""
 
     # get parameters from dict
     fov_len, stack_len, crop_num, _, row_len, col_len, chan_len = log_data["original_shape"]
@@ -370,48 +369,48 @@ def stitch_montages(montage_stack, log_data):
     row_len = log_data.get("row_crop_size", row_len)
     col_len = log_data.get("col_crop_size", col_len)
 
-    montage_start_indices, montage_end_indices = log_data["montage_start_indices"], log_data["montage_end_indices"]
-    num_montages, fov_names = log_data["num_montages"], log_data["fov_names"]
+    slice_start_indices, slice_end_indices = log_data["slice_start_indices"], log_data["slice_end_indices"]
+    num_slices, fov_names = log_data["num_slices"], log_data["fov_names"]
 
-    stitched_montages = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1))
+    stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1))
 
-    # loop montage indices to generate montaged data
-    for i in range(num_montages - 1):
-        stitched_montages[:, montage_start_indices[i]:montage_end_indices[i], :, 0, ...] = montage_stack[:, :, :, i, ...]
+    # loop slice indices to generate sliced data
+    for i in range(num_slices - 1):
+        stitched_slices[:, slice_start_indices[i]:slice_end_indices[i], :, 0, ...] = slice_stack[:, :, :, i, ...]
 
-    # last montage, only index into stack the amount two indices are separated
-    last_idx = num_montages - 1
-    montage_len = montage_end_indices[last_idx] - montage_start_indices[last_idx]
-    stitched_montages[:, montage_start_indices[last_idx]:montage_end_indices[last_idx], :, 0, ...] = montage_stack[:, :montage_len, :, last_idx, ...]
+    # last slice, only index into stack the amount two indices are separated
+    last_idx = num_slices - 1
+    slice_len = slice_end_indices[last_idx] - slice_start_indices[last_idx]
+    stitched_slices[:, slice_start_indices[last_idx]:slice_end_indices[last_idx], :, 0, ...] = slice_stack[:, :slice_len, :, last_idx, ...]
 
-    stitched_xr = xr.DataArray(stitched_montages,
+    stitched_xr = xr.DataArray(stitched_slices,
                                coords=[fov_names, range(stack_len), range(crop_num), range(1), range(row_len),
                                        range(col_len), ["segmentation_label"]],
                                dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
     return stitched_xr
 
 
-def reconstruct_montage_data(save_dir):
-    """High level function to put pieces of a montage back together
+def reconstruct_slice_data(save_dir):
+    """High level function to put pieces of a slice back together
     Inputs
-        save_dir: full path to directory where montage pieces are stored
+        save_dir: full path to directory where slice pieces are stored
 
     Outputs
         stitched_xr: xarray of [fovs, slices, rows, cols, segmentation_label] containing stitched labels"""
 
     if not os.path.isdir(save_dir):
-        raise FileNotFoundError("montage directory does not exist")
+        raise FileNotFoundError("slice directory does not exist")
 
     json_file_path = os.path.join(save_dir, "log_data.json")
     if not os.path.exists(json_file_path):
         raise FileNotFoundError("json file does not exist")
 
     with open(json_file_path) as json_file:
-        montage_log_data = json.load(json_file)
+        slice_log_data = json.load(json_file)
 
-    montage_stack = load_npzs(save_dir, montage_log_data)
+    slice_stack = load_npzs(save_dir, slice_log_data)
 
-    stitched_xr = stitch_montages(montage_stack, montage_log_data)
+    stitched_xr = stitch_slices(slice_stack, slice_log_data)
 
     return stitched_xr
 
