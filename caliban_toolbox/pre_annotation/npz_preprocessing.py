@@ -1049,7 +1049,6 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
                     else:
                         # crop is not blank, save based on file_format
-                        print("labels are not blank, saving")
                         save_path = os.path.join(save_dir, npz_id)
 
                         # save images as either npz or xarray
