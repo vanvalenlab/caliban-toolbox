@@ -11,9 +11,6 @@ from caliban_toolbox.utils.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
 
 
-
-
-
 def relabel_preserve_relationships(annotations, start_val=1):
     """Relabels annotations while preserving relationships within in each stack. Eg, if cell 5 gets relabeled to cell 4,
     every instance of cell 5 in the stack will get relabeled to cell 4 as well.
@@ -132,7 +129,7 @@ def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
     #relabel cells appropriately
 
     #relabeled_next holds cells as they get relabeled appropriately
-    relabeled_next = np.zeros(next_img.shape, dtype = np.uint16)
+    relabeled_next = np.zeros(next_img.shape, dtype=np.uint16)
 
     #max_indices[cell_from_next_img] -> cell from first image that matches it best
     max_indices = np.argmax(iou, axis = 0)

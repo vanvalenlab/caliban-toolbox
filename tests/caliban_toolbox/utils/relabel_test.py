@@ -67,4 +67,23 @@ def test_relabel_all_frames():
                     assert int(np.max(current_crop) + 1) == len(np.unique(current_crop))
 
 
+def test_predict_stack_labels():
 
+    # create single slice with five different cells
+    single_slice = np.zeros((100, 100), dtype='int16')
+    single_slice[0:10, 0:10] = 1
+    single_slice[10:20, 70:80] = 2
+    single_slice[20:30, 50:60] = 3
+    single_slice[30:40, 65:75] = 4
+    single_slice[40:50, 30:40] = 5
+
+    increment = 3
+    combined_stack = np.zeros((20, 100, 100, 1), dtype='int16')
+
+    # move single slice slowly out of view by "increment" pixels each frame to change which cells are present
+    for i in range(1, combined_stack.shape[0]):
+        combined_stack[i, :-(i * increment), :, 0] = single_slice[(i * increment):, :]
+
+
+    img = combined_stack[2, :, :, 0]
+    next_img = combined_stack[4, :, :, 0]
