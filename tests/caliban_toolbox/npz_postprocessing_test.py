@@ -1,6 +1,7 @@
 import os
 import shutil
 import json
+import pytest
 
 import numpy as np
 from caliban_toolbox.pre_annotation import npz_preprocessing
@@ -38,6 +39,40 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
                            dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
 
     return test_stack_xr
+
+
+def test_get_npz_file_path():
+    # create list of npz_ids
+    dir_list = ["fov_fov1_row_2_col_3_slice_4.npz", "fov_fov1_row_2_col_3_slice_5_save_version_0.npz",
+                "fov_fov1_row_2_col_3_slice_6_save_version_0.npz", "fov_fov1_row_2_col_3_slice_6_save_version_1.npz",
+                "fov_fov1_row_2_col_3_slice_7_save_version_0.npz",
+                "fov_fov1_row_2_col_3_slice_7_save_version_0_save_version_2.npz"]
+
+    fov, row, col = "fov1", 2, 3
+
+    # test unmodified npz
+    slice = 4
+    output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
+
+    assert output_string == dir_list[0]
+
+    # test single modified npz
+    slice = 5
+    output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
+
+    assert output_string == dir_list[1]
+
+    # test multiple versions saved
+    slice = 6
+
+    with pytest.raises(ValueError):
+        output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
+
+    # test multiple versions saved due to resave
+    slice = 7
+
+    with pytest.raises(ValueError):
+        output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
 
 
 def test_load_npzs():

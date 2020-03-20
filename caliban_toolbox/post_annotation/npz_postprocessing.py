@@ -33,6 +33,33 @@ import xarray as xr
 from segmentation.utils import data_utils
 
 
+def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext=".npz"):
+    """Helper function to identify correct file path for an npz file
+
+    Inputs
+        dir_list: list of files in directory
+        fov_name: string of the current fov_name
+        row: int of current row
+        col: int of current col
+        slice: int of current slice
+        file_ext: extension file was saved with
+
+    Returns
+        file_path: string of formatted file path with appropriate ending"""
+
+    base_string = "fov_{}_row_{}_col_{}_slice_{}".format(fov_name, row, col, slice)
+    string_matches = [string for string in dir_list if base_string + "_save_version" in string]
+
+    if len(string_matches) == 0:
+        full_string = base_string + file_ext
+    elif len(string_matches) == 1:
+        full_string = string_matches[0]
+    else:
+        raise ValueError("Multiple save versions found: "
+                         "please select only a single save version. {}".format(string_matches))
+    return full_string
+
+
 def load_npzs(crop_dir, log_data):
     """Reads all of the cropped images from a directory, and aggregates them into a single stack
 
@@ -53,6 +80,7 @@ def load_npzs(crop_dir, log_data):
     save_format = log_data["save_format"]
 
     stack = np.zeros((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size, 1))
+    saved_files = os.listdir(crop_dir)
 
     # loop through all npz files
     for fov_idx, fov_name in enumerate(fov_names):
@@ -63,7 +91,7 @@ def load_npzs(crop_dir, log_data):
 
                     # load NPZs
                     if save_format == "npz":
-                        npz_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_slice_{}.npz".format(fov_name, row, col, slice))
+                        npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
                         if os.path.exists(npz_path):
                             temp_npz = np.load(npz_path)
 
@@ -80,7 +108,7 @@ def load_npzs(crop_dir, log_data):
 
                     # load xarray
                     elif save_format == "xr":
-                        xr_path = os.path.join(crop_dir, "fov_{}_row_{}_col_{}_slice_{}.npz".format(fov_name, row, col, slice))
+                        xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
                         if os.path.exists(xr_path):
                             temp_xr = xr.open_dataarray(xr_path)
 
