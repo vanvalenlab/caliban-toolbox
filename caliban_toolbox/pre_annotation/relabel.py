@@ -11,10 +11,69 @@ from caliban_toolbox.utils.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
 
 
-def relabel_preserve_relationships(input_data, start_val=1):
-    """Relab z/t stacks to have"""
 
 
+
+def relabel_preserve_relationships(annotations, start_val=1):
+    """Relabels annotations while preserving relationships within in each stack. Eg, if cell 5 gets relabeled to cell 4,
+    every instance of cell 5 in the stack will get relabeled to cell 4 as well.
+
+    Inputs
+        annotations: xarray of data to relabel [fovs, stacks, crops, slices, rows, cols, channels]
+        start_val: Value where relabeling will begin
+
+    Returns:
+        relabeled_annotations: xarray containing annotations that have been relabeled """
+
+    fov_len, stack_len, num_crops, num_slices, rows, cols, channels = annotations.shape
+
+    if num_crops > 1:
+        raise ValueError("Relabeling should occur before cropping or after reconstruction")
+
+    if num_slices > 1:
+        raise ValueError("Relabeling occur before slicing or after reconstruction")
+
+    # create new array to store the relabeled annotations
+    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
+
+    # get all unique values in this stack, excluding 0 (background)
+    unique_cells = np.unique(annotations)
+    unique_cells = unique_cells[np.nonzero(unique_cells)]
+
+    # create array to hold sequential relabeled ids
+    relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
+
+    # populate relabeled_annotations array corresponding relabeled ids
+    for cell_id, relabel_id in zip(unique_cells, relabel_ids):
+        relabeled_annotations = np.where(annotations == cell_id, relabel_id, relabeled_annotations)
+
+    # overwrite original npz with relabeled npz (only the annotations have changed)
+    return relabeled_annotations
+
+
+def relabel_all_frames(input_data, start_val=1):
+    """Relabels all frames in all montages in all fovs independently from start_val.
+
+    Inputs
+        input_data: array of [fovs, stacks, crops, slices, rows, cols, channels] to be relabeled
+        start_val: Value of first label in each frame
+
+    Returns:
+        relabeled_data: array of relabeled data"""
+
+    relabeled_annotations = np.zeros(input_data.shape)
+    fov_len, stack_len, num_crops, num_slices, _, _, _ = input_data.shape
+
+    # relabel each frame
+    for fov in range(fov_len):
+        for stack in range(stack_len):
+            for crop in range(num_crops):
+                for slice in range(num_slices):
+                    img = input_data[fov, stack, crop, slice, :, :, 0]
+                    img_relabeled, _, _ = relabel_sequential(img, start_val)
+                    relabeled_annotations[fov, stack, crop, slice, :, :, 0] = img_relabeled
+
+    return relabeled_annotations
 
 
 def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
@@ -167,114 +226,6 @@ def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
                                  stringent_allowed[reassigned_cell], relabeled_next)
 
     return relabeled_next
-
-
-def relabel_npz_preserve_relationships(annotations, start_val=1):
-    """Relabels annotations while preserving relationships within in each stack. Eg, if cell 5 gets relabeled to cell 4,
-    every instance of cell 5 in the stack will get relabeled to cell 4 as well.
-
-    Inputs
-        annotations: xarray of data to relabel [fovs, stacks, crops, slices, rows, cols, channels]
-        start_val: Value where relabeling will begin
-
-    Returns:
-        relabeled_annotations: xarray containing annotations that have been relabeled """
-
-    fov_len, stack_len, num_crops, num_slices, rows, cols, channels = annotations.shape
-
-    if num_crops > 1:
-        raise ValueError("Relabeling should occur before cropping or after reconstruction")
-
-    if num_slices > 1:
-        raise 
-
-    # assumes channels_last
-    features = annotations.shape[-1]
-
-    # create new array to store the relabeled annotations
-    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
-
-    # features should be relabeled independently of each other
-    for f in range(features):
-
-        img_stack = annotations[:,:,:,f]
-
-        # get all unique values in this stack, excluding 0 (background)
-        unique_cells = np.unique(img_stack)
-        unique_cells = unique_cells[np.nonzero(unique_cells)]
-
-        # create array from starting value to starting value + number of cells to relabel
-        # ensures no labels are skipped
-        relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
-
-        # populate relabeled_annotations array with relabeled annotations for that frame
-        for cell_id, relabel_id in zip(unique_cells, relabel_ids):
-            relabeled_annotations[:,:,:,f] = np.where(img_stack == cell_id, relabel_id,
-                relabeled_annotations[:,:,:,f])
-
-    # overwrite original npz with relabeled npz (only the annotations have changed)
-    return relabeled_annotations
-
-
-
-
-def relabel_npz_all_frames(full_npz_path, start_val = 1):
-    '''
-    Relabels each frame in an npz starting from start_val. Each frame gets relabeled
-    independently of the other frames, so this can scramble relationship data if it
-    exists. Useful for cases where relationships do not need to be preserved (eg,
-    annotating, correcting, possibly reshaping npzs full of 2D annotations).
-
-    Npz should be 4D in shape (frames, y, x, channels).
-
-    Inputs:
-        full_npz_path: full path to npz to relabel. Used to load and then
-            save npz.
-        start_val: What label to begin relabeling with. 1 by default but
-            could be set to another value if needed for other purposes
-
-    Returns:
-        None (relabeled npzs are saved in place)
-    '''
-    # load npz
-    npz = np.load(full_npz_path)
-
-    # load raw and annotations, but we only need to modify annotations
-    raw = npz['X'][()]
-    annotations = npz['y'][()]
-
-    # TODO: make sure that npz is 4D
-
-    # assumes channels_last
-    features = annotations.shape[-1]
-
-    # create new array to store the relabeled annotations
-    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
-
-    # features should be relabeled independently of each other
-    for f in range(features):
-
-        # relabel each frame
-        for frame in range(annotations.shape[0]):
-            img = annotations[frame,:,:,f]
-
-            # get all unique values in this frame, excluding 0 (background)
-            unique_cells = np.unique(img)
-            unique_cells = unique_cells[np.nonzero(unique_cells)]
-
-            # create array from starting value to starting value + number of cells to relabel
-            # ensures no labels are skipped
-            relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
-
-            # populate relabeled_annotations array with relabeled annotations for that frame
-            for cell_id, relabel_id in zip(unique_cells, relabel_ids):
-                relabeled_annotations[frame,:,:,f] = np.where(img == cell_id, relabel_id,
-                    relabeled_annotations[frame,:,:,f])
-
-    # overwrite original npz with relabeled npz (only the annotations have changed)
-    np.savez(full_npz_path, X = raw, y = relabeled_annotations)
-
-    return None
 
 
 def relabel_npz_zstack_prediction(full_npz_path, start_val = 1, threshold = 0.1):
