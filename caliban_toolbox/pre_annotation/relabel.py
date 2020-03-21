@@ -71,7 +71,8 @@ def relabel_all_frames(input_data, start_val=1):
     return relabeled_annotations
 
 
-def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
+# TODO: refactor this and function below. Waiting on example data from geneva to use for testing
+def predict_zstack_cell_ids(img, next_img, threshold=0.1):
     '''
     Predict labels for next_img based on intersection over union (iou)
     with img. If cells don't meet threshold for iou, they don't count as
@@ -223,6 +224,7 @@ def predict_zstack_cell_ids(img, next_img, threshold = 0.1):
     return relabeled_next
 
 
+# TODO: refactor this. Waiting for example data from Geneva
 def relabel_npz_zstack_prediction(full_npz_path, start_val = 1, threshold = 0.1):
     '''
     Relabels the first frame of an npz starting from start_val. Each subsequent frame
