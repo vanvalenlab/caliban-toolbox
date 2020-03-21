@@ -29,12 +29,8 @@ from __future__ import division
 from __future__ import print_function
 
 from caliban_toolbox.pre_annotation import aws_upload
-# from caliban_toolbox.pre_annotation import chop_into_overlapping_images
-from caliban_toolbox.pre_annotation import contrast_adjustment
 from caliban_toolbox.pre_annotation import fig_eight_upload
-from caliban_toolbox.pre_annotation import montage_makers
-from caliban_toolbox.pre_annotation import montage_to_csv
-from caliban_toolbox.pre_annotation import overlapping_chopper
+
 
 del absolute_import
 del division
