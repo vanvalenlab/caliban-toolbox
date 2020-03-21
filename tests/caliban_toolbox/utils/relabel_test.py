@@ -87,3 +87,22 @@ def test_predict_stack_labels():
 
     img = combined_stack[2, :, :, 0]
     next_img = combined_stack[4, :, :, 0]
+
+
+def test_relabel_data():
+    fov_len, stack_len, num_crops, num_slices, rows, cols, channels = 2, 5, 1, 1, 100, 100, 1
+
+    stack = np.zeros((fov_len, stack_len, num_crops, num_slices, rows, cols, channels))
+    stack[:, :, :, :, 2:10, 1:9, 0] = 10
+    stack[:, :, :, :, 80:85, 10:30, 0] = 20
+    stack[:, :, :, :, 50:60, 20:30, 0] = 30
+    stack[:, :, :, :, 2:10, 20:30, 0] = 40
+    stack[:, :, :, :, 70:80, 10:30, 0] = 5
+    stack[:, :, :, :, 20:30, 90:94, 0] = 6
+    stack[:, :, :, :, 40:50, 60:80, 0] = 90
+
+    relabel_modes = ["preserve", "all_frames"]
+    for relabel_type in relabel_modes:
+        output = relabel.relabel_data(stack, relabel_type)
+
+

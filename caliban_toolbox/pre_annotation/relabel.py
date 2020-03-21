@@ -2,10 +2,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-import math
 import numpy as np
 import os
-import stat
 
 from caliban_toolbox.utils.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
@@ -307,47 +305,37 @@ def relabel_npz_zstack_prediction(full_npz_path, start_val = 1, threshold = 0.1)
     return None
 
 
-def relabel_npzs_folder(npz_dir, relabel_type = 'preserve', start_val = 1, threshold = 0.1):
-    '''
-    Relabel each npz in a folder with a given relabling strategy.
-    Relableling strategy is 'preserve' by default so that relationships
-    are not lost/scrambled unless user intentionally uses different strategy.
-    Note: "predict" relabeling scheme does not use deep learning predictions and
-    will not produce lineage predictions. This option is a computer vision approach
-    to help annotators when a deep learning prediction is not available.
+def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1):
+    """Relabel stacked labels for easier annotation in Caliban
 
-    Inputs:
-        npz_dir: full path to directory holding npzs to be relabeled. All npzs
-            in dir will be relabeled in place.
-        relabel_type: string to choose which relabeling function to call. Options
-            are:
-                preserve - preserve 3D relationships of labels
-                unique - each cell in each frame gets a unique label
-                all_frames - each frame is relabeled from start_val, independent of
-                    other frame labeling
-                predict - relabel first frame to start from 1, then predict labels in
-                    subsequent frames by iou comparisons between each frame and the next frame
-        start_val: which starting value to pass to relabeling function. 1 by default
-        threshold: iou between cells that must be reached for zstack prediction to
-            consider them matched. Default is 0.1, only used in relabel_npz_zstack_prediction
+    Inputs
+        input_data: xarray of data to be relabeled
+        relabel_type: string to choose which relabeling function to call.
+            preserve - preserve existing relationships of between labels in different frames
+            all_frames - each frame is independently relabeled from start_val
+            predict - attempt to link cells acrossframes via IOU for overlap
+
+        start_val: lowest value for relabeling
+        threshold: minimum iou threshold to count an overlap for predict relabeling
 
     Returns:
-        None. Npzs are relabeled in place as function runs
-    '''
+        array of relabel
+    """
 
-    npz_list = list_npzs_folder(npz_dir)
+    allowed_relabels = ["preserve", "all_frames", "predict"]
 
-    for npz in npz_list:
-        full_npz_path = os.path.join(npz_dir, npz)
+    if relabel_type not in allowed_relabels:
+        raise ValueError("relable_type must be one of [preserve, all_frames, predict]: got {}".format(relabel_type))
 
-        if relabel_type == 'preserve':
-            relabel_npz_preserve_relationships(full_npz_path, start_val)
+    if relabel_type == 'preserve':
+        relabeled = relabel_preserve_relationships(input_data, start_val)
 
-        elif relabel_type == 'unique':
-            relabel_npz_unique(full_npz_path, start_val)
+    elif relabel_type == 'all_frames':
+        relabeled = relabel_all_frames(input_data, start_val)
 
-        elif relabel_type == 'all_frames':
-            relabel_npz_all_frames(full_npz_path, start_val)
+    elif relabel_type == 'predict':
+        relabeled = relabel_zstack_prediction(input_data, start_val, threshold)
 
-        elif relabel_type == 'predict':
-            relabel_npz_zstack_prediction(full_npz_path, start_val, threshold)
+    return relabeled
+
+
