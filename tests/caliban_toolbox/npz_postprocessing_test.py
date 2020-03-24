@@ -161,7 +161,7 @@ def test_stitch_crops():
                 input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10), 3] = cell_idx
             cell_idx += 1
 
-    crop_size, overlap_frac = 50, 0.2
+    crop_size, overlap_frac = 400, 0.2
 
     cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data, crop_size=(crop_size, crop_size),
                                                     overlap_frac=overlap_frac)
@@ -172,7 +172,10 @@ def test_stitch_crops():
 
     # trim padding
     row_padding, col_padding = log_data["row_padding"], log_data["col_padding"]
-    stitched_img = stitched_img[:, :, :, :, :-row_padding, :-col_padding, :]
+    if row_padding > 0:
+        stitched_img = stitched_img[:, :, :, :, :-row_padding, :, :]
+    if col_padding > 0:
+        stitched_img = stitched_img[:, :, :, :, :, :-col_padding, :]
 
     # check that objects are at same location
     assert(np.all(np.equal(stitched_img[..., 0] > 0, input_data.values[..., 3] > 0)))
@@ -269,7 +272,7 @@ def test_reconstruct_image_data():
                 3] = cell_idx
             cell_idx += 1
 
-    crop_size, overlap_frac = 50, 0.2
+    crop_size, overlap_frac = 40, 0.2
     save_dir = "tests/caliban_toolbox/test_crop_and_stitch"
 
     # crop data
@@ -290,6 +293,58 @@ def test_reconstruct_image_data():
 
     # there are the same number of cells
     assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+
+    # clean up
+    shutil.rmtree(save_dir)
+
+    # test single crop in x, y, both
+    crop_size, overlap_frac = (400, 40), 0.2
+    save_dir = "tests/caliban_toolbox/test_crop_and_stitch1"
+
+    # crop data
+    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                         crop_size=crop_size,
+                                                                         overlap_frac=0.2)
+
+    # stitch data
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                            save_dir=save_dir)
+
+    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+
+    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
+
+    # all the same pixels are marked
+    assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+
+    # there are the same number of cells
+    assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+
+    # clean up
+    shutil.rmtree(save_dir)
+
+    # test single crop in both
+    crop_size, overlap_frac = (400, 400), 0.2
+    save_dir = "tests/caliban_toolbox/test_crop_and_stitch2"
+
+    # crop data
+    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                         crop_size=crop_size,
+                                                                         overlap_frac=0.2)
+
+    # stitch data
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                            save_dir=save_dir)
+
+    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+
+    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
+
+    # all the same pixels are marked
+    assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+
+    # there are the same number of cells
+    assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
     # clean up
     shutil.rmtree(save_dir)

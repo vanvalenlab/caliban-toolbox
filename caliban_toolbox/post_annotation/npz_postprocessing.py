@@ -225,7 +225,10 @@ def reconstruct_image_stack(crop_dir):
     stitched_images = stitch_crops(annotated_data=crop_stack, log_data=log_data)
 
     # crop image down to original size
-    stitched_images = stitched_images[:, :, :, :, :-row_padding, :-col_padding, :]
+    if row_padding > 0:
+        stitched_images = stitched_images[:, :, :, :, :-row_padding, :, :]
+    if col_padding > 0:
+        stitched_images = stitched_images[:, :, :, :, :, :-col_padding, :]
 
     _, stack_len, _, _, row_len, col_len, _ = log_data["original_shape"]
     stitched_xr = xr.DataArray(data=stitched_images,
