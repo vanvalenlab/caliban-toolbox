@@ -101,12 +101,12 @@ def test_load_npzs():
 
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
                                                 log_data=combined_log_data, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz")
+                                                blank_labels="include", save_format="npz", verbose=False)
 
         with open(os.path.join(temp_dir, "log_data.json")) as json_file:
             saved_log_data = json.load(json_file)
 
-        loaded_slices = npz_postprocessing.load_npzs(save_dir, saved_log_data)
+        loaded_slices = npz_postprocessing.load_npzs(temp_dir, saved_log_data, verbose=False)
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -136,9 +136,9 @@ def test_load_npzs():
 
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
                                                 log_data=combined_log_data, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz")
+                                                blank_labels="include", save_format="npz", verbose=False)
 
-        loaded_slices = npz_postprocessing.load_npzs(save_dir, combined_log_data)
+        loaded_slices = npz_postprocessing.load_npzs(temp_dir, combined_log_data)
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -162,7 +162,7 @@ def test_stitch_crops():
     crop_size, overlap_frac = 400, 0.2
 
     cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data, crop_size=(crop_size, crop_size),
-                                                    overlap_frac=overlap_frac)
+                                                                 overlap_frac=overlap_frac)
     cropped_labels = cropped[..., -1:].values
     log_data["original_shape"] = input_data.shape
 
@@ -280,7 +280,7 @@ def test_reconstruct_image_data():
 
         # stitch data
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir)
+                                                save_dir=temp_dir, verbose=False)
 
         npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -303,7 +303,7 @@ def test_reconstruct_image_data():
 
         # stitch data
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir)
+                                                save_dir=temp_dir, verbose=False)
 
         npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -326,7 +326,7 @@ def test_reconstruct_image_data():
 
         # stitch data
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir)
+                                                save_dir=temp_dir, verbose=False)
 
         npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -409,7 +409,7 @@ def test_reconstruct_slice_data():
 
         npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
                                                 log_data={**slice_log_data}, save_dir=temp_dir, blank_labels="include",
-                                                save_format="npz")
+                                                save_format="npz", verbose=False)
 
         stitched_slices = npz_postprocessing.reconstruct_slice_data(temp_dir)
         assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))

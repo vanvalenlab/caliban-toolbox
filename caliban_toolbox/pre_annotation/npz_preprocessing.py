@@ -279,7 +279,8 @@ def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
     return slice_xr, log_data
 
 
-def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels="include", save_format="npz"):
+def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels="include", save_format="npz",
+                          verbose=True):
     """Take an array of processed image data and save as NPZ for caliban
 
     Inputs
@@ -287,6 +288,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
         original_xr: the unmodified xarray
         log_data: data used to reconstruct images
         save_dir: path to save the npz and JSON files
+
 
     Outputs
         None (saves npz and JSON to disk)"""
@@ -326,7 +328,8 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
                         # blank labels get saved to separate folder
                         if blank_labels == "separate":
-                            print("{} is blank, saving to separate folder".format(npz_id))
+                            if verbose:
+                                print("{} is blank, saving to separate folder".format(npz_id))
                             save_path = os.path.join(save_dir, blank_labels, npz_id)
 
                             # save images as either npz or xarray
@@ -338,11 +341,13 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
                         # blank labels don't get saved, empty area of tissue
                         elif blank_labels == "skip":
-                            print("{} is blank, skipping saving".format(npz_id))
+                            if verbose:
+                                print("{} is blank, skipping saving".format(npz_id))
 
                         # blank labels get saved along with other crops
                         elif blank_labels == "include":
-                            print("{} is blank, saving to folder".format(npz_id))
+                            if verbose:
+                                print("{} is blank, saving to folder".format(npz_id))
                             save_path = os.path.join(save_dir, npz_id)
 
                             # save images as either npz or xarray

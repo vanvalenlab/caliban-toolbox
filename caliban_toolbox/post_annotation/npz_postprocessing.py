@@ -60,7 +60,7 @@ def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext=".npz"):
     return full_string
 
 
-def load_npzs(crop_dir, log_data):
+def load_npzs(crop_dir, log_data, verbose=True):
     """Reads all of the cropped images from a directory, and aggregates them into a single stack
 
     Inputs:
@@ -104,7 +104,8 @@ def load_npzs(crop_dir, log_data):
                             stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_npz["y"]
                         else:
                             # npz not generated, did not contain any labels, keep blank
-                            print("could not find npz {}, skipping".format(npz_path))
+                            if verbose:
+                                print("could not find npz {}, skipping".format(npz_path))
 
                     # load xarray
                     elif save_format == "xr":
@@ -199,7 +200,7 @@ def stitch_crops(annotated_data, log_data):
     return stitched_labels
 
 
-def reconstruct_image_stack(crop_dir):
+def reconstruct_image_stack(crop_dir, verbose=True):
     """High level function to combine crops together into a single stitched image
 
     Inputs:
@@ -219,7 +220,7 @@ def reconstruct_image_stack(crop_dir):
     row_padding, col_padding = log_data["row_padding"], log_data["col_padding"]
     fov_names, channel_names = log_data["fov_names"], log_data["channel_names"]
     # combine all npz crops into a single stack
-    crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data)
+    crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
 
     # stitch crops together into single contiguous image
     stitched_images = stitch_crops(annotated_data=crop_stack, log_data=log_data)
@@ -421,7 +422,7 @@ def stitch_slices(slice_stack, log_data):
     return stitched_xr
 
 
-def reconstruct_slice_data(save_dir):
+def reconstruct_slice_data(save_dir, verbose=True):
     """High level function to put pieces of a slice back together
     Inputs
         save_dir: full path to directory where slice pieces are stored
@@ -439,7 +440,7 @@ def reconstruct_slice_data(save_dir):
     with open(json_file_path) as json_file:
         slice_log_data = json.load(json_file)
 
-    slice_stack = load_npzs(save_dir, slice_log_data)
+    slice_stack = load_npzs(save_dir, slice_log_data, verbose=verbose)
 
     stitched_xr = stitch_slices(slice_stack, slice_log_data)
 

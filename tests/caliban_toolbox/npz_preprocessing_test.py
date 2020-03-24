@@ -271,8 +271,9 @@ def test_save_npzs_for_caliban():
     slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                                save_dir=temp_dir, blank_labels="include", save_format="npz")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+                                                log_data=copy.copy(log_data),save_dir=temp_dir, blank_labels="include",
+                                                save_format="npz", verbose=False)
 
         # check that correct size was saved
         test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_row_0_col_0_slice_0.npz"))
@@ -292,12 +293,12 @@ def test_save_npzs_for_caliban():
         crop_size = (10, 10)
         overlap_frac = 0.2
         data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                             overlap_frac=overlap_frac,
-                                                                             test_parameters=False)
+                                                                                  overlap_frac=overlap_frac,
+                                                                                  test_parameters=False)
 
         npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
                                                 log_data={**log_data, **log_data_crop}, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz")
+                                                blank_labels="include", save_format="npz", verbose=False)
         expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
         files = os.listdir(temp_dir)
         files = [file for file in files if "npz" in file]
@@ -313,8 +314,9 @@ def test_save_npzs_for_caliban():
 
     # test that function correctly includes blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
-        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                                save_dir=temp_dir, blank_labels="include", save_format="npz")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+                                                log_data=copy.copy(log_data), save_dir=temp_dir, blank_labels="include",
+                                                save_format="npz", verbose=False)
 
         # check that there is the expected number of files saved to directory
         files = os.listdir(temp_dir)
@@ -324,8 +326,9 @@ def test_save_npzs_for_caliban():
 
     # test that function correctly skips blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
-        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                                save_dir=temp_dir, save_format="npz", blank_labels="skip")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+                                                log_data=copy.copy(log_data), save_dir=temp_dir, save_format="npz",
+                                                blank_labels="skip", verbose=False)
 
         #  check that expected number of files in directory
         files = os.listdir(temp_dir)
@@ -334,8 +337,9 @@ def test_save_npzs_for_caliban():
 
     # test that function correctly saves blank crops to separate folder
     with tempfile.TemporaryDirectory() as temp_dir:
-        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                                save_dir=temp_dir, save_format="npz", blank_labels="separate")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+                                                log_data=copy.copy(log_data), save_dir=temp_dir, save_format="npz",
+                                                blank_labels="separate", verbose=False)
 
         # check that expected number of files in each directory
         files = os.listdir(temp_dir)
