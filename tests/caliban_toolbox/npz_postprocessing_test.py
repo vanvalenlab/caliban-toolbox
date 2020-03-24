@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import pytest
+import tempfile
 
 import numpy as np
 from caliban_toolbox.pre_annotation import npz_preprocessing
@@ -76,74 +77,71 @@ def test_get_npz_file_path():
 
 
 def test_load_npzs():
-    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
-    slice_stack_len = 4
+    with tempfile.TemporaryDirectory() as temp_dir:
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        slice_stack_len = 4
 
-    slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                                    row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    crop_size = (10, 10)
-    overlap_frac = 0.2
-    data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                              overlap_frac=overlap_frac,
-                                                                              test_parameters=False)
-    combined_log_data = {**log_data, **log_data_crop}
-    # tag the upper left hand corner of the label in each slice
-    slice_tags = np.arange(data_xr_cropped.shape[3])
-    crop_tags = np.arange(data_xr_cropped.shape[2])
-    data_xr_cropped[0, 0, :, 0, 0, 0, 2] = crop_tags
-    data_xr_cropped[0, 0, 0, :, 0, 0, 2] = slice_tags
-    save_dir = "tests/caliban_toolbox/test_load_slices/"
+        slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                            log_data=combined_log_data, save_dir=save_dir,
-                                            blank_labels="include", save_format="npz")
+        crop_size = (10, 10)
+        overlap_frac = 0.2
+        data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
+                                                                                  overlap_frac=overlap_frac,
+                                                                                  test_parameters=False)
+        combined_log_data = {**log_data, **log_data_crop}
+        # tag the upper left hand corner of the label in each slice
+        slice_tags = np.arange(data_xr_cropped.shape[3])
+        crop_tags = np.arange(data_xr_cropped.shape[2])
+        data_xr_cropped[0, 0, :, 0, 0, 0, 2] = crop_tags
+        data_xr_cropped[0, 0, 0, :, 0, 0, 2] = slice_tags
 
-    with open(os.path.join(save_dir, "log_data.json")) as json_file:
-        saved_log_data = json.load(json_file)
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                                log_data=combined_log_data, save_dir=temp_dir,
+                                                blank_labels="include", save_format="npz")
 
-    loaded_slices = npz_postprocessing.load_npzs(save_dir, saved_log_data)
+        with open(os.path.join(temp_dir, "log_data.json")) as json_file:
+            saved_log_data = json.load(json_file)
 
-    assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
-    assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
+        loaded_slices = npz_postprocessing.load_npzs(save_dir, saved_log_data)
 
-    shutil.rmtree(save_dir)
+        assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
+        assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
 
     # test slices with unequal last length
-    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
-    slice_stack_len = 7
+    with tempfile.TemporaryDirectory() as temp_dir:
+        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        slice_stack_len = 7
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                                    row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
+        slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
-    crop_size = (10, 10)
-    overlap_frac = 0.2
-    data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                              overlap_frac=overlap_frac,
-                                                                              test_parameters=False)
-    # tag the upper left hand corner of the label in each slice
-    slice_tags = np.arange(data_xr_cropped.shape[3])
-    crop_tags = np.arange(data_xr_cropped.shape[2])
-    data_xr_cropped[0, 0, :, 0, 0, 0, 2] = crop_tags
-    data_xr_cropped[0, 0, 0, :, 0, 0, 2] = slice_tags
-    save_dir = "tests/caliban_toolbox/test_load_slices/"
+        crop_size = (10, 10)
+        overlap_frac = 0.2
+        data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
+                                                                                  overlap_frac=overlap_frac,
+                                                                                  test_parameters=False)
+        # tag the upper left hand corner of the label in each slice
+        slice_tags = np.arange(data_xr_cropped.shape[3])
+        crop_tags = np.arange(data_xr_cropped.shape[2])
+        data_xr_cropped[0, 0, :, 0, 0, 0, 2] = crop_tags
+        data_xr_cropped[0, 0, 0, :, 0, 0, 2] = slice_tags
 
-    combined_log_data = {**log_data, **log_data_crop}
+        combined_log_data = {**log_data, **log_data_crop}
 
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                            log_data=combined_log_data, save_dir=save_dir,
-                                            blank_labels="include", save_format="npz")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                                log_data=combined_log_data, save_dir=temp_dir,
+                                                blank_labels="include", save_format="npz")
 
-    loaded_slices = npz_postprocessing.load_npzs(save_dir, combined_log_data)
+        loaded_slices = npz_postprocessing.load_npzs(save_dir, combined_log_data)
 
-    assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
-    assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
-
-    shutil.rmtree(save_dir)
+        assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
+        assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
 
 
 def test_stitch_crops():
@@ -258,96 +256,87 @@ def test_stitch_crops():
 
 def test_reconstruct_image_data():
     # generate stack of crops from image with grid pattern
-    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
+    with tempfile.TemporaryDirectory() as temp_dir:
+        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                                    row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    # create image with
-    cell_idx = 1
-    for i in range(12):
-        for j in range(11):
-            for fov in range(input_data.shape[0]):
-                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10),
-                3] = cell_idx
-            cell_idx += 1
+        # create image with
+        cell_idx = 1
+        for i in range(12):
+            for j in range(11):
+                for fov in range(input_data.shape[0]):
+                    input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10),
+                    3] = cell_idx
+                cell_idx += 1
 
-    crop_size, overlap_frac = 40, 0.2
-    save_dir = "tests/caliban_toolbox/test_crop_and_stitch"
+        crop_size, overlap_frac = 40, 0.2
 
-    # crop data
-    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
-                                                                         crop_size=(crop_size, crop_size),
-                                                                         overlap_frac=0.2)
+        # crop data
+        data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                             crop_size=(crop_size, crop_size),
+                                                                             overlap_frac=0.2)
 
-    # stitch data
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                            save_dir=save_dir)
+        # stitch data
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                                save_dir=temp_dir)
 
-    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+        npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
-    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
+        stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
 
-    # all the same pixels are marked
-    assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+        # all the same pixels are marked
+        assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
-    # there are the same number of cells
-    assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+        # there are the same number of cells
+        assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
-    # clean up
-    shutil.rmtree(save_dir)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # test single crop in x, y, both
+        crop_size, overlap_frac = (400, 40), 0.2
 
-    # test single crop in x, y, both
-    crop_size, overlap_frac = (400, 40), 0.2
-    save_dir = "tests/caliban_toolbox/test_crop_and_stitch1"
+        # crop data
+        data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                             crop_size=crop_size,
+                                                                             overlap_frac=0.2)
 
-    # crop data
-    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
-                                                                         crop_size=crop_size,
-                                                                         overlap_frac=0.2)
+        # stitch data
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                                save_dir=temp_dir)
 
-    # stitch data
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                            save_dir=save_dir)
+        npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
-    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+        stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
 
-    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
+        # all the same pixels are marked
+        assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
-    # all the same pixels are marked
-    assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+        # there are the same number of cells
+        assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
-    # there are the same number of cells
-    assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # test single crop in both
+        crop_size, overlap_frac = (400, 400), 0.2
 
-    # clean up
-    shutil.rmtree(save_dir)
+        # crop data
+        data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                             crop_size=crop_size,
+                                                                             overlap_frac=0.2)
 
-    # test single crop in both
-    crop_size, overlap_frac = (400, 400), 0.2
-    save_dir = "tests/caliban_toolbox/test_crop_and_stitch2"
+        # stitch data
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                                save_dir=temp_dir)
 
-    # crop data
-    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
-                                                                         crop_size=crop_size,
-                                                                         overlap_frac=0.2)
+        npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
-    # stitch data
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                            save_dir=save_dir)
+        stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
 
-    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+        # all the same pixels are marked
+        assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
-    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
-
-    # all the same pixels are marked
-    assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
-
-    # there are the same number of cells
-    assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
-
-    # clean up
-    shutil.rmtree(save_dir)
+        # there are the same number of cells
+        assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
 
 def test_stitch_slices():
@@ -405,24 +394,22 @@ def test_stitch_slices():
 
 
 def test_reconstruct_slice_data():
-    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
-    slice_stack_len = 4
+    with tempfile.TemporaryDirectory() as temp_dir:
+        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                                    row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    # tag upper left hand corner of the label in each image
-    tags = np.arange(stack_len)
-    input_data[0, :, 0, 0, 0, 0, 2] = tags
+        # tag upper left hand corner of the label in each image
+        tags = np.arange(stack_len)
+        input_data[0, :, 0, 0, 0, 0, 2] = tags
 
-    slice_xr, slice_log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
+        slice_xr, slice_log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
-    save_dir = "tests/caliban_toolbox/test_reconstruct_slice_data/"
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                            log_data={**slice_log_data}, save_dir=save_dir, blank_labels="include",
-                                            save_format="npz")
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+                                                log_data={**slice_log_data}, save_dir=temp_dir, blank_labels="include",
+                                                save_format="npz")
 
-    stitched_slices = npz_postprocessing.reconstruct_slice_data(save_dir)
-    assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))
-
-    shutil.rmtree(save_dir)
+        stitched_slices = npz_postprocessing.reconstruct_slice_data(temp_dir)
+        assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))

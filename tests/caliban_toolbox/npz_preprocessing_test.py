@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import copy
+import tempfile
 
 import numpy as np
 from caliban_toolbox.pre_annotation import npz_preprocessing
@@ -269,41 +270,39 @@ def test_save_npzs_for_caliban():
 
     slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
-    save_dir = "tests/caliban_toolbox/test_save_npzs_for_caliban/"
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                            save_dir=save_dir, blank_labels="include", save_format="npz")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                                save_dir=temp_dir, blank_labels="include", save_format="npz")
 
-    # check that correct size was saved
+        # check that correct size was saved
+        test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_row_0_col_0_slice_0.npz"))
 
-    test_npz_labels = np.load(save_dir + "fov_fov1_row_0_col_0_slice_0.npz")
+        assert test_npz_labels["y"].shape == (fov_len, slice_stack_len, row_len, col_len, 1)
 
-    assert test_npz_labels["y"].shape == (fov_len, slice_stack_len, row_len, col_len, 1)
+        assert test_npz_labels["y"].shape[:-1] == test_npz_labels["X"].shape[:-1]
 
-    assert test_npz_labels["y"].shape[:-1] == test_npz_labels["X"].shape[:-1]
+        # check that json saved successfully
+        with open(os.path.join(temp_dir, "log_data.json")) as json_file:
+            saved_log_data = json.load(json_file)
 
-    # check that json saved successfully
-    with open(os.path.join(save_dir, "log_data.json")) as json_file:
-        saved_log_data = json.load(json_file)
+        assert saved_log_data["original_shape"] == list(input_data.shape)
 
-    assert saved_log_data["original_shape"] == list(input_data.shape)
-    shutil.rmtree(save_dir)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # check that combined crop and slice saving works
+        crop_size = (10, 10)
+        overlap_frac = 0.2
+        data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
+                                                                             overlap_frac=overlap_frac,
+                                                                             test_parameters=False)
 
-    # check that combined crop and slice saving works
-    crop_size = (10, 10)
-    overlap_frac = 0.2
-    data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                         overlap_frac=overlap_frac,
-                                                                         test_parameters=False)
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                                log_data={**log_data, **log_data_crop}, save_dir=temp_dir,
+                                                blank_labels="include", save_format="npz")
+        expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
+        files = os.listdir(temp_dir)
+        files = [file for file in files if "npz" in file]
 
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                            log_data={**log_data, **log_data_crop}, save_dir=save_dir,
-                                            blank_labels="include", save_format="npz")
-    expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
-    files = os.listdir(save_dir)
-    files = [file for file in files if "npz" in file]
-
-    assert len(files) == expected_crop_num
-    shutil.rmtree(save_dir)
+        assert len(files) == expected_crop_num
 
     # check that arguments specifying what to do with blank crops are working
     # set specified crops to not be blank
@@ -313,39 +312,39 @@ def test_save_npzs_for_caliban():
     expected_crop_num = slice_xr.shape[2] * slice_xr.shape[3]
 
     # test that function correctly includes blank crops when saving
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                            save_dir=save_dir, blank_labels="include", save_format="npz")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                                save_dir=temp_dir, blank_labels="include", save_format="npz")
 
-    # check that there is the expected number of files saved to directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "npz" in file]
+        # check that there is the expected number of files saved to directory
+        files = os.listdir(temp_dir)
+        files = [file for file in files if "npz" in file]
 
-    assert len(files) == expected_crop_num
-    shutil.rmtree(save_dir)
+        assert len(files) == expected_crop_num
 
     # test that function correctly skips blank crops when saving
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                            save_dir=save_dir, save_format="npz", blank_labels="skip")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                                save_dir=temp_dir, save_format="npz", blank_labels="skip")
 
-    #  check that expected number of files in directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "npz" in file]
-    assert len(files) == 3
-    shutil.rmtree(save_dir)
+        #  check that expected number of files in directory
+        files = os.listdir(temp_dir)
+        files = [file for file in files if "npz" in file]
+        assert len(files) == 3
 
     # test that function correctly saves blank crops to separate folder
-    npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
-                                            save_dir=save_dir, save_format="npz", blank_labels="separate")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        npz_preprocessing.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data, log_data=copy.copy(log_data),
+                                                save_dir=temp_dir, save_format="npz", blank_labels="separate")
 
-    # check that expected number of files in each directory
-    files = os.listdir(save_dir)
-    files = [file for file in files if "npz" in file]
-    assert len(files) == 3
+        # check that expected number of files in each directory
+        files = os.listdir(temp_dir)
+        files = [file for file in files if "npz" in file]
+        assert len(files) == 3
 
-    files = os.listdir(os.path.join(save_dir, "separate"))
-    files = [file for file in files if "npz" in file]
-    assert len(files) == expected_crop_num - 3
-    shutil.rmtree(save_dir)
+        files = os.listdir(os.path.join(temp_dir, "separate"))
+        files = [file for file in files if "npz" in file]
+        assert len(files) == expected_crop_num - 3
 
 
 
