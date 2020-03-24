@@ -225,8 +225,8 @@ def predict_zstack_cell_ids(img, next_img, threshold=0.1):
 
 
 # TODO: refactor this. Waiting for example data from Geneva
-def relabel_npz_zstack_prediction(full_npz_path, start_val = 1, threshold = 0.1):
-    '''
+def predict_relationships(image_stack, start_val=1, threshold=0.1):
+    """
     Relabels the first frame of an npz starting from start_val. Each subsequent frame
     gets relabeled based on iou (intersection over union) with the previous frame.
     This can scramble human-annotated 3D label assignments if they exist--
@@ -254,57 +254,39 @@ def relabel_npz_zstack_prediction(full_npz_path, start_val = 1, threshold = 0.1)
 
     Returns:
         None (relabeled npzs are saved in place)
-    '''
-
-    # load npz
-    npz = np.load(full_npz_path)
-
-    # load raw and annotations, but we only need to modify annotations
-    raw = npz['X'][()]
-    annotations = npz['y'][()]
-
-    # TODO: make sure that npz is 4D
-
-    # assumes channels_last
-    features = annotations.shape[-1]
+    """
 
     # create new array to store the relabeled annotations
-    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
+    relabeled_annotations = np.zeros(image_stack.shape, dtype=image_stack.dtype)
 
-    # features should be relabeled independently of each other
-    for f in range(features):
+    # relabel the first frame
+    # (even if this is empty, each next_frame gets relabeled as first step in
+    # predict_zstack_cell_ids, so whichever frame is the first to have labels
+    # will be relabeled from 1)
 
-        # relabel the first frame
-        # (even if this is empty, each next_frame gets relabeled as first step in
-        # predict_zstack_cell_ids, so whichever frame is the first to have labels
-        # will be relabeled from 1)
+    first_img = image_stack[0, :, :, 0]
+    unique_cells = np.unique(first_img)
+    unique_cells = unique_cells[np.nonzero(unique_cells)]
 
-        first_img = annotations[0,:,:,f]
-        unique_cells = np.unique(first_img)
-        unique_cells = unique_cells[np.nonzero(unique_cells)]
+    relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
+    for cell_id, relabel_id in zip(unique_cells, relabel_ids):
+                    relabeled_annotations[0, :, :, 0] = np.where(first_img == cell_id, relabel_id,
+                                                                 relabeled_annotations[0, :, :, 0])
 
-        relabel_ids = np.arange(start_val, len(unique_cells) + start_val)
-        for cell_id, relabel_id in zip(unique_cells, relabel_ids):
-                        relabeled_annotations[0,:,:,f] = np.where(first_img == cell_id, relabel_id,
-                            relabeled_annotations[0,:,:,f])
+    # from that frame onwards, predict the rest
+    for frame in range(image_stack.shape[0] - 1):
 
-        # from that frame onwards, predict the rest
-        for frame in range(annotations.shape[0] -1):
+        # base labels off of this frame
+        img = relabeled_annotations[frame, :, :, 0]
 
-            # base labels off of this frame
-            img = relabeled_annotations[frame,:,:,f]
+        # this is frame that gets relabeled with predictions
+        next_img = image_stack[frame + 1, :, :, 0]
 
-            # this is frame that gets relabeled with predictions
-            next_img = annotations[frame + 1, :,:,f]
+        # put predictions into relabeled_annotations
+        predicted_next = predict_zstack_cell_ids(img, next_img, threshold)
+        relabeled_annotations[frame + 1, :, :, 0] = predicted_next
 
-            # put predictions into relabeled_annotations
-            predicted_next = predict_zstack_cell_ids(img, next_img, threshold)
-            relabeled_annotations[frame + 1, :,:,f] = predicted_next
-
-    # overwrite original npz with relabeled npz (only the annotations have changed)
-    np.savez(full_npz_path, X = raw, y = relabeled_annotations)
-
-    return None
+    return relabeled_annotations
 
 
 def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1):
