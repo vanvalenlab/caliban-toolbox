@@ -446,5 +446,5 @@ def test_reconstruct_slice_data():
 
         # image shapes are the same
         assert np.all(stitched_slices.shape == input_data.shape)
-        
+
         assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))

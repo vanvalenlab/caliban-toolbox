@@ -31,7 +31,7 @@ import re
 
 from getpass import getpass
 
-from caliban_toolbox.utils.io_utils import get_img_names, list_npzs_folder
+from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
 
 
 # TODO: Determine which of these functions are still needed
