@@ -304,7 +304,6 @@ def test_save_npzs_for_caliban():
         files = [file for file in files if "npz" in file]
 
         assert len(files) == expected_crop_num
-
     # check that arguments specifying what to do with blank crops are working
     # set specified crops to not be blank
     slice_xr[0, 0, 0, [1, 4, 7], 0, 0, -1] = 27

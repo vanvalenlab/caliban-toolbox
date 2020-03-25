@@ -1,4 +1,4 @@
-# Copyright 2016-2019 David Van Valen at California Institute of Technology
+# Copyright 2016-2020 David Van Valen at California Institute of Technology
 # (Caltech), with support from the Paul Allen Family Foundation, Google,
 # & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -37,6 +37,7 @@ from getpass import getpass
 # TODO: Determine which of these functions are still needed
 def download_report(job_id, save_folder, report_type):
     """Download zipped job report from Figure 8, containing links to completed annotations
+
 
     Args:
         job_id: ID number for the job to download a report from Figure 8
@@ -110,6 +111,7 @@ def unzip_report(path_to_zip):
 
 def download_and_unzip(job_id, save_folder, report_type='full'):
     """Download and unzip a job report csv file from Figure 8
+
 
     Args:
         job_id: ID number for the job to download a report from Figure 8

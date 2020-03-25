@@ -190,6 +190,7 @@ def predict_relationships(image_stack, start_val=1, threshold=0.1):
 
     Relabels the first frame starting from start_val. This will scramble human-annotated 3D label assignments. Use
     relabel_npz_preserve_relationships for relabeling human-corrected 3D labels.
+
     This step should be applied when:
         - launching a 3D npz that was created from unrelated 2D predictions
         - the npz has not already been relabeled

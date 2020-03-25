@@ -1,4 +1,4 @@
-# Copyright 2016-2019 The Van Valen Lab at the California Institute of
+# Copyright 2016-2020 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -151,7 +151,7 @@ def adjust_image(image, adjust_kwargs):
 
 def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
     """Display effects of overlaying two contrast-adjusted images
-    
+
     Args:
         img_1: first image of pair to form composite, as numpy array
         img_2: second image of pair to form composite, as numpy array
@@ -161,7 +161,7 @@ def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
         
     Returns:
         None"""
-    
+
     prop_img_2 = 1.0 - prop_img_1
     mod_img = img_1 * prop_img_1 + img_2 * prop_img_2
 

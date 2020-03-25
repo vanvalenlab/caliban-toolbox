@@ -1,4 +1,4 @@
-# Copyright 2016-2019 David Van Valen at California Institute of Technology
+# Copyright 2016-2020 David Van Valen at California Institute of Technology
 # (Caltech), with support from the Paul Allen Family Foundation, Google,
 # & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -80,6 +80,7 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
         lists of image urls (to be used to create a CSV file)
     '''
     # TODO: decide if outdated or keeping
+
     ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
     ##might replace with a "create_session" function for user input of access keys, then run upload separately
 
@@ -138,8 +139,7 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
 
 
 def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload):
-    """
-    input_bucket = string, name of bucket where files will be uploaded
+    """input_bucket = string, name of bucket where files will be uploaded
     output_bucket = string, name of bucket where files will be saved during annotation
     aws_folder = string, location in input bucket where files will be uploaded, used to make keys;
         files will be saved to this folder within output bucket during annotation
@@ -153,6 +153,7 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     files_to_upload = list_npzs_folder(folder_to_upload)
 
     # create list of npzs that were uploaded to pass to csv maker
+
     filename_list = []
 
     subfolders = re.split('/', aws_folder)

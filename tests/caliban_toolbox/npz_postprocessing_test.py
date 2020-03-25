@@ -1,14 +1,14 @@
 import os
+import shutil
 import json
 import pytest
 import tempfile
 
 import numpy as np
-import xarray as xr
-import skimage.measure
-
 from caliban_toolbox.pre_annotation import npz_preprocessing
 from caliban_toolbox.post_annotation import npz_postprocessing
+import xarray as xr
+import skimage.measure
 
 import importlib
 importlib.reload(npz_preprocessing)
@@ -54,6 +54,7 @@ def test_get_npz_file_path():
     # test unmodified npz
     slice = 4
     output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
+
     assert output_string == dir_list[0]
 
     # test single modified npz
@@ -68,6 +69,7 @@ def test_get_npz_file_path():
 
     # test that error is raised when multiple save versions present due to resaves
     slice = 7
+
     with pytest.raises(ValueError):
         output_string = npz_postprocessing.get_saved_file_path(dir_list, fov, row, col, slice)
 
@@ -163,6 +165,7 @@ def test_stitch_crops():
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     # create image with artificial objects to be segmented
+
     cell_idx = 1
     for i in range(12):
         for j in range(11):
@@ -189,6 +192,7 @@ def test_stitch_crops():
 
     # dims other than channels are the same
     assert np.all(stitched_img.shape[:-1] == input_data.shape[:-1])
+
 
     # check that objects are at same location
     assert(np.all(np.equal(stitched_img[..., 0] > 0, input_data.values[..., 3] > 0)))
@@ -230,6 +234,7 @@ def test_stitch_crops():
     cropped, padded = npz_preprocessing.crop_helper(input_data=input_data, row_starts=row_starts, row_ends=row_ends,
                                                     col_starts=col_starts, col_ends=col_ends,
                                                     padding=(padding, padding))
+
 
     # generate log data, since we had to go inside the upper level function to modify crop_helper inputs
     log_data = {}
@@ -369,6 +374,47 @@ def test_reconstruct_image_data():
 
 def test_stitch_slices():
     # generate data
+    fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
+
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+
+    # create image with
+    cell_idx = 1
+    for i in range(12):
+        for j in range(11):
+            for fov in range(input_data.shape[0]):
+                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10),
+                3] = cell_idx
+            cell_idx += 1
+
+    crop_size, overlap_frac = 50, 0.2
+    save_dir = "tests/caliban_toolbox/test_crop_and_stitch"
+
+    # crop data
+    data_xr_cropped, log_data = npz_preprocessing.crop_multichannel_data(data_xr=input_data,
+                                                                         crop_size=(crop_size, crop_size),
+                                                                         overlap_frac=0.2)
+
+    # stitch data
+    npz_preprocessing.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
+                                            save_dir=save_dir)
+
+    npz_postprocessing.reconstruct_image_stack(crop_dir=save_dir)
+
+    stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
+
+    # all the same pixels are marked
+    assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+
+    # there are the same number of cells
+    assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+
+    # clean up
+    shutil.rmtree(save_dir)
+
+
+def test_stitch_slices():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
@@ -383,11 +429,12 @@ def test_stitch_slices():
     slice_xr, log_data = npz_preprocessing.create_slice_data(input_data, slice_stack_len)
 
     # TODO move crop + slice testing to another test function
-    # crop_size = (10, 10)
-    # overlap_frac = 0.2
-    # data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-    #                                                                           overlap_frac=overlap_frac,
-    #                                                                           test_parameters=False)
+    crop_size = (10, 10)
+    overlap_frac = 0.2
+    data_xr_cropped, log_data_crop = npz_preprocessing.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
+                                                                              overlap_frac=overlap_frac,
+                                                                              test_parameters=False)
+
     # # get parameters
     # row_crop_size, col_crop_size = crop_size[0], crop_size[1]
     # num_row_crops, num_col_crops = log_data_crop["num_row_crops"], log_data_crop["num_col_crops"]
@@ -403,6 +450,7 @@ def test_stitch_slices():
     assert np.all(np.equal(stitched_slices[0, :, 0, 0, :, :, 0], test_vals))
 
     # test case without even division of crops into imsize
+
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 7
 

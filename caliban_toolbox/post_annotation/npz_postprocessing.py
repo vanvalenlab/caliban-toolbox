@@ -1,4 +1,5 @@
-# Copyright 2016-2019 David Van Valen at California Institute of Technology
+
+# Copyright 2016-2020 David Van Valen at California Institute of Technology
 # (Caltech), with support from the Paul Allen Family Foundation, Google,
 # & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -66,6 +67,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
     Inputs:
         crop_dir: path to directory with cropped npz or xarray files
         log_data: dictionary of parameters generated during data saving
+
         verbose: flag to control print statements
 
     Outputs:
