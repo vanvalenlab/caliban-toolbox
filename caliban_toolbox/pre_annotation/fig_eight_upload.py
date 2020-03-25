@@ -23,24 +23,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-'''
-Interact with the Figure 8 API to copy an existing job and upload data in a CSV to it
-
-'''
-
 import requests
 import subprocess
 import sys
 import os
 
 from getpass import getpass
-# Can copy an existing job to make a new one without data
-# Can upload new data to the newly created job
 
 
 def fig_eight(csv_direc, identifier, job_id_to_copy):
-    '''
-    Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
+    """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     
     Args:
         csv_direc: full path to directory that contains CSV files
@@ -48,42 +40,39 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
         job_id_to_copy: ID number of Figure 8 job from which to copy instructions and settings to new job
         
     Returns:
-        None
-    '''
+        None"""
     
     key = str(getpass("Figure eight api key? "))
-    #job_to_copy = input("What job do you want to copy? ")
+    # job_to_copy = input("What job do you want to copy? ")
 
-    #get information about the job being copied
+    # get information about the job being copied
     url = "https://api.figure-eight.com/v1/jobs/{job_id}.json?"
     url = url.replace('{job_id}', str(job_id_to_copy))
     API_key = {"key" : key}
     original_job = requests.get(url, params=API_key)
 
-    #copy job without data
+    # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
     if new_job_id == -1:
         return
     print('New job ID is: ' + str(new_job_id))
 
-    #add data from csv to job you just made
+    # add data from csv to job you just made
     csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
     data = upload_data(csv_name, new_job_id, key)
 
     return None
 
-def copy_job(id, key):
 
-    '''
-    Create a Figure 8 job based on existing job
+def copy_job(id, key):
+    """Create a Figure 8 job based on existing job
     
     Args:
         id: ID number of job to copy instructions and settings from when creating new job
         key: API key to access Figure 8 account
                 
     Returns:
-        ID number of job created
-    '''
+        ID number of job created"""
 
     url = 'https://api.figure-eight.com/v1/jobs/{job_id}/copy.json?'
     url = url.replace('{job_id}', str(id))
@@ -96,10 +85,9 @@ def copy_job(id, key):
 
     return new_job_id
 
-def upload_data(csv_name, id, key):
 
-    '''
-    Add data to an existing Figure 8 job by uploading a CSV file
+def upload_data(csv_name, id, key):
+    """Add data to an existing Figure 8 job by uploading a CSV file
     
     Args:
         csv_direc: full path to CSV file to upload
@@ -107,8 +95,7 @@ def upload_data(csv_name, id, key):
         key: API key to access Figure 8 account
         
     Returns:
-        None
-    '''
+        None"""
 
     url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
     url = url.replace('{job_id}', str(id))

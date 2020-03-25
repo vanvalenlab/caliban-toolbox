@@ -23,11 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-'''
-Functions to select and adjust images with widgets in jupyter notebooks
-'''
-
-# import statements
 from __future__ import absolute_import
 
 from ipywidgets import interact, interactive, fixed
@@ -38,65 +33,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage as sk
 import os
-from imageio import imread
 
-from caliban_toolbox.utils.io_utils import get_img_names
-
-def choose_img(name, dirpath):
-    '''
-    Pick an image from a directory to see effects of contrast adjustment steps; image chosen is displayed
-    
-    Args:
-        name: name of image file
-        dirpath: full path to directory containing images
-    
-    Returns:
-        Full path to selected image
-    '''
-    filepath = os.path.join(dirpath, name)
-    img = imread(filepath)
-    fig, ax = plt.subplots(figsize=(16, 12))
-    ax.imshow(img, cmap = mpl.cm.gray)
-    return filepath
-
-def choose_img_pair(frame, raw_dir, overlay_dir):
-    '''
-    Pick two paired images from two directories (eg, each directory contains a different channel)
-    to see effects of contrast adjustment steps; both images chosen are displayed
-    
-    Args:
-        frame: index of image location in directory
-        raw_dir: full path to first image-containing directory
-        overlay_dir: full path to second image-containing directory
-        
-    Returns:
-        Full paths to both images selected 
-    '''
-    #load raw and overlay images based on frame number
-    raw_img_name = get_img_names(raw_dir)[frame]
-    raw_img_path = os.path.join(raw_dir, raw_img_name)
-    raw_img = imread(raw_img_path)
-    
-    overlay_img_name = get_img_names(overlay_dir)[frame]
-    overlay_img_path = os.path.join(overlay_dir, overlay_img_name)
-    overlay_img = imread(overlay_img_path)
-    
-    fig, ax = plt.subplots(figsize=(16, 12), nrows = 2)
-    
-    plt.subplot(211)
-    plt.imshow(raw_img, cmap = mpl.cm.gray)
-    plt.subplot(212)
-    plt.imshow(overlay_img, cmap = mpl.cm.gray)
-
-    plt.show()
-    
-    return raw_img_path, overlay_img_path
-    
 
 def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=100, invert_img=True, gamma_adjust=1.0,
-               equalize_hist=False, equalize_adapthist=False, v_min=0, v_max=255):
-    '''
-    Display effects of contrast adjustment on an image
+                             equalize_hist=False, equalize_adapthist=False, v_min=0, v_max=255):
+    """Display effects of contrast adjustment on an image
     
     Args:
         image: image to adjust, as array
@@ -111,8 +52,7 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
         v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
     
     Returns:
-        Contrast-adjusted image
-    '''
+        Contrast-adjusted image"""
 
     new_image = filters.gaussian(image, sigma=blur, multichannel=False)
     
@@ -126,28 +66,26 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
         
     new_image=sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = 'float')
     
-    if(equalize_hist == True):
-        #new_image=sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = 'np.uint16')
+    if equalize_hist:
         new_image = sk.exposure.equalize_hist(new_image, nbins=256, mask=None)
         
-    if(equalize_adapthist == True):
+    if equalize_adapthist:
         new_image = sk.exposure.equalize_adapthist(new_image, kernel_size=None, clip_limit=0.01, nbins=256)
      
-    new_image = sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = np.uint8)
+    new_image = sk.exposure.rescale_intensity(new_image, in_range='image', out_range=np.uint8)
     new_image = new_image.astype(np.uint8)
 
-    #adjust min/max of image after it is rescaled to np.uint8
+    # adjust min/max of image after it is rescaled to np.uint8
     new_image = sk.exposure.rescale_intensity(new_image, in_range=(v_min, v_max))
     
     fig, ax = plt.subplots(figsize=(16, 12))
-    ax.imshow(new_image, cmap = mpl.cm.gray)
+    ax.imshow(new_image, cmap=mpl.cm.gray)
 
     return new_image
 
 
 def adjust_image(image, adjust_kwargs):
-    '''
-    Contrast adjusts an image using assortment of filters and skimage functions
+    """Contrast adjusts an image using assortment of filters and skimage functions
 
     Args:
         image: image to adjust, as array, with dtype np.float32
@@ -162,8 +100,7 @@ def adjust_image(image, adjust_kwargs):
         v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
 
     Returns:
-        Contrast adjusted image as a numpy array (np.uint8)
-    '''
+        Contrast adjusted image as a numpy array (np.uint8)"""
 
     if len(image.shape) > 2:
         print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
@@ -195,10 +132,10 @@ def adjust_image(image, adjust_kwargs):
     if invert:
         image = sk.util.invert(image)
 
-    if (hist):
+    if hist:
         image = sk.exposure.equalize_hist(image, nbins=256, mask=None)
 
-    if (adapthist):
+    if adapthist:
         image = sk.exposure.rescale_intensity(image, in_range='image', out_range='float')
         image = sk.exposure.equalize_adapthist(image, kernel_size=None, clip_limit=0.01, nbins=256)
 
@@ -213,8 +150,7 @@ def adjust_image(image, adjust_kwargs):
 
 
 def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
-    '''
-    Display effects of overlaying two contrast-adjusted images
+    """Display effects of overlaying two contrast-adjusted images
     
     Args:
         img_1: first image of pair to form composite, as numpy array
@@ -224,8 +160,7 @@ def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
         v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
         
     Returns:
-        None
-    '''
+        None"""
     
     prop_img_2 = 1.0 - prop_img_1
     mod_img = img_1 * prop_img_1 + img_2 * prop_img_2
@@ -277,7 +212,7 @@ def overlay_images(img_1, img_2, prop_img_1, v_min, v_max):
 
 
 def choose_img_from_stack(stack, slice_idx, chan_name):
-    """Helper function for interatively selecting an image to test out modifications from a stack of images
+    """Helper function for interactively selecting an image to test out modifications from a stack of images
 
     Inputs
         stack: a 4D stack of images [slices, rows, cols, channels]
@@ -287,6 +222,7 @@ def choose_img_from_stack(stack, slice_idx, chan_name):
     Returns
         slice_index: the slice index that was selected by the user
         chan_index: the chan_index that was selected by the user"""
+
     chan_idx = np.where(stack.channels.values == chan_name)[0][0]
     img = stack[slice_idx, :, :, chan_idx]
     fig, ax = plt.subplots(figsize=(16, 12))
