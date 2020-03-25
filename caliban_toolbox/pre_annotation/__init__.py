@@ -1,4 +1,4 @@
-# Copyright 2016-2019 The Van Valen Lab at the California Institute of
+# Copyright 2016-2020 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -29,12 +29,7 @@ from __future__ import division
 from __future__ import print_function
 
 from caliban_toolbox.pre_annotation import aws_upload
-# from caliban_toolbox.pre_annotation import chop_into_overlapping_images
-from caliban_toolbox.pre_annotation import contrast_adjustment
 from caliban_toolbox.pre_annotation import fig_eight_upload
-from caliban_toolbox.pre_annotation import montage_makers
-from caliban_toolbox.pre_annotation import montage_to_csv
-from caliban_toolbox.pre_annotation import overlapping_chopper
 
 
 del absolute_import

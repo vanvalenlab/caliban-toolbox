@@ -1,4 +1,4 @@
-# Copyright 2016-2019 David Van Valen at California Institute of Technology
+# Copyright 2016-2020 David Van Valen at California Institute of Technology
 # (Caltech), with support from the Paul Allen Family Foundation, Google,
 # & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -42,14 +42,14 @@ from getpass import getpass
 def download_report(job_id, save_folder, report_type):
     '''
     Download zipped job report from Figure 8, containing links to completed annotations
-    
+
     Args:
         job_id: ID number for the job to download a report from Figure 8
         save_folder: full path to where zip file of job report should be saved. Should not be CSV dir.
         report_type: string specifying the type of report to download from Figure 8. Can choose between
             'full', 'aggregated', 'json', 'gold_report', 'workset', and 'source'. Usually, 'full' is the most
             useful.
-        
+
     Returns:
         Path to downloaded zipped CSV if file was successfully downloaded. Otherwise, returns None.
     '''
@@ -64,7 +64,7 @@ def download_report(job_id, save_folder, report_type):
     save_path = os.path.join(save_folder, file_name)
 
     #password prompt for api info
-    key = str(getpass("Enter your API key:"))
+    key = str(getpass("Please enter your Figure Eight API key:"))
 
     #construct url
     url = "https://api.figure-eight.com/v1/jobs/{job_id}.csv?"
@@ -84,10 +84,10 @@ def download_report(job_id, save_folder, report_type):
 def unzip_report(path_to_zip):
     '''
     Unzips .csv file and renames it appropriately
-    
+
     Args:
         path_to_zip: full path to where zipped csv file is saved
-        
+
     Returns:
         Full path to unzipped and renamed csv file; will be saved in a directory named "CSV"
     '''
@@ -117,14 +117,14 @@ def unzip_report(path_to_zip):
 def download_and_unzip(job_id, save_folder, report_type = 'full'):
     '''
     Download and unzip a job report csv file from Figure 8
-    
+
     Args:
         job_id: ID number for the job to download a report from Figure 8
         save_folder: full path to where zip file of job report should be saved. Should not be CSV dir.
         report_type: string specifying the type of report to download from Figure 8. Can choose between
             'full', 'aggregated', 'json', 'gold_report', 'workset', and 'source'. Usually, 'full' is the most
             useful.
-    
+
     Returns:
         Full path to unzipped and renamed csv file; will be saved in a directory named "CSV"
     '''
@@ -133,16 +133,18 @@ def download_and_unzip(job_id, save_folder, report_type = 'full'):
 
     csv_path = unzip_report(zip_saved_path)
 
+    return csv_path
+
 def save_annotations_from_csv(csv_path, annotations_folder):
     '''
     Uses information from Figure 8 job report to download image annotations and name appropriately.
     If annotations do not exist, user is notified of missing annotations and a csv file for reuploading
     the source images is created.
-    
+
     Args:
         csv_path: full path to csv file containing annotation information
         annotations_folder: full path to directory where downloaded annotations should be saved
-        
+
     Returns:
         List of images that have missing annotations; list is empty if job completed successfully. If job
             did not complete successfully, a csv file is created that contains just the rows that should be
@@ -158,7 +160,7 @@ def save_annotations_from_csv(csv_path, annotations_folder):
 
     #load csv with pandas
     csv_data = pd.read_csv(csv_path)
-    
+
     csv_dir = os.path.dirname(csv_path)
     csv_name = os.path.basename(csv_path)
     csv_name = os.path.splitext(csv_name)[0]
@@ -193,7 +195,7 @@ def save_annotations_from_csv(csv_path, annotations_folder):
             # remove image from broken_link information, if this is a row that was re-run successfully
             broken_link_reupload_df.drop(broken_link_reupload_df[broken_link_reupload_df["image_url"] == image_url].index, inplace = True)
             broken_link_full_df.drop(broken_link_full_df[broken_link_full_df["image_url"]==image_url].index, inplace= True)
-            
+
             #download image from annotation
             img_request = requests.get(annotation_url)
             open(annotation_save_path, 'wb').write(img_request.content)
@@ -206,7 +208,7 @@ def save_annotations_from_csv(csv_path, annotations_folder):
             else:
                 broken_link_reupload_df.loc[broken_link_reupload_df.last_valid_index()+1] = csv_data.loc[row]
                 broken_link_full_df.loc[broken_link_full_df.last_valid_index()+1] = csv_data.loc[row]
-    
+
     if broken_link_full_df.last_valid_index() is not None:
         #only save dataframes with broken_link info if there is something in them
         broken_link_full_df.to_csv(broken_link_full_path, index = False)
@@ -214,7 +216,7 @@ def save_annotations_from_csv(csv_path, annotations_folder):
         print("Broken link information saved at: ", broken_link_full_path)
         print("Reupload rows using: ", broken_link_reupload_path)
     else: print("All images in this set have corresponding annotations.")
-    
+
     return broken_link_reupload_df.image_url.tolist()
 
 

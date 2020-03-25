@@ -1,4 +1,4 @@
-# Copyright 2016-2019 The Van Valen Lab at the California Institute of
+# Copyright 2016-2020 The Van Valen Lab at the California Institute of
 # Technology (Caltech), with support from the Paul Allen Family Foundation,
 # Google, & National Institutes of Health (NIH) under Grant U24CA224309-01.
 # All rights reserved.
@@ -70,4 +70,19 @@ def nikon_getfiles(direc_name, channel_name):
     imgfiles = [i for i in imglist if channel_name in i]
     imgfiles = sorted_nicely(imgfiles)
     return imgfiles
+
+
+def list_npzs_folder(npz_dir):
+    '''
+    Helper to get all npz names from a given folder. Analogous
+    to get_img_names. Filenames are returned in a sorted list.
+    Inputs:
+        npz_dir: full path to folder that you want to get npz names from
+    Output:
+        sorted list of npz files
+    '''
+    all_files = os.listdir(npz_dir)
+    npz_list = [i for i in all_files if ".npz" in i]
+    npz_list = sorted_nicely(npz_list)
+    return npz_list
 
