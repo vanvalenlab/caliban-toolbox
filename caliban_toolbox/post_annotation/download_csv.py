@@ -22,12 +22,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ==============================================================================
-'''
-Download completed annotations from Figure 8
-'''
 
-#imports
 import json
 import os
 import stat
@@ -40,8 +35,7 @@ from getpass import getpass
 
 
 def download_report(job_id, save_folder, report_type):
-    '''
-    Download zipped job report from Figure 8, containing links to completed annotations
+    """Download zipped job report from Figure 8, containing links to completed annotations
 
     Args:
         job_id: ID number for the job to download a report from Figure 8
@@ -51,13 +45,12 @@ def download_report(job_id, save_folder, report_type):
             useful.
 
     Returns:
-        Path to downloaded zipped CSV if file was successfully downloaded. Otherwise, returns None.
-    '''
+        Path to downloaded zipped CSV if file was successfully downloaded. Otherwise, returns None."""
 
-    #make folder to save job stuff in if needed
+    # make folder to save job stuff in if needed
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
-        #add folder modification permissions to deal with files from file explorer
+        # add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(save_folder, mode)
     file_name = "job_" + str(job_id) + "_" + report_type + "_report.zip"
