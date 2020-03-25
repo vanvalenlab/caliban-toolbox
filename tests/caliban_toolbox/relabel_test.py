@@ -2,7 +2,6 @@ import copy
 import importlib
 
 from caliban_toolbox.pre_annotation import relabel
-from skimage.segmentation import relabel_sequential
 
 import numpy as np
 
@@ -68,7 +67,6 @@ def test_relabel_all_frames():
 
 
 def test_predict_relationships():
-
     # # create single slice with five different cells
     # single_slice = np.zeros((100, 100), dtype='int16')
     # single_slice[0:10, 0:10] = 1
@@ -94,6 +92,7 @@ def test_predict_relationships():
 
     assert np.all(true_data == relabeled_data)
 
+
 def test_relabel_data():
     fov_len, stack_len, num_crops, num_slices, rows, cols, channels = 2, 5, 1, 1, 100, 100, 1
 
@@ -111,3 +110,9 @@ def test_relabel_data():
         output = relabel.relabel_data(stack, relabel_type)
 
 
+if iou[current_cell_match][best_matched_next] > threshold:
+    next_img_relabeled = np.where(next_img == best_matched_next, current_cell_match, next_img_relabeled)
+
+# if it's a bad match, we add next_cell to unmatched list
+elif iou[current_cell_match][best_matched_next] <= threshold:
+    next_cells_unmatched = np.append(next_cells_unmatched, best_matched_next)
