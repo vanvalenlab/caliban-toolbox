@@ -288,7 +288,9 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
         original_xr: the unmodified xarray
         log_data: data used to reconstruct images
         save_dir: path to save the npz and JSON files
-
+        blank_labels: whether to include NPZs with blank labels (poor predictions) or skip (no cells)
+        save_format: format to save the data (currently only NPZ)
+        verbose: flag to control print statements
 
     Outputs
         None (saves npz and JSON to disk)"""
