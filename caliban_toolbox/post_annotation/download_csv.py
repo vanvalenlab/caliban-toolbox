@@ -34,6 +34,7 @@ import zipfile
 from getpass import getpass
 
 
+# TODO: Determine which of these functions are still needed
 def download_report(job_id, save_folder, report_type):
     """Download zipped job report from Figure 8, containing links to completed annotations
 

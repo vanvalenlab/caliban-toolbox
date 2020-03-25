@@ -31,6 +31,7 @@ import os
 from getpass import getpass
 
 
+# TODO: Determine which of these functions are still needed
 def fig_eight(csv_direc, identifier, job_id_to_copy):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     
