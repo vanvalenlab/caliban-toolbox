@@ -1,11 +1,5 @@
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
-
 import numpy as np
-import os
 
-from caliban_toolbox.utils.io_utils import list_npzs_folder
 from skimage.segmentation import relabel_sequential
 
 
@@ -147,7 +141,6 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
                         next_cells_unmatched = np.append(next_cells_unmatched, next_cell)
                         continue
                     else:
-                        print("deeper in the for loop")
                         # if it's the best match and above the IOU threshold, we add it to the relabeled image
                         if iou[current_cell_match][next_cell] > threshold:
                             next_img_relabeled = np.where(next_img == next_cell, current_cell_match, next_img_relabeled)
@@ -159,9 +152,8 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
                         # in either case, we want to be done with the "current_cell_match" from img
                         current_cells_used = np.append(current_cells_used, current_cell_match)
 
-            # current_cell_match != 0 is still true
+            # only a single match, check to see if IOU threshold is met
             elif num_matches == 1:
-                #add the matched cell to the relabeled image
                 if iou[current_cell_match][next_cell] > threshold:
                     next_img_relabeled = np.where(next_img == next_cell, current_cell_match, next_img_relabeled)
                 else:
@@ -169,40 +161,26 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
 
                 current_cells_used = np.append(current_cells_used, current_cell_match)
 
+        # the single current_cell_match for this next_cell has already been used
         elif current_cell_match in current_cells_used and next_cell != 0:
-            #skip that pairing, add next_cell to uncurrent_cell_matchs
+            # skip that pairing, add next_cell to next_cells_unmatched
             next_cells_unmatched = np.append(next_cells_unmatched, next_cell)
 
-        #if the cell in next_img didn't match anything (and is not the background):
-        if current_cell_match == 0 and next_cell !=0:
+        # if the next_cell is not background, and did not match any nonzero current_cells
+        if next_cell != 0 and current_cell_match == 0:
             next_cells_unmatched = np.append(next_cells_unmatched, next_cell)
-            #note: this also puts skipped (nonexistent) labels into unmatched cells, main reason to relabel first
 
-    #figure out which labels we should use to label remaining, unmatched cells
+    # Since both images were relabeled from 1, all values below the max in each are already used
+    current_max = max(np.max(current_img), np.max(next_img_relabeled))
 
-    #these are the values that have already been used in next_img_relabeled
-    relabeled_values = np.unique(next_img_relabeled)[np.nonzero(np.unique(next_img_relabeled))]
+    # We increment from current_max to create new values for remaining cells that weren't matched
+    vals_for_unmatched_cells = list(range(current_max + 1, current_max + 1 + len(next_cells_unmatched)))
 
-    #to account for any new cells that appear, create labels by adding to the max number of cells
-    #assumes that these are new cells and that all prev labels have been assigned
-    #only make as many new labels as needed
-
-    if len(relabeled_values) > 0:
-        current_max = max(np.max(current_cells), np.max(relabeled_values)) + 1
-    else:
-        current_max = np.max(current_cells) + 1
-
-    stringent_allowed = []
-    for additional_needed in range(len(next_cells_unmatched)):
-        stringent_allowed.append(current_max)
-        current_max += 1
-
-    #replace each unmatched cell with a value from the stringent_allowed list,
-    #add that relabeled cell to next_img_relabeled
+    # relabel each unmatched cell with new value
     if len(next_cells_unmatched) > 0:
         for reassigned_cell in range(len(next_cells_unmatched)):
             next_img_relabeled = np.where(next_img == next_cells_unmatched[reassigned_cell],
-                                 stringent_allowed[reassigned_cell], next_img_relabeled)
+                                          vals_for_unmatched_cells[reassigned_cell], next_img_relabeled)
 
     return next_img_relabeled
 

@@ -109,10 +109,3 @@ def test_relabel_data():
     for relabel_type in relabel_modes:
         output = relabel.relabel_data(stack, relabel_type)
 
-
-if iou[current_cell_match][best_matched_next] > threshold:
-    next_img_relabeled = np.where(next_img == best_matched_next, current_cell_match, next_img_relabeled)
-
-# if it's a bad match, we add next_cell to unmatched list
-elif iou[current_cell_match][best_matched_next] <= threshold:
-    next_cells_unmatched = np.append(next_cells_unmatched, best_matched_next)
