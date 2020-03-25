@@ -108,6 +108,7 @@ def test_load_npzs():
             saved_log_data = json.load(json_file)
 
         loaded_slices = npz_postprocessing.load_npzs(temp_dir, saved_log_data, verbose=False)
+        assert(np.all(loaded_slices.shape == data_xr_cropped.shape))
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -144,6 +145,7 @@ def test_load_npzs():
                                                 blank_labels="include", save_format="npz", verbose=False)
 
         loaded_slices = npz_postprocessing.load_npzs(temp_dir, combined_log_data)
+        assert(np.all(loaded_slices.shape == data_xr_cropped.shape))
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -180,6 +182,9 @@ def test_stitch_crops():
         stitched_img = stitched_img[:, :, :, :, :-row_padding, :, :]
     if col_padding > 0:
         stitched_img = stitched_img[:, :, :, :, :, :-col_padding, :]
+
+    # Check that stitched image is correct shape
+    assert np.all(stitched_img.shape == input_data.shape)
 
     # check that objects are at same location
     assert(np.all(np.equal(stitched_img[..., 0] > 0, input_data.values[..., 3] > 0)))
@@ -250,6 +255,9 @@ def test_stitch_crops():
 
     props = skimage.measure.regionprops_table(relabeled, properties=["area", "label"])
 
+    # image shapes are the same
+    assert np.all(stitched_img.shape == input_data.shape)
+
     # same number of unique objects before and after
     assert(len(np.unique(relabeled)) == len(np.unique(input_data[0, 0, 0, 0, :, :, 0])))
 
@@ -293,6 +301,9 @@ def test_reconstruct_image_data():
 
         stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
 
+        # image shapes are the same
+        assert np.all(stitched_xr.shape == input_data.shape)
+
         # all the same pixels are marked
         assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
@@ -316,6 +327,9 @@ def test_reconstruct_image_data():
 
         stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
 
+        # image shapes are the same
+        assert np.all(stitched_xr.shape == input_data.shape)
+
         # all the same pixels are marked
         assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
@@ -338,6 +352,9 @@ def test_reconstruct_image_data():
         npz_postprocessing.reconstruct_image_stack(crop_dir=temp_dir)
 
         stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
+
+        # image shapes are the same
+        assert np.all(stitched_xr.shape == input_data.shape)
 
         # all the same pixels are marked
         assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
@@ -376,6 +393,9 @@ def test_stitch_slices():
     log_data["fov_names"] = input_data.fovs.values
     stitched_slices = npz_postprocessing.stitch_slices(slice_xr[..., -1:], {**log_data})
 
+    # image shapes are the same
+    assert np.all(stitched_slices.shape == input_data.shape)
+
     assert np.all(np.equal(stitched_slices[0, :, 0, 0, :, :, 0], test_vals))
 
     # test case without even division of crops into imsize
@@ -396,6 +416,9 @@ def test_stitch_slices():
     log_data["original_shape"] = input_data.shape
     log_data["fov_names"] = input_data.fovs.values
     stitched_slices = npz_postprocessing.stitch_slices(slice_xr[..., -1:], log_data)
+
+    # image shapes are the same
+    assert np.all(stitched_slices.shape == input_data.shape)
 
     assert np.all(np.equal(stitched_slices[0, :, 0, 0, :, :, 0], test_vals))
 
@@ -420,4 +443,8 @@ def test_reconstruct_slice_data():
                                                 save_format="npz", verbose=False)
 
         stitched_slices = npz_postprocessing.reconstruct_slice_data(temp_dir)
+
+        # image shapes are the same
+        assert np.all(stitched_slices.shape == input_data.shape)
+        
         assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))
