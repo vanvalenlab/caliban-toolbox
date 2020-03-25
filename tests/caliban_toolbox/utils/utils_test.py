@@ -23,29 +23,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for misc_utils"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# from tensorflow.python.platform import test
 
 import numpy as np
+from caliban_toolbox.utils import utils
 
-from caliban_toolbox.utils import misc_utils
 
-
-# class MiscUtilsTest(test.TestCase):
 def test_sorted_nicely():
     # test image file sorting
     expected = ['test_001_dapi', 'test_002_dapi', 'test_003_dapi']
     unsorted = ['test_003_dapi', 'test_001_dapi', 'test_002_dapi']
-    assert(np.array_equal(expected, misc_utils.sorted_nicely(unsorted)))
+    assert(np.array_equal(expected, utils.sorted_nicely(unsorted)))
     # test montage folder sorting
     expected = ['test_0_0', 'test_1_0', 'test_1_1']
     unsorted = ['test_1_1', 'test_0_0', 'test_1_0']
-    assert(np.array_equal(expected, misc_utils.sorted_nicely(unsorted)))
-
-#
-# if __name__ == '__main__':
-#     test.main()
+    assert(np.array_equal(expected, utils.sorted_nicely(unsorted)))

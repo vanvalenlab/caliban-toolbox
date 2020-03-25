@@ -349,6 +349,3 @@ def test_save_npzs_for_caliban():
         files = os.listdir(os.path.join(temp_dir, "separate"))
         files = [file for file in files if "npz" in file]
         assert len(files) == expected_crop_num - 3
-
-
-
