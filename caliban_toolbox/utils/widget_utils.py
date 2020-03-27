@@ -33,6 +33,60 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage as sk
 import os
+from imageio import imread
+from caliban_toolbox.utils.utils import get_img_names
+
+
+def choose_img(name, dirpath):
+    '''
+    Pick an image from a directory to see effects of contrast adjustment steps; image chosen is displayed
+
+    Args:
+        name: name of image file
+        dirpath: full path to directory containing images
+
+    Returns:
+        Full path to selected image
+    '''
+    filepath = os.path.join(dirpath, name)
+    img = imread(filepath)
+    fig, ax = plt.subplots(figsize=(16, 12))
+    ax.imshow(img, cmap=mpl.cm.gray)
+    return filepath
+
+
+def choose_img_pair(frame, raw_dir, overlay_dir):
+    '''
+    Pick two paired images from two directories (eg, each directory contains a different channel)
+    to see effects of contrast adjustment steps; both images chosen are displayed
+
+    Args:
+        frame: index of image location in directory
+        raw_dir: full path to first image-containing directory
+        overlay_dir: full path to second image-containing directory
+
+    Returns:
+        Full paths to both images selected
+    '''
+    # load raw and overlay images based on frame number
+    raw_img_name = get_img_names(raw_dir)[frame]
+    raw_img_path = os.path.join(raw_dir, raw_img_name)
+    raw_img = imread(raw_img_path)
+
+    overlay_img_name = get_img_names(overlay_dir)[frame]
+    overlay_img_path = os.path.join(overlay_dir, overlay_img_name)
+    overlay_img = imread(overlay_img_path)
+
+    fig, ax = plt.subplots(figsize=(16, 12), nrows=2)
+
+    plt.subplot(211)
+    plt.imshow(raw_img, cmap=mpl.cm.gray)
+    plt.subplot(212)
+    plt.imshow(overlay_img, cmap=mpl.cm.gray)
+
+    plt.show()
+
+    return raw_img_path, overlay_img_path
 
 
 def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=100, invert_img=True, gamma_adjust=1.0,
