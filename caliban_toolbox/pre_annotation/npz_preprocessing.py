@@ -37,14 +37,14 @@ import xarray as xr
 
 
 def compute_crop_indices(img_len, crop_size, overlap_frac):
-    """ Determine how to crop the image across one dimension.
+    """Determine how to crop the image across one dimension.
 
-    Inputs
+    Args:
         img_len: length of the image for given dimension
         crop_size: size in pixels of the crop in given dimension
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
-    Outputs:
+    Returns:
         start_indices: array of coordinates for where each crop will start in given dimension
         end_indices: array of coordinates for where each crop will end in given dimension
         padding: number of pixels of padding at start and end of image in given dimension
@@ -68,7 +68,7 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
 def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding):
     """Crops an image into pieces according to supplied coordinates
 
-    Inputs
+    Args:
         input_data: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be cropped
         row_starts: list of indices where row crops start
         row_ends: list of indices where row crops end
@@ -76,10 +76,11 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
         col_ends: list of indices where col crops end
         padding: tuple of (row_pad, col_pad) which specifies the amount of padding to add the final image
 
-    Outputs:
+    Returns:
         cropped_stack: stack of cropped images of
             shape [fovs, stacks, crops, slices, cropped_rows, cropped_cols, channels]
-        padded_image_shape: shape of the final padded image"""
+        padded_image_shape: shape of the final padded image
+    """
 
     # determine key parameters of crop
     fov_len, stack_len, input_crop_num, slice_num, _, _, channel_len = input_data.shape
@@ -115,14 +116,15 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
 def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
-    Inputs
+    Args:
         data_xr: xarray to be cropped of size [fovs, stacks, 1, slices, rows, cols, channels]
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
         test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
-    Outputs:
-        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, channels """
+    Returns:
+        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, channels
+    """
 
     # sanitize inputs
     if len(crop_size) != 2:
@@ -173,14 +175,15 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
 def compute_slice_indices(stack_len, slice_len, slice_overlap):
     """ Determine how to slice an image across the stack dimension.
 
-    Inputs
+    Args:
         stack_len: total number of z or t stacks
         slice_len: number of z/t frames to be included in each slice
         slice_overlap: number of z/t frames that will overlap in each slice
 
-    Outputs:
+    Returns:
         slice_start_indices: array of coordinates for the start location of each slice
-        slice_end_indices: array of coordinates for the start location of each slice """
+        slice_end_indices: array of coordinates for the start location of each slice
+    """
 
     if slice_overlap >= slice_len:
         raise ValueError("slice overlap must be less than the length of the slice")
@@ -203,13 +206,14 @@ def compute_slice_indices(stack_len, slice_len, slice_overlap):
 def slice_helper(data_xr, slice_start_indices, slice_end_indices):
     """Divide a stack into smaller slices according to supplied indices
 
-    Inputs
+    Args:
         data_stack: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split into slices
         slice_start_indices: list of indices for where slices start
         slice_end_indices: list of indices for where slices end
 
-    Outputs:
-        slice_xr: xarray of sliced images of [fovs, stacks, crops, slices, rows, cols, channels]"""
+    Returns:
+        slice_xr: xarray of sliced images of [fovs, stacks, crops, slices, rows, cols, channels]
+    """
 
     # get input image dimensions
     fov_len, stack_len, crop_num, input_slice_num, row_len, col_len, chan_len = data_xr.shape
@@ -249,14 +253,15 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
 def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
     """Takes an array of data and splits it up into smaller pieces along the stack dimension
 
-    Inputs
+    Args:
         data_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split up
         slice_stack_len: number of z/t frames in each slice
         slice_overlap: number of z/t frames in each slice that overlap one another
 
-    Outputs
+    Returns:
         slice_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] that has been split
-        log_data: dictionary containing data for reconstructing original image"""
+        log_data: dictionary containing data for reconstructing original image
+    """
 
     # sanitize inputs
     if len(data_xr.shape) != 7:
@@ -283,7 +288,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
                           verbose=True):
     """Take an array of processed image data and save as NPZ for caliban
 
-    Inputs
+    Args:
         resized_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] that has been reshaped
         original_xr: the unmodified xarray
         log_data: data used to reconstruct images
@@ -292,8 +297,9 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
         save_format: format to save the data (currently only NPZ)
         verbose: flag to control print statements
 
-    Outputs
-        None (saves npz and JSON to disk)"""
+    Returns:
+        None (saves npz and JSON to disk)
+    """
 
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)

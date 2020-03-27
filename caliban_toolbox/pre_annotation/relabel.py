@@ -4,15 +4,17 @@ from skimage.segmentation import relabel_sequential
 
 
 def relabel_preserve_relationships(annotations, start_val=1):
-    """Relabels annotations while preserving relationships within in each stack. Eg, if cell 5 gets relabeled to cell 4,
-    every instance of cell 5 in the stack will get relabeled to cell 4 as well.
+    """Relabels annotations while preserving relationships within in each stack.
 
-    Inputs
+    Eg, if cell 5 gets relabeled to cell 4, every instance of cell 5 in the stack will get relabeled to cell 4 as well.
+
+    Args:
         annotations: xarray of data to relabel [fovs, stacks, crops, slices, rows, cols, channels]
         start_val: Value where relabeling will begin
 
     Returns:
-        relabeled_annotations: xarray containing annotations that have been relabeled """
+        relabeled_annotations: xarray containing annotations that have been relabeled
+    """
 
     fov_len, stack_len, num_crops, num_slices, rows, cols, channels = annotations.shape
 
@@ -43,12 +45,13 @@ def relabel_preserve_relationships(annotations, start_val=1):
 def relabel_all_frames(input_data, start_val=1):
     """Relabels all frames in all montages in all fovs independently from start_val.
 
-    Inputs
+    Args:
         input_data: array of [fovs, stacks, crops, slices, rows, cols, channels] to be relabeled
         start_val: Value of first label in each frame
 
     Returns:
-        relabeled_data: array of relabeled data"""
+        relabeled_data: array of relabeled data
+    """
 
     relabeled_annotations = np.zeros(input_data.shape)
     fov_len, stack_len, num_crops, num_slices, _, _, _ = input_data.shape
@@ -71,13 +74,14 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
     Cells that overlap at least "threshold" amount will be given the same label.
     Cells that don't meet this cutoff will given a unique label for that frame
 
-    Inputs
+    Args:
         current_img: current image that will be used to identify existing labels
         next_img: image to be relabeled based on overlap with img
         threshold: iou cutoff to determine if cells match
 
-    Outputs
-        next_relabeled: corrected version of next_img"""
+    Returns:
+        next_relabeled: corrected version of next_img
+    """
 
     # relabel to remove skipped values, keeps subsequent predictions cleaner
     next_img, _, _ = relabel_sequential(next_img)
@@ -199,13 +203,14 @@ def predict_relationships(image_stack, start_val=1, threshold=0.1):
     Note: the iou-based prediction was implemented for zstack prediction, but should
     work okay for timelapse movies as well (although it is not expected to get divisions).
 
-    Inputs:
+    Args:
         image_stack: xarray of [fovs, stacks, crops, slices, rows, cols, channels]
         start_val: Label value where labeling will begin.
         threshold: iou threshold for classifying cells as a match
 
     Returns:
-        relabeled_stack: stack of relabeled images"""
+        relabeled_stack: stack of relabeled images
+    """
 
     # create new array to store the relabeled annotations
     relabeled_annotations = np.zeros(image_stack.shape, dtype=image_stack.dtype)
@@ -239,7 +244,7 @@ def predict_relationships(image_stack, start_val=1, threshold=0.1):
 def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1):
     """Relabel stacked labels for easier annotation in Caliban
 
-    Inputs
+    Args:
         input_data: xarray of data to be relabeled
         relabel_type: string to choose which relabeling function to call.
             preserve - preserve existing relationships of between labels in different frames
