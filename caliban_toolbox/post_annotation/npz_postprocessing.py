@@ -34,7 +34,7 @@ import xarray as xr
 from segmentation.utils import data_utils
 
 
-def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext=".npz"):
+def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext='.npz'):
     """Helper function to identify correct file path for an npz file
 
     Args:
@@ -49,16 +49,16 @@ def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext=".npz"):
         file_path: string of formatted file path with appropriate ending
     """
 
-    base_string = "fov_{}_row_{}_col_{}_slice_{}".format(fov_name, row, col, slice)
-    string_matches = [string for string in dir_list if base_string + "_save_version" in string]
+    base_string = 'fov_{}_row_{}_col_{}_slice_{}'.format(fov_name, row, col, slice)
+    string_matches = [string for string in dir_list if base_string + '_save_version' in string]
 
     if len(string_matches) == 0:
         full_string = base_string + file_ext
     elif len(string_matches) == 1:
         full_string = string_matches[0]
     else:
-        raise ValueError("Multiple save versions found: "
-                         "please select only a single save version. {}".format(string_matches))
+        raise ValueError('Multiple save versions found: '
+                         'please select only a single save version. {}'.format(string_matches))
     return full_string
 
 
@@ -75,14 +75,14 @@ def load_npzs(crop_dir, log_data, verbose=True):
         stack: combined array of all labeled images
     """
 
-    fov_names = log_data["fov_names"]
-    num_crops, num_slices = log_data.get("num_crops", 1), log_data.get("num_slices", 1)
-    num_row_crops, num_col_crops = log_data.get("num_row_crops", 1), log_data.get("num_col_crops", 1)
-    fov_len, stack_len, _, _, row_size, col_size, _ = log_data["original_shape"]
-    slice_stack_len = log_data.get("slice_stack_len", stack_len)
+    fov_names = log_data['fov_names']
+    num_crops, num_slices = log_data.get('num_crops', 1), log_data.get('num_slices', 1)
+    num_row_crops, num_col_crops = log_data.get('num_row_crops', 1), log_data.get('num_col_crops', 1)
+    fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
+    slice_stack_len = log_data.get('slice_stack_len', stack_len)
 
-    row_crop_size, col_crop_size = log_data.get("row_crop_size", row_size), log_data.get("col_crop_size", col_size)
-    save_format = log_data["save_format"]
+    row_crop_size, col_crop_size = log_data.get('row_crop_size', row_size), log_data.get('col_crop_size', col_size)
+    save_format = log_data['save_format']
 
     stack = np.zeros((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size, 1))
     saved_files = os.listdir(crop_dir)
@@ -95,25 +95,25 @@ def load_npzs(crop_dir, log_data, verbose=True):
                 for slice in range(num_slices):
 
                     # load NPZs
-                    if save_format == "npz":
+                    if save_format == 'npz':
                         npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
                         if os.path.exists(npz_path):
                             temp_npz = np.load(npz_path)
 
                             # last slice may be truncated, modify index
                             if slice == num_slices - 1:
-                                current_stack_len = temp_npz["X"].shape[1]
+                                current_stack_len = temp_npz['X'].shape[1]
                             else:
                                 current_stack_len = slice_stack_len
 
-                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_npz["y"]
+                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_npz['y']
                         else:
                             # npz not generated, did not contain any labels, keep blank
                             if verbose:
-                                print("could not find npz {}, skipping".format(npz_path))
+                                print('could not find npz {}, skipping'.format(npz_path))
 
                     # load xarray
-                    elif save_format == "xr":
+                    elif save_format == 'xr':
                         xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
                         if os.path.exists(xr_path):
                             temp_xr = xr.open_dataarray(xr_path)
@@ -127,7 +127,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
                             stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_xr[..., -1:]
                         else:
                             # npz not generated, did not contain any labels, keep blank
-                            print("could not find xr {}, skipping".format(xr_path))
+                            print('could not find xr {}, skipping'.format(xr_path))
 
                 crop_idx += 1
 
@@ -146,15 +146,15 @@ def stitch_crops(annotated_data, log_data):
     """
 
     # Initialize image with single dimension for channels
-    fov_len, stack_len, _, _, row_size, col_size, _ = log_data["original_shape"]
-    row_padding, col_padding = log_data.get("row_padding", 0), log_data.get("col_padding", 0)
+    fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
+    row_padding, col_padding = log_data.get('row_padding', 0), log_data.get('col_padding', 0)
     stitched_labels = np.zeros((fov_len, stack_len, 1, 1, row_size + row_padding, col_size + col_padding, 1))
 
-    row_starts, row_ends = log_data["row_starts"], log_data["row_ends"]
-    col_starts, col_ends = log_data["col_starts"], log_data["col_ends"]
+    row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
+    col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
 
     if annotated_data.shape[3] != 1:
-        raise ValueError("Stacks must be combined before stitching can occur")
+        raise ValueError('Stacks must be combined before stitching can occur')
 
     # loop through all crops in the stack for each image
     for fov in range(fov_len):
@@ -219,14 +219,14 @@ def reconstruct_image_stack(crop_dir, verbose=True):
 
     # sanitize inputs
     if not os.path.isdir(crop_dir):
-        raise ValueError("crop_dir not a valid directory: {}".format(crop_dir))
+        raise ValueError('crop_dir not a valid directory: {}'.format(crop_dir))
 
     # unpack JSON data
-    with open(os.path.join(crop_dir, "log_data.json")) as json_file:
+    with open(os.path.join(crop_dir, 'log_data.json')) as json_file:
         log_data = json.load(json_file)
 
-    row_padding, col_padding = log_data["row_padding"], log_data["col_padding"]
-    fov_names, channel_names = log_data["fov_names"], log_data["channel_names"]
+    row_padding, col_padding = log_data['row_padding'], log_data['col_padding']
+    fov_names, channel_names = log_data['fov_names'], log_data['channel_names']
     # combine all npz crops into a single stack
     crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
 
@@ -239,13 +239,13 @@ def reconstruct_image_stack(crop_dir, verbose=True):
     if col_padding > 0:
         stitched_images = stitched_images[:, :, :, :, :, :-col_padding, :]
 
-    _, stack_len, _, _, row_len, col_len, _ = log_data["original_shape"]
+    _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
     stitched_xr = xr.DataArray(data=stitched_images,
                                coords=[fov_names, range(stack_len), range(1), range(1), range(row_len), range(col_len),
-                                       ["segmentation_label"]], dims=["fovs", "stacks", "crops", "slices",
-                                                                      "rows", "cols", "channels"])
+                                       ['segmentation_label']], dims=['fovs', 'stacks', 'crops', 'slices',
+                                                                      'rows', 'cols', 'channels'])
 
-    stitched_xr.to_netcdf(os.path.join(crop_dir, "stitched_images.nc"))
+    stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.nc'))
 
 
 def overlay_grid_lines(overlay_img, row_starts, row_ends, col_starts, col_ends):
@@ -362,19 +362,19 @@ def set_channel_colors(combined_xr, plot_colors):
     """
 
     # first define the order that channels are visualize
-    channel_order = np.array(["red", "green", "blue", "cyan", "magenta", "yellow", "segmentation_label"])
+    channel_order = np.array(['red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'segmentation_label'])
 
     # create the array holding the final ordering of channel names
-    final_channel_names = np.array(["red", "green", "blue", "cyan", "magenta", "yellow", "segmentation_label"],
-                                   dtype="<U20")
+    final_channel_names = np.array(['red', 'green', 'blue', 'cyan', 'magenta', 'yellow', 'segmentation_label'],
+                                   dtype='<U20')
 
     # make sure supplied plot_colors exist as available channels
     if not np.all(np.isin(plot_colors, channel_order)):
-        raise ValueError("supplied plot_colors not valid, must be one of: {}".format(channel_order[:-1]))
+        raise ValueError('supplied plot_colors not valid, must be one of: {}'.format(channel_order[:-1]))
 
     # make sure all imaging channels have a plot_color
     if len(plot_colors) != combined_xr.shape[-1] - 1:
-        raise ValueError("Mismatch between number of imaging channels and supplied plot colors")
+        raise ValueError('Mismatch between number of imaging channels and supplied plot colors')
 
     channel_names = combined_xr.channels.values
 
@@ -408,13 +408,13 @@ def stitch_slices(slice_stack, log_data):
     """
 
     # get parameters from dict
-    fov_len, stack_len, crop_num, _, row_len, col_len, chan_len = log_data["original_shape"]
-    crop_num = log_data.get("num_crops", crop_num)
-    row_len = log_data.get("row_crop_size", row_len)
-    col_len = log_data.get("col_crop_size", col_len)
+    fov_len, stack_len, crop_num, _, row_len, col_len, chan_len = log_data['original_shape']
+    crop_num = log_data.get('num_crops', crop_num)
+    row_len = log_data.get('row_crop_size', row_len)
+    col_len = log_data.get('col_crop_size', col_len)
 
-    slice_start_indices, slice_end_indices = log_data["slice_start_indices"], log_data["slice_end_indices"]
-    num_slices, fov_names = log_data["num_slices"], log_data["fov_names"]
+    slice_start_indices, slice_end_indices = log_data['slice_start_indices'], log_data['slice_end_indices']
+    num_slices, fov_names = log_data['num_slices'], log_data['fov_names']
 
     stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1))
 
@@ -429,8 +429,8 @@ def stitch_slices(slice_stack, log_data):
 
     stitched_xr = xr.DataArray(stitched_slices,
                                coords=[fov_names, range(stack_len), range(crop_num), range(1), range(row_len),
-                                       range(col_len), ["segmentation_label"]],
-                               dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
+                                       range(col_len), ['segmentation_label']],
+                               dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
     return stitched_xr
 
 
@@ -445,11 +445,11 @@ def reconstruct_slice_data(save_dir, verbose=True):
     """
 
     if not os.path.isdir(save_dir):
-        raise FileNotFoundError("slice directory does not exist")
+        raise FileNotFoundError('slice directory does not exist')
 
-    json_file_path = os.path.join(save_dir, "log_data.json")
+    json_file_path = os.path.join(save_dir, 'log_data.json')
     if not os.path.exists(json_file_path):
-        raise FileNotFoundError("json file does not exist")
+        raise FileNotFoundError('json file does not exist')
 
     with open(json_file_path) as json_file:
         slice_log_data = json.load(json_file)

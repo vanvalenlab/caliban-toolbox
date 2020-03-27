@@ -19,10 +19,10 @@ def relabel_preserve_relationships(annotations, start_val=1):
     fov_len, stack_len, num_crops, num_slices, rows, cols, channels = annotations.shape
 
     if num_crops > 1:
-        raise ValueError("Relabeling should occur before cropping or after reconstruction")
+        raise ValueError('Relabeling should occur before cropping or after reconstruction')
 
     if num_slices > 1:
-        raise ValueError("Relabeling occur before slicing or after reconstruction")
+        raise ValueError('Relabeling occur before slicing or after reconstruction')
 
     # create new array to store the relabeled annotations
     relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
@@ -258,10 +258,10 @@ def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1
         array of relabel
     """
 
-    allowed_relabels = ["preserve", "all_frames", "predict"]
+    allowed_relabels = ['preserve', 'all_frames', 'predict']
 
     if relabel_type not in allowed_relabels:
-        raise ValueError("relable_type must be one of [preserve, all_frames, predict]: got {}".format(relabel_type))
+        raise ValueError('relable_type must be one of [preserve, all_frames, predict]: got {}'.format(relabel_type))
 
     if relabel_type == 'preserve':
         relabeled = relabel_preserve_relationships(input_data, start_val)
