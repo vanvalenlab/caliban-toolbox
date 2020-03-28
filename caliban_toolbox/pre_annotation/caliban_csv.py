@@ -28,13 +28,15 @@ import os
 import stat
 import sys
 import pandas as pd
+import numpy as np
 
 from caliban_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_file
 from caliban_toolbox.post_annotation.download_csv import download_and_unzip
 
 
 def initial_csv_maker(csv_dir, identifier, stage, input_bucket, output_bucket,
-                      subfolders, filenames, filepaths):
+                      subfolders, filenames, filepaths, pixel_only=False, label_only=False,
+                      rgb_mode=False):
     """Make and save a CSV file containing information for a Caliban job to
     be uploaded to Figure 8. Includes columns of information so that the result CSV
     after job is completed contains enough information to create next job in sequence
@@ -66,7 +68,10 @@ def initial_csv_maker(csv_dir, identifier, stage, input_bucket, output_bucket,
             'stage': stage,
             'input_bucket': input_bucket,
             'output_bucket': output_bucket,
-            'subfolders': subfolders}
+            'subfolders': subfolders,
+            'pixel_only': pixel_only,
+            'label_only': label_only,
+            'rgb_mode': rgb_mode}
     dataframe = pd.DataFrame(data=data, index = range(len(filepaths)))
 
     # create file location, name file
@@ -108,6 +113,9 @@ def create_next_CSV(csv_dir, job_id, next_stage):
         subfolders = row.subfolders
         stage = row.stage
         filename = row.filename
+        pixel_only = row.pixel_only
+        label_only = row.label_only
+        rgb_mode = row.rgb_mode
 
         key_src = "{0}/{1}/{2}".format(subfolders, stage, filename)
         key_dst = "{0}/{1}/{2}".format(subfolders, next_stage, filename)
@@ -119,7 +127,22 @@ def create_next_CSV(csv_dir, job_id, next_stage):
         subfolders = re.split('/', subfolders)
         subfolders = '__'.join(subfolders)
 
-        new_filepath = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
+        optional_flags = np.any(pixel_only, label_only, rgb_mode)
+
+        if optional_flags:
+            optional_url = ""
+            if pixel_only:
+                optional_url += "&pixel_only=true"
+            if label_only:
+                optional_url += "&label_only=true"
+            if rgb_mode:
+                optional_url += "&rgb=true"
+
+        base_url = "https://caliban.deepcell.org/"
+        if optional_flags:
+            base_url += optional_url
+
+        new_filepath = base_url + "{0}__{1}__{2}__{3}__{4}".format(input_bucket,
             output_bucket, subfolders, next_stage, filename)
 
         filepath_list.append(new_filepath)
