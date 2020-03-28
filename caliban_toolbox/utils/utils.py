@@ -23,10 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""
-Utils functions from deepcell
-"""
-
 import os
 import re
 
@@ -35,6 +31,7 @@ from skimage.io import imread
 from skimage.external.tifffile import TiffFile
 
 
+# TODO: Determine which of these functions are still needed
 def sorted_nicely(l):
     convert = lambda text: int(text) if text.isdigit() else text
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
@@ -49,6 +46,16 @@ def get_image(file_name):
     if ext == '.tif' or ext == '.tiff':
         return np.float32(TiffFile(file_name).asarray())
     return np.float32(imread(file_name))
+
+
+def get_img_names(direc_name):
+    """
+    Return all image filenames in direc_name as sorted list
+    """
+    imglist = os.listdir(direc_name)
+    imgfiles = [i for i in imglist if ".tif" in i or ".png" in i or ".jpg" in i]
+    imgfiles = sorted_nicely(imgfiles)
+    return imgfiles
 
 
 def nikon_getfiles(direc_name, channel_name):
@@ -95,3 +102,18 @@ def get_images_from_directory(data_location, channel_names, data_format="channel
         all_images.append(all_channels)
 
     return all_images
+
+
+def list_npzs_folder(npz_dir):
+    '''
+    Helper to get all npz names from a given folder. Analogous
+    to get_img_names. Filenames are returned in a sorted list.
+    Inputs:
+        npz_dir: full path to folder that you want to get npz names from
+    Output:
+        sorted list of npz files
+    '''
+    all_files = os.listdir(npz_dir)
+    npz_list = [i for i in all_files if ".npz" in i]
+    npz_list = sorted_nicely(npz_list)
+    return npz_list

@@ -30,8 +30,6 @@ from __future__ import division
 from __future__ import print_function
 
 
-from caliban_toolbox.utils import io_utils
-from caliban_toolbox.utils import misc_utils
 from caliban_toolbox.utils import utils
 from caliban_toolbox.utils import widget_utils
 

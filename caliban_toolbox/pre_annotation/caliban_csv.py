@@ -23,10 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-'''
-Make CSV file that can be uploaded to Figure 8 to load images to annotate
-
-'''
 import re
 import os
 import stat
@@ -37,10 +33,9 @@ from caliban_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_
 from caliban_toolbox.post_annotation.download_csv import download_and_unzip
 
 
-def initial_csv_maker(csv_dir, identifier, stage,
-    input_bucket, output_bucket, subfolders, filenames, filepaths):
-    '''
-    Make and save a CSV file containing information for a Caliban job to
+def initial_csv_maker(csv_dir, identifier, stage, input_bucket, output_bucket,
+                      subfolders, filenames, filepaths):
+    """Make and save a CSV file containing information for a Caliban job to
     be uploaded to Figure 8. Includes columns of information so that the result CSV
     after job is completed contains enough information to create next job in sequence
     without additional inputs.
@@ -63,8 +58,8 @@ def initial_csv_maker(csv_dir, identifier, stage,
 
     Returns:
         None
-        ({identifier}_{stage}_upload.csv will be saved in csv_dir)
-    '''
+        ({identifier}_{stage}_upload.csv will be saved in csv_dir)"""
+
     data = {'project_url': filepaths,
             'filename': filenames,
             'identifier': identifier,
@@ -74,28 +69,28 @@ def initial_csv_maker(csv_dir, identifier, stage,
             'subfolders': subfolders}
     dataframe = pd.DataFrame(data=data, index = range(len(filepaths)))
 
-    #create file location, name file
+    # create file location, name file
     if not os.path.isdir(csv_dir):
         os.makedirs(csv_dir)
-        #add folder modification permissions to deal with files from file explorer
+        # add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
         os.chmod(csv_dir, mode)
     csv_name = os.path.join(csv_dir, '{0}_{1}_upload.csv'.format(identifier, stage))
 
-    #save csv file
+    # save csv file
     dataframe.to_csv(csv_name, index = False)
 
     return None
 
+
 def create_next_CSV(csv_dir, job_id, next_stage):
-    '''
-    Downloads job report from a Caliban job and uses provided info to create the CSV for
+    """Downloads job report from a Caliban job and uses provided info to create the CSV for
     the next job in the sequence.
 
     Returns:
         identifier: string, identifier used for previous job in sequence. Returned to make it easy
-            to move the next job along without having to look somewhere to find identifier
-    '''
+            to move the next job along without having to look somewhere to find identifier"""
+
     # job_report_csv creates CSV dir if does not already exist, so we use parent directory here
     base_dir = os.path.dirname(csv_dir)
     job_report_csv = download_and_unzip(job_id, base_dir, "full")

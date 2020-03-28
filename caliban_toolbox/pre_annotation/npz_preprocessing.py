@@ -37,14 +37,14 @@ import xarray as xr
 
 
 def compute_crop_indices(img_len, crop_size, overlap_frac):
-    """ Determine how to crop the image across one dimension.
+    """Determine how to crop the image across one dimension.
 
-    Inputs
+    Args:
         img_len: length of the image for given dimension
         crop_size: size in pixels of the crop in given dimension
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
-    Outputs:
+    Returns:
         start_indices: array of coordinates for where each crop will start in given dimension
         end_indices: array of coordinates for where each crop will end in given dimension
         padding: number of pixels of padding at start and end of image in given dimension
@@ -68,7 +68,7 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
 def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding):
     """Crops an image into pieces according to supplied coordinates
 
-    Inputs
+    Args:
         input_data: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be cropped
         row_starts: list of indices where row crops start
         row_ends: list of indices where row crops end
@@ -76,10 +76,11 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
         col_ends: list of indices where col crops end
         padding: tuple of (row_pad, col_pad) which specifies the amount of padding to add the final image
 
-    Outputs:
+    Returns:
         cropped_stack: stack of cropped images of
             shape [fovs, stacks, crops, slices, cropped_rows, cropped_cols, channels]
-        padded_image_shape: shape of the final padded image"""
+        padded_image_shape: shape of the final padded image
+    """
 
     # determine key parameters of crop
     fov_len, stack_len, input_crop_num, slice_num, _, _, channel_len = input_data.shape
@@ -96,11 +97,11 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     cropped_xr = xr.DataArray(data=cropped_stack, coords=[input_data.fovs, input_data.stacks, range(crop_num),
                                                           input_data.slices, range(crop_size_row),
                                                           range(crop_size_col), input_data.channels],
-                              dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
+                              dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
 
     # pad the input to account for imperfectly overlapping final crop in rows and cols
     formatted_padding = ((0, 0), (0, 0), (0, 0), (0, 0), (0, padding[0]), (0, padding[1]), (0, 0))
-    padded_input = np.pad(input_data, formatted_padding, mode="constant", constant_values=0)
+    padded_input = np.pad(input_data, formatted_padding, mode='constant', constant_values=0)
 
     # loop through rows and cols to generate crops
     crop_counter = 0
@@ -115,27 +116,28 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
 def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
-    Inputs
+    Args:
         data_xr: xarray to be cropped of size [fovs, stacks, 1, slices, rows, cols, channels]
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
         overlap_frac: fraction that crops will overlap each other on each edge
         test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
-    Outputs:
-        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, channels """
+    Returns:
+        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, channels
+    """
 
     # sanitize inputs
     if len(crop_size) != 2:
-        raise ValueError("crop_size must be a tuple of (row_crop, col_crop), got {}".format(crop_size))
+        raise ValueError('crop_size must be a tuple of (row_crop, col_crop), got {}'.format(crop_size))
 
     if not crop_size[0] > 0 and crop_size[1] > 0:
-        raise ValueError("crop_size entries must be positive numbers")
+        raise ValueError('crop_size entries must be positive numbers')
 
     if overlap_frac < 0 or overlap_frac > 1:
-        raise ValueError("overlap_frac must be between 0 and 1")
+        raise ValueError('overlap_frac must be between 0 and 1')
 
-    if list(data_xr.dims) != ["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"]:
-        raise ValueError("data_xr does not have expected dims, found {}".format(data_xr.dims))
+    if list(data_xr.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']:
+        raise ValueError('data_xr does not have expected dims, found {}'.format(data_xr.dims))
 
     # check if testing or running all samples
     if test_parameters:
@@ -155,17 +157,17 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
 
     # save relevant parameters for reconstructing image
     log_data = {}
-    log_data["row_starts"] = row_starts.tolist()
-    log_data["row_ends"] = row_ends.tolist()
-    log_data["row_crop_size"] = crop_size[0]
-    log_data["num_row_crops"] = len(row_starts)
-    log_data["col_starts"] = col_starts.tolist()
-    log_data["col_ends"] = col_ends.tolist()
-    log_data["col_crop_size"] = crop_size[1]
-    log_data["num_col_crops"] = len(col_starts)
-    log_data["row_padding"] = int(row_padding)
-    log_data["col_padding"] = int(col_padding)
-    log_data["num_crops"] = data_xr_cropped.shape[2]
+    log_data['row_starts'] = row_starts.tolist()
+    log_data['row_ends'] = row_ends.tolist()
+    log_data['row_crop_size'] = crop_size[0]
+    log_data['num_row_crops'] = len(row_starts)
+    log_data['col_starts'] = col_starts.tolist()
+    log_data['col_ends'] = col_ends.tolist()
+    log_data['col_crop_size'] = crop_size[1]
+    log_data['num_col_crops'] = len(col_starts)
+    log_data['row_padding'] = int(row_padding)
+    log_data['col_padding'] = int(col_padding)
+    log_data['num_crops'] = data_xr_cropped.shape[2]
 
     return data_xr_cropped, log_data
 
@@ -173,24 +175,25 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
 def compute_slice_indices(stack_len, slice_len, slice_overlap):
     """ Determine how to slice an image across the stack dimension.
 
-    Inputs
+    Args:
         stack_len: total number of z or t stacks
         slice_len: number of z/t frames to be included in each slice
         slice_overlap: number of z/t frames that will overlap in each slice
 
-    Outputs:
+    Returns:
         slice_start_indices: array of coordinates for the start location of each slice
-        slice_end_indices: array of coordinates for the start location of each slice """
+        slice_end_indices: array of coordinates for the start location of each slice
+    """
 
     if slice_overlap >= slice_len:
-        raise ValueError("slice overlap must be less than the length of the slice")
+        raise ValueError('slice overlap must be less than the length of the slice')
 
     spacing = slice_len - slice_overlap
 
-    # slices_start indices begin at index 0, and are spaced "spacing" apart from one another
+    # slices_start indices begin at index 0, and are spaced 'spacing' apart from one another
     slice_start_indices = np.arange(0, stack_len - slice_overlap, spacing)
 
-    # slices_end indices are "spacing" away from the start
+    # slices_end indices are 'spacing' away from the start
     slice_end_indices = slice_start_indices + slice_len
 
     if slice_end_indices[-1] != stack_len:
@@ -203,19 +206,20 @@ def compute_slice_indices(stack_len, slice_len, slice_overlap):
 def slice_helper(data_xr, slice_start_indices, slice_end_indices):
     """Divide a stack into smaller slices according to supplied indices
 
-    Inputs
+    Args:
         data_stack: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split into slices
         slice_start_indices: list of indices for where slices start
         slice_end_indices: list of indices for where slices end
 
-    Outputs:
-        slice_xr: xarray of sliced images of [fovs, stacks, crops, slices, rows, cols, channels]"""
+    Returns:
+        slice_xr: xarray of sliced images of [fovs, stacks, crops, slices, rows, cols, channels]
+    """
 
     # get input image dimensions
     fov_len, stack_len, crop_num, input_slice_num, row_len, col_len, chan_len = data_xr.shape
 
     if input_slice_num > 1:
-        raise ValueError("Input array already contains slice data")
+        raise ValueError('Input array already contains slice data')
 
     slice_num = len(slice_start_indices)
     sliced_stack_len = slice_end_indices[0] - slice_start_indices[0]
@@ -225,7 +229,7 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
     slice_xr = xr.DataArray(data=slice_data, coords=[data_xr.fovs, range(sliced_stack_len), range(crop_num),
                                                      range(slice_num), range(row_len), range(col_len),
                                                      data_xr.channels],
-                              dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
+                              dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
 
     # loop through slice indices to generate sliced data
     slice_counter = 0
@@ -249,21 +253,22 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
 def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
     """Takes an array of data and splits it up into smaller pieces along the stack dimension
 
-    Inputs
+    Args:
         data_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be split up
         slice_stack_len: number of z/t frames in each slice
         slice_overlap: number of z/t frames in each slice that overlap one another
 
-    Outputs
+    Returns:
         slice_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] that has been split
-        log_data: dictionary containing data for reconstructing original image"""
+        log_data: dictionary containing data for reconstructing original image
+    """
 
     # sanitize inputs
     if len(data_xr.shape) != 7:
-        raise ValueError("invalid input data shape, expected array of len(7), got {}".format(data_xr.shape))
+        raise ValueError('invalid input data shape, expected array of len(7), got {}'.format(data_xr.shape))
 
     if slice_stack_len > data_xr.shape[1]:
-        raise ValueError("slice size is greater than stack length")
+        raise ValueError('slice size is greater than stack length')
 
     # compute indices for slices
     stack_len = data_xr.shape[1]
@@ -272,40 +277,45 @@ def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
     slice_xr = slice_helper(data_xr, slice_start_indices, slice_end_indices)
 
     log_data = {}
-    log_data["slice_start_indices"] = slice_start_indices.tolist()
-    log_data["slice_end_indices"] = slice_end_indices.tolist()
-    log_data["num_slices"] = len(slice_start_indices)
+    log_data['slice_start_indices'] = slice_start_indices.tolist()
+    log_data['slice_end_indices'] = slice_end_indices.tolist()
+    log_data['num_slices'] = len(slice_start_indices)
 
     return slice_xr, log_data
 
 
-def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels="include", save_format="npz"):
+def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels='include', save_format='npz',
+                          verbose=True):
     """Take an array of processed image data and save as NPZ for caliban
 
-    Inputs
+    Args:
         resized_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] that has been reshaped
         original_xr: the unmodified xarray
         log_data: data used to reconstruct images
         save_dir: path to save the npz and JSON files
+        blank_labels: whether to include NPZs with blank labels (poor predictions) or skip (no cells)
+        save_format: format to save the data (currently only NPZ)
+        verbose: flag to control print statements
 
-    Outputs
-        None (saves npz and JSON to disk)"""
+    Returns:
+        None (saves npz and JSON to disk)
+    """
 
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    num_row_crops = log_data.get("num_row_crops", 1)
-    num_col_crops = log_data.get("num_col_crops", 1)
-    num_slices = log_data.get("num_slices", 1)
+    num_row_crops = log_data.get('num_row_crops', 1)
+    num_col_crops = log_data.get('num_col_crops', 1)
+    num_slices = log_data.get('num_slices', 1)
 
     fov_names = original_xr.fovs.values
     fov_len = len(fov_names)
 
-    if blank_labels not in ["skip", "include", "separate"]:
-        raise ValueError("blank_labels must be one of ['skip', 'include', 'separate'], got {}".format(blank_labels))
+    if blank_labels not in ['skip', 'include', 'separate']:
+        raise ValueError('blank_labels must be one of [skip, include, separate], got {}'.format(blank_labels))
 
-    if blank_labels == "separate":
-        os.makedirs(os.path.join(save_dir, "separate"))
+    if blank_labels == 'separate':
+        os.makedirs(os.path.join(save_dir, 'separate'))
 
     # loop through all crops in all images
     for fov in range(fov_len):
@@ -314,7 +324,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
             for col in range(num_col_crops):
                 for slice in range(num_slices):
                     # generate identifier for crop
-                    npz_id = "fov_{}_row_{}_col_{}_slice_{}".format(fov_names[fov], row, col, slice)
+                    npz_id = 'fov_{}_row_{}_col_{}_slice_{}'.format(fov_names[fov], row, col, slice)
 
                     # subset xarray based on supplied indices
                     current_xr = resized_xr[fov:(fov + 1), :, crop_counter, slice,  ...]
@@ -325,32 +335,35 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
                     if np.sum(labels) == 0:
 
                         # blank labels get saved to separate folder
-                        if blank_labels == "separate":
-                            print("{} is blank, saving to separate folder".format(npz_id))
+                        if blank_labels == 'separate':
+                            if verbose:
+                                print('{} is blank, saving to separate folder'.format(npz_id))
                             save_path = os.path.join(save_dir, blank_labels, npz_id)
 
                             # save images as either npz or xarray
                             if save_format == 'npz':
-                                np.savez(save_path + ".npz", X=channels, y=labels)
+                                np.savez(save_path + '.npz', X=channels, y=labels)
 
                             elif save_format == 'xr':
-                                current_xr.to_netcdf(save_path + ".xr")
+                                current_xr.to_netcdf(save_path + '.xr')
 
                         # blank labels don't get saved, empty area of tissue
-                        elif blank_labels == "skip":
-                            print("{} is blank, skipping saving".format(npz_id))
+                        elif blank_labels == 'skip':
+                            if verbose:
+                                print('{} is blank, skipping saving'.format(npz_id))
 
                         # blank labels get saved along with other crops
-                        elif blank_labels == "include":
-                            print("{} is blank, saving to folder".format(npz_id))
+                        elif blank_labels == 'include':
+                            if verbose:
+                                print('{} is blank, saving to folder'.format(npz_id))
                             save_path = os.path.join(save_dir, npz_id)
 
                             # save images as either npz or xarray
                             if save_format == 'npz':
-                                np.savez(save_path + ".npz", X=channels, y=labels)
+                                np.savez(save_path + '.npz', X=channels, y=labels)
 
                             elif save_format == 'xr':
-                                current_xr.to_netcdf(save_path + ".xr")
+                                current_xr.to_netcdf(save_path + '.xr')
 
                     else:
                         # crop is not blank, save based on file_format
@@ -358,19 +371,19 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
                         # save images as either npz or xarray
                         if save_format == 'npz':
-                            np.savez(save_path + ".npz", X=channels, y=labels)
+                            np.savez(save_path + '.npz', X=channels, y=labels)
 
                         elif save_format == 'xr':
-                            current_xr.to_netcdf(save_path + ".xr")
+                            current_xr.to_netcdf(save_path + '.xr')
 
                 crop_counter += 1
 
-    log_data["fov_names"] = fov_names.tolist()
-    log_data["channel_names"] = original_xr.channels.values.tolist()
-    log_data["original_shape"] = original_xr.shape
-    log_data["slice_stack_len"] = resized_xr.shape[1]
-    log_data["save_format"] = save_format
+    log_data['fov_names'] = fov_names.tolist()
+    log_data['channel_names'] = original_xr.channels.values.tolist()
+    log_data['original_shape'] = original_xr.shape
+    log_data['slice_stack_len'] = resized_xr.shape[1]
+    log_data['save_format'] = save_format
 
-    log_path = os.path.join(save_dir, "log_data.json")
-    with open(log_path, "w") as write_file:
+    log_path = os.path.join(save_dir, 'log_data.json')
+    with open(log_path, 'w') as write_file:
         json.dump(log_data, write_file)
