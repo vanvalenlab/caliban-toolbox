@@ -130,7 +130,7 @@ def create_next_CSV(csv_dir, job_id, next_stage):
         optional_flags = np.any(pixel_only, label_only, rgb_mode)
 
         if optional_flags:
-            optional_url = ""
+            optional_url = "?"
             if pixel_only:
                 optional_url += "&pixel_only=true"
             if label_only:

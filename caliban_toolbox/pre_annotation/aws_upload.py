@@ -164,7 +164,7 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     optional_flags = np.any(pixel_only, label_only, rgb_mode)
 
     if optional_flags:
-        optional_url = ""
+        optional_url = "?"
         if pixel_only:
             optional_url += "&pixel_only=true"
         if label_only:
