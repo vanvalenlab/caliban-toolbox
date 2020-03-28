@@ -137,7 +137,8 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     return uploaded_images, prev_images, next_images
 
 
-def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload):
+def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload, pixel_only=False,
+                       label_only=False, rgb_mode=False):
     '''
     input_bucket = string, name of bucket where files will be uploaded
     output_bucket = string, name of bucket where files will be saved during annotation
@@ -157,6 +158,18 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
+    optional_flags = np.any(pixel_only, label_only, rgb_mode)
+
+    if optional_flags:
+        optional_url = ""
+        if pixel_only:
+            optional_url += "&pixel_only=true"
+        if label_only:
+            optional_url += "&label_only=true"
+        if rgb_mode:
+            optional_url += "&rgb=true"
+
+
     #upload each image from that folder
     for img in files_to_upload:
 
@@ -170,7 +183,11 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
         s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
-        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
+        base_url = "https://caliban.deepcell.org/"
+        if optional_flags:
+            base_url += optional_url
+
+        url = base_url + "{0}__{1}__{2}__{3}__{4}".format(input_bucket,
             output_bucket, subfolders, stage, img)
 
         #add caliban url to list
