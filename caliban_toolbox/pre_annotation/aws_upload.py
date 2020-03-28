@@ -23,10 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-'''
-Upload image files to AWS bucket
-'''
-
 import sys
 import boto3
 import os
@@ -35,8 +31,10 @@ import re
 
 from getpass import getpass
 
-from caliban_toolbox.utils.io_utils import get_img_names
+from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
 
+
+# TODO: Determine which of these functions are still needed
 # Taken from AWS Documentation
 class ProgressPercentage(object):
     def __init__(self, filename):
@@ -44,6 +42,7 @@ class ProgressPercentage(object):
         self._size = float(os.path.getsize(filename))
         self._seen_so_far = 0
         self._lock = threading.Lock()
+
     def __call__(self, bytes_amount):
         with self._lock:
             self._seen_so_far += bytes_amount
@@ -80,6 +79,8 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     Returns:
         lists of image urls (to be used to create a CSV file)
     '''
+    # TODO: decide if outdated or keeping
+
     ##currently aws_upload does not add much functionality to upload but I am keeping it around for now
     ##might replace with a "create_session" function for user input of access keys, then run upload separately
 
@@ -138,57 +139,58 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
 
 
 def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload):
-    '''
-    input_bucket = string, name of bucket where files will be uploaded
+    """input_bucket = string, name of bucket where files will be uploaded
     output_bucket = string, name of bucket where files will be saved during annotation
     aws_folder = string, location in input bucket where files will be uploaded, used to make keys;
         files will be saved to this folder within output bucket during annotation
+    stage: TODO: add description of arg
     folder_to_upload = string, path to folder where npzs to be uploaded are
-    '''
+    """
 
     s3 = connect_aws()
 
-     #load the images from specified folder but not the json log file
+    # load the images from specified folder but not the json log file
     files_to_upload = list_npzs_folder(folder_to_upload)
 
-    #create list of montages that were uploaded to pass to csv maker
+    # create list of npzs that were uploaded to pass to csv maker
+
     filename_list = []
 
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
-    #upload each image from that folder
+    # upload each image from that folder
     for img in files_to_upload:
 
-        #set full path to image
+        # set full path to image
         img_path = os.path.join(folder_to_upload, img)
 
-        #set destination path
+        # set destination path
         img_key = os.path.join(aws_folder, stage, img)
 
-        #upload
-        s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path), ExtraArgs={'ACL':'public-read', 'Metadata': {'source_path': img_path}})
+        # upload
+        s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path),
+                       ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
         url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
             output_bucket, subfolders, stage, img)
 
-        #add caliban url to list
+        # add caliban url to list
         filename_list.append(url)
 
     return files_to_upload, filename_list
 
+
 def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
-    '''
-    Helper function to transfer files from one bucket/key to another. Used
+    """Helper function to transfer files from one bucket/key to another. Used
     in conjunction with pre_annotation.caliban_csv.create_next_CSV to create
-    the next stage of Caliban jobs without needing to download each result file.
-    '''
+    the next stage of Caliban jobs without needing to download each result file."""
 
     copy_source = {'Bucket': output_bucket,
-                    'Key': key_src}
+                   'Key': key_src}
 
     s3.copy(copy_source, input_bucket, key_dst,
-        ExtraArgs={'ACL':'public-read'})
+            ExtraArgs={'ACL': 'public-read'})
 
 
