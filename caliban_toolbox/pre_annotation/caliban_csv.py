@@ -138,12 +138,11 @@ def create_next_CSV(csv_dir, job_id, next_stage):
             if rgb_mode:
                 optional_url += "&rgb=true"
 
-        base_url = "https://caliban.deepcell.org/"
-        if optional_flags:
-            base_url += optional_url
-
-        new_filepath = base_url + "{0}__{1}__{2}__{3}__{4}".format(input_bucket,
+        new_filepath = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
             output_bucket, subfolders, next_stage, filename)
+
+        if optional_flags:
+            new_filepath += optional_url
 
         filepath_list.append(new_filepath)
 

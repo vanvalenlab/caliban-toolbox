@@ -29,6 +29,8 @@ import os
 import threading
 import re
 
+import numpy as np
+
 from getpass import getpass
 
 from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
@@ -161,7 +163,7 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
-    optional_flags = np.any(pixel_only, label_only, rgb_mode)
+    optional_flags = np.any([pixel_only, label_only, rgb_mode])
 
     if optional_flags:
         optional_url = "?"
@@ -187,12 +189,11 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
                        ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
-        base_url = "https://caliban.deepcell.org/"
-        if optional_flags:
-            base_url += optional_url
-
-        url = base_url + "{0}__{1}__{2}__{3}__{4}".format(input_bucket,
+        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
             output_bucket, subfolders, stage, img)
+
+        if optional_flags:
+            url += optional_url
 
         # add caliban url to list
         filename_list.append(url)
