@@ -29,28 +29,23 @@ import sys
 import os
 
 from getpass import getpass
+from caliban_toolbox.pre_annotation.caliban_csv import initial_csv_maker
+from caliban_toolbox.pre_annotation.aws_upload import aws_caliban_upload
 
 
-# TODO: Determine which of these functions are still needed
-def fig_eight(csv_direc, identifier, job_id_to_copy):
+def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, stage,
+                            rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     
     Args:
-        csv_direc: full path to directory that contains CSV files
+        base_direc: full path to directory that contains CSV files
         identifier: string, used to find correct CSV file in csv_direc
         job_id_to_copy: ID number of Figure 8 job from which to copy instructions and settings to new job
         
     Returns:
         None"""
-    
-    key = str(getpass("Figure eight api key? "))
-    # job_to_copy = input("What job do you want to copy? ")
 
-    # get information about the job being copied
-    url = "https://api.figure-eight.com/v1/jobs/{job_id}.json?"
-    url = url.replace('{job_id}', str(job_id_to_copy))
-    API_key = {"key" : key}
-    original_job = requests.get(url, params=API_key)
+    key = str(getpass("Figure eight api key? "))
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
@@ -58,11 +53,20 @@ def fig_eight(csv_direc, identifier, job_id_to_copy):
         return
     print('New job ID is: ' + str(new_job_id))
 
-    # add data from csv to job you just made
-    csv_name = os.path.join(csv_direc, identifier + '_upload.csv')
-    data = upload_data(csv_name, new_job_id, key)
+    # upload files to AWS bucket
+    upload_folder = os.path.join(base_dir, 'crop_dir')
+    filenames, filepaths = aws_caliban_upload(aws_folder=aws_folder, stage=stage,
+                                                        upload_folder=upload_folder,
+                                                        pixel_only=pixel_only,
+                       rgb_mode=rgb_mode, label_only=label_only)
 
-    return None
+    # Generate log file for current job
+    initial_csv_maker(base_dir=base_dir, identifier=identifier, stage=stage, subfolders=aws_folder,
+                      filenames=filenames, filepaths=filepaths, job_id=new_job_id,
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
+
+    # add data from csv to job you just made
+    upload_data(os.path.join(base_dir, 'log_files/upload_log.csv'), new_job_id, key)
 
 
 def copy_job(id, key):
@@ -118,5 +122,3 @@ def upload_data(csv_name, id, key):
             "-review the job design \n" +
             "-confirm pricing \n" +
             "-launch the job (or contact success manager)")
-            
-    return None

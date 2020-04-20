@@ -30,6 +30,7 @@ import threading
 import re
 
 import numpy as np
+import pandas as pd
 
 from getpass import getpass
 
@@ -140,11 +141,9 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     return uploaded_images, prev_images, next_images
 
 
-def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to_upload, pixel_only=False,
+def aws_caliban_upload(aws_folder, stage, upload_folder, pixel_only=False,
                        label_only=False, rgb_mode=False):
     """
-    input_bucket = string, name of bucket where files will be uploaded
-    output_bucket = string, name of bucket where files will be saved during annotation
     aws_folder = string, location in input bucket where files will be uploaded, used to make keys;
         files will be saved to this folder within output bucket during annotation
     stage: TODO: add description of arg
@@ -154,7 +153,7 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     s3 = connect_aws()
 
     # load the images from specified folder but not the json log file
-    files_to_upload = list_npzs_folder(folder_to_upload)
+    files_to_upload = list_npzs_folder(upload_folder)
 
     # create list of npzs that were uploaded to pass to csv maker
 
@@ -179,18 +178,18 @@ def aws_caliban_upload(input_bucket, output_bucket, aws_folder, stage, folder_to
     for img in files_to_upload:
 
         # set full path to image
-        img_path = os.path.join(folder_to_upload, img)
+        img_path = os.path.join(upload_folder, img)
 
         # set destination path
         img_key = os.path.join(aws_folder, stage, img)
 
         # upload
-        s3.upload_file(img_path, input_bucket, img_key, Callback=ProgressPercentage(img_path),
+        s3.upload_file(img_path, 'caliban-input', img_key, Callback=ProgressPercentage(img_path),
                        ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
-        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
-            output_bucket, subfolders, stage, img)
+        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format('caliban-input',
+            'caliban-output', subfolders, stage, img)
 
         if optional_flags:
             url += optional_url
@@ -211,5 +210,31 @@ def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
 
     s3.copy(copy_source, input_bucket, key_dst,
             ExtraArgs={'ACL': 'public-read'})
+
+
+def aws_caliban_download(upload_log, output_dir):
+    """
+    upload_log: pandas file containing information from upload
+    output_dir: directory where files will be saved
+    """
+
+    s3 = connect_aws()
+
+    # load the images from specified folder but not the json log file
+    files_to_download = upload_log['filename']
+    aws_folder = upload_log['subfolders'][0]
+    stage = upload_log['stage'][0]
+
+    # download all images
+    for img in files_to_download:
+
+        # set full path to image
+        save_path = os.path.join(output_dir, img)
+
+        # set aws path
+        img_path = os.path.join(aws_folder, stage, img)
+
+        # upload
+        s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
 
 

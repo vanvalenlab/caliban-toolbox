@@ -34,9 +34,8 @@ from caliban_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_
 from caliban_toolbox.post_annotation.download_csv import download_and_unzip
 
 
-def initial_csv_maker(csv_dir, identifier, stage, input_bucket, output_bucket,
-                      subfolders, filenames, filepaths, pixel_only=False, label_only=False,
-                      rgb_mode=False):
+def initial_csv_maker(base_dir, identifier, stage, subfolders, filenames, filepaths, job_id,
+                      pixel_only=False, label_only=False, rgb_mode=False):
     """Make and save a CSV file containing information for a Caliban job to
     be uploaded to Figure 8. Includes columns of information so that the result CSV
     after job is completed contains enough information to create next job in sequence
@@ -66,24 +65,26 @@ def initial_csv_maker(csv_dir, identifier, stage, input_bucket, output_bucket,
             'filename': filenames,
             'identifier': identifier,
             'stage': stage,
-            'input_bucket': input_bucket,
-            'output_bucket': output_bucket,
+            'input_bucket': 'caliban-input',
+            'output_bucket': 'caliban-output',
             'subfolders': subfolders,
+            'job_id': job_id,
             'pixel_only': pixel_only,
             'label_only': label_only,
             'rgb_mode': rgb_mode}
     dataframe = pd.DataFrame(data=data, index = range(len(filepaths)))
 
     # create file location, name file
-    if not os.path.isdir(csv_dir):
-        os.makedirs(csv_dir)
+    log_dir = os.path.join(base_dir, 'logs')
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+
         # add folder modification permissions to deal with files from file explorer
         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-        os.chmod(csv_dir, mode)
-    csv_name = os.path.join(csv_dir, '{0}_{1}_upload.csv'.format(identifier, stage))
+        os.chmod(log_dir, mode)
 
     # save csv file
-    dataframe.to_csv(csv_name, index = False)
+    dataframe.to_csv(os.path.join(log_dir, 'upload_log.csv'), index = False)
 
     return None
 
