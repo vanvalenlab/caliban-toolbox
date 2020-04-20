@@ -106,7 +106,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
                             else:
                                 current_stack_len = slice_stack_len
 
-                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_npz['y']
+                            stack[fov_idx, :current_stack_len, crop_idx, slice, ...] = temp_npz['y']
                         else:
                             # npz not generated, did not contain any labels, keep blank
                             if verbose:
@@ -124,7 +124,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
                             else:
                                 current_stack_len = stack_len
 
-                            stack[fov_idx:(fov_idx + 1), :current_stack_len, crop_idx, slice, ...] = temp_xr[..., -1:]
+                            stack[fov_idx, :current_stack_len, crop_idx, slice, ...] = temp_xr[..., -1:]
                         else:
                             # npz not generated, did not contain any labels, keep blank
                             print('could not find xr {}, skipping'.format(xr_path))

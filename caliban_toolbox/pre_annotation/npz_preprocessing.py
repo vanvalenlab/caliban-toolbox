@@ -327,9 +327,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
                     npz_id = 'fov_{}_row_{}_col_{}_slice_{}'.format(fov_names[fov], row, col, slice)
 
                     # subset xarray based on supplied indices
-                    # hack for current RGB branch testing
-                    # current_xr = resized_xr[fov:(fov + 1), :, crop_counter, slice,  ...]
-                    current_xr = resized_xr[fov:(fov + 1), 0, crop_counter, slice,  ...]
+                    current_xr = resized_xr[fov, :, crop_counter, slice,  ...]
                     labels = current_xr[..., -1:].values
                     channels = current_xr[..., :-1].values
 
