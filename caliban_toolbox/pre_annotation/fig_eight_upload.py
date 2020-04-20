@@ -24,13 +24,14 @@
 # limitations under the License.
 # ==============================================================================
 import requests
-import subprocess
-import sys
 import os
 
+import pandas as pd
+
 from getpass import getpass
-from caliban_toolbox.pre_annotation.caliban_csv import initial_csv_maker
-from caliban_toolbox.pre_annotation.aws_upload import aws_caliban_upload
+from caliban_toolbox.pre_annotation.caliban_csv import create_upload_log
+from caliban_toolbox.pre_annotation.aws_upload import aws_upload_files, aws_download_files
+from caliban_toolbox.post_annotation.download_csv import download_report, unzip_report
 
 
 def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, stage,
@@ -38,12 +39,18 @@ def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, st
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     
     Args:
-        base_direc: full path to directory that contains CSV files
+        base_dir: full path to directory that contains CSV files
         identifier: string, used to find correct CSV file in csv_direc
-        job_id_to_copy: ID number of Figure 8 job from which to copy instructions and settings to new job
-        
+        job_id_to_copy: ID number of Figure 8 job to use as template for new job
+        aws_folder: folder in aws bucket where files be stored
+        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
+
     Returns:
-        None"""
+        None
+    """
 
     key = str(getpass("Figure eight api key? "))
 
@@ -55,33 +62,60 @@ def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, st
 
     # upload files to AWS bucket
     upload_folder = os.path.join(base_dir, 'crop_dir')
-    filenames, filepaths = aws_caliban_upload(aws_folder=aws_folder, stage=stage,
-                                                        upload_folder=upload_folder,
-                                                        pixel_only=pixel_only,
-                       rgb_mode=rgb_mode, label_only=label_only)
+    filenames, filepaths = aws_upload_files(aws_folder=aws_folder, stage=stage,
+                                            upload_folder=upload_folder, pixel_only=pixel_only,
+                                            rgb_mode=rgb_mode, label_only=label_only)
 
     # Generate log file for current job
-    initial_csv_maker(base_dir=base_dir, identifier=identifier, stage=stage, subfolders=aws_folder,
+    create_upload_log(base_dir=base_dir, identifier=identifier, stage=stage, aws_folder=aws_folder,
                       filenames=filenames, filepaths=filepaths, job_id=new_job_id,
                       pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
 
-    # add data from csv to job you just made
-    upload_data(os.path.join(base_dir, 'log_files/upload_log.csv'), new_job_id, key)
+    # upload NPZs using log file
+    upload_data(os.path.join(base_dir, 'logs/upload_log.csv'), new_job_id, key)
 
 
-def copy_job(id, key):
+def download_fig_eight_output(base_dir):
+    """Gets annotated files from a Figure 8 job
+
+    Args:
+        base_dir: directory containing relevant job files
+
+    Returns:
+        None
+    """
+
+    # get information from job creation
+    log_file = pd.read_csv(os.path.join(base_dir, 'logs/upload_log.csv'))
+    job_id = log_file['job_id'][0]
+
+    # download Figure 8 report
+    log_dir = os.path.join(base_dir, 'logs')
+    download_report(job_id=job_id, log_dir=log_dir)
+    unzip_report(log_dir=log_dir)
+
+    # download annotations from aws
+    output_dir = os.path.join(base_dir, 'output')
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
+    upload_log = pd.read_csv(os.path.join(base_dir, 'logs/upload_log.csv'))
+    aws_download_files(upload_log, output_dir)
+
+
+def copy_job(job_id, key):
     """Create a Figure 8 job based on existing job
     
     Args:
-        id: ID number of job to copy instructions and settings from when creating new job
+        job_id: ID number of job to copy instructions and settings from when creating new job
         key: API key to access Figure 8 account
                 
     Returns:
-        ID number of job created"""
+        ID number of job created
+    """
 
-    url = 'https://api.figure-eight.com/v1/jobs/{job_id}/copy.json?'
-    url = url.replace('{job_id}', str(id))
-    API_key = {"key" : key}
+    url = 'https://api.figure-eight.com/v1/jobs/{}/copy.json?'.format(str(job_id))
+    API_key = {"key": key}
 
     new_job = requests.get(url, params=API_key)
     if new_job.status_code != 200:
@@ -91,34 +125,29 @@ def copy_job(id, key):
     return new_job_id
 
 
-def upload_data(csv_name, id, key):
+def upload_data(csv_path, job_id, key):
     """Add data to an existing Figure 8 job by uploading a CSV file
     
     Args:
-        csv_direc: full path to CSV file to upload
-        id: ID number of job to upload data to 
+        csv_path: full path to csv
+        job_id: ID number of job to upload data to
         key: API key to access Figure 8 account
         
     Returns:
-        None"""
+        None
+    """
 
     url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
-    url = url.replace('{job_id}', str(id))
+    url = url.replace('{job_id}', str(job_id))
     url = url.replace('{api_key}', key)
 
-    csv_file = open(csv_name, 'r')
+    csv_file = open(csv_path, 'r')
     csv_data = csv_file.read()
 
     headers = {"Content-Type": "text/csv"}
 
-    add_data = requests.put(url, data = csv_data, headers = headers)
+    add_data = requests.put(url, data=csv_data, headers=headers)
     if add_data.status_code != 200:
-        print("upload_data not successful. Status code: ", new_job.status_code)
+        print("Upload_data not successful. Status code: ", add_data.status_code)
     else:
-        print("Added data")
-
-        print("Now that the data is added, you should go to the Figure Eight website to: \n" +
-            "-change the job title \n" +
-            "-review the job design \n" +
-            "-confirm pricing \n" +
-            "-launch the job (or contact success manager)")
+        print("Data successfully uploaded to Figure Eight.")

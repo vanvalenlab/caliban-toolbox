@@ -37,7 +37,6 @@ from getpass import getpass
 from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
 
 
-# TODO: Determine which of these functions are still needed
 # Taken from AWS Documentation
 class ProgressPercentage(object):
     def __init__(self, filename):
@@ -68,7 +67,8 @@ def connect_aws():
     return s3
 
 
-def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
+# old version of function: can delete once we're sure we won't use pipeline anymore
+def aws_upload_deprecated(bucket_name, aws_folder, folder_to_upload, include_context):
     '''
     Uses an AWS s3 session to upload images.
 
@@ -141,13 +141,13 @@ def aws_upload(bucket_name, aws_folder, folder_to_upload, include_context):
     return uploaded_images, prev_images, next_images
 
 
-def aws_caliban_upload(aws_folder, stage, upload_folder, pixel_only=False,
-                       label_only=False, rgb_mode=False):
-    """
-    aws_folder = string, location in input bucket where files will be uploaded, used to make keys;
-        files will be saved to this folder within output bucket during annotation
-    stage: TODO: add description of arg
-    folder_to_upload = string, path to folder where npzs to be uploaded are
+def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, rgb_mode):
+    """Uploads files to AWS bucket for use in Figure 8
+
+    Args:
+        aws_folder: folder where uploaded files will be stored
+        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        upload_folder: path to folder containing files that will be uploaded
     """
 
     s3 = connect_aws()
@@ -155,15 +155,14 @@ def aws_caliban_upload(aws_folder, stage, upload_folder, pixel_only=False,
     # load the images from specified folder but not the json log file
     files_to_upload = list_npzs_folder(upload_folder)
 
-    # create list of npzs that were uploaded to pass to csv maker
-
     filename_list = []
 
+    # change slashes separating nested folders to underscores for URL generation
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
+    # optional flags to add to URL
     optional_flags = np.any([pixel_only, label_only, rgb_mode])
-
     if optional_flags:
         optional_url = "?"
         if pixel_only:
@@ -173,14 +172,13 @@ def aws_caliban_upload(aws_folder, stage, upload_folder, pixel_only=False,
         if rgb_mode:
             optional_url += "&rgb=true"
 
-
-    #upload each image from that folder
+    # upload images
     for img in files_to_upload:
 
-        # set full path to image
+        # full path to image
         img_path = os.path.join(upload_folder, img)
 
-        # set destination path
+        # destination path
         img_key = os.path.join(aws_folder, stage, img)
 
         # upload
@@ -212,15 +210,16 @@ def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
             ExtraArgs={'ACL': 'public-read'})
 
 
-def aws_caliban_download(upload_log, output_dir):
-    """
-    upload_log: pandas file containing information from upload
+def aws_download_files(upload_log, output_dir):
+    """Download files following Figure 8 annotation.
+
+    upload_log: pandas file containing information from upload process
     output_dir: directory where files will be saved
     """
 
     s3 = connect_aws()
 
-    # load the images from specified folder but not the json log file
+    # get files
     files_to_download = upload_log['filename']
     aws_folder = upload_log['subfolders'][0]
     stage = upload_log['stage'][0]
@@ -228,13 +227,12 @@ def aws_caliban_download(upload_log, output_dir):
     # download all images
     for img in files_to_download:
 
-        # set full path to image
+        # full path to save image
         save_path = os.path.join(output_dir, img)
 
-        # set aws path
+        # path to file in aws
         img_path = os.path.join(aws_folder, stage, img)
 
-        # upload
         s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
 
 

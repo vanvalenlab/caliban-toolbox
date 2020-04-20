@@ -278,7 +278,7 @@ def test_save_npzs_for_caliban():
         # check that correct size was saved
         test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_row_0_col_0_slice_0.npz"))
 
-        assert test_npz_labels["y"].shape == (fov_len, slice_stack_len, row_len, col_len, 1)
+        assert test_npz_labels["y"].shape == (slice_stack_len, row_len, col_len, 1)
 
         assert test_npz_labels["y"].shape[:-1] == test_npz_labels["X"].shape[:-1]
 

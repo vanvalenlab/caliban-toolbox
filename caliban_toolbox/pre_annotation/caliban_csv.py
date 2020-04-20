@@ -31,48 +31,39 @@ import pandas as pd
 import numpy as np
 
 from caliban_toolbox.pre_annotation.aws_upload import connect_aws, aws_transfer_file
-from caliban_toolbox.post_annotation.download_csv import download_and_unzip
 
 
-def initial_csv_maker(base_dir, identifier, stage, subfolders, filenames, filepaths, job_id,
+def create_upload_log(base_dir, identifier, stage, aws_folder, filenames, filepaths, job_id,
                       pixel_only=False, label_only=False, rgb_mode=False):
-    """Make and save a CSV file containing information for a Caliban job to
-    be uploaded to Figure 8. Includes columns of information so that the result CSV
-    after job is completed contains enough information to create next job in sequence
-    without additional inputs.
+    """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
 
     Args:
-        csv_dir: full path to directory where CSV file should be saved; created if does not exist
+        base_dir: full path to directory where job results will be stored
         identifier: a string to distinguish a job (or set of sequential jobs) from others
             eg "celltype_cyto_movie_setnumber"
-        stage: string, used to distinguish which type of corrections are being made on the data
-            eg "firstpass", "fgbg" (refinining foreground/background detail), "tracking" etc
-            Included in CSV name to distinguish from other related CSV files
-        input_bucket: string, name of bucket where files will be put, used to make keys
-        output_bucket: string, name of bucket where modified files will be saved
-        subfolders: string, location in input bucket where files will be uploaded, used to make keys;
-            files will be saved to this folder within output bucket during annotation
-        filenames: ordered list of filenames that were uploaded, used to construct project_urls in
-            downstream jobs
-        filepaths: ordered list of urls of images in Amazon S3 bucket
-
+        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        aws_folder: folder in aws bucket where files be stored
+        filenames: list of all files to be uploaded
+        filepaths: list of complete urls to images in Amazon S3 bucket
+        job_id: internal Figure Eight id for job
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
 
     Returns:
         None
-        ({identifier}_{stage}_upload.csv will be saved in csv_dir)"""
+    """
 
     data = {'project_url': filepaths,
             'filename': filenames,
             'identifier': identifier,
             'stage': stage,
-            'input_bucket': 'caliban-input',
-            'output_bucket': 'caliban-output',
-            'subfolders': subfolders,
+            'aws_folder': aws_folder,
             'job_id': job_id,
             'pixel_only': pixel_only,
             'label_only': label_only,
             'rgb_mode': rgb_mode}
-    dataframe = pd.DataFrame(data=data, index = range(len(filepaths)))
+    dataframe = pd.DataFrame(data=data, index=range(len(filepaths)))
 
     # create file location, name file
     log_dir = os.path.join(base_dir, 'logs')
@@ -89,6 +80,7 @@ def initial_csv_maker(base_dir, identifier, stage, subfolders, filenames, filepa
     return None
 
 
+# TODO: update given new pipeline changes
 def create_next_CSV(csv_dir, job_id, next_stage):
     """Downloads job report from a Caliban job and uses provided info to create the CSV for
     the next job in the sequence.
