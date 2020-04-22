@@ -25,13 +25,63 @@
 # ==============================================================================
 import requests
 import os
-
+import stat
+import zipfile
 import pandas as pd
 
 from getpass import getpass
-from caliban_toolbox.pre_annotation.caliban_csv import create_upload_log
-from caliban_toolbox.pre_annotation.aws_upload import aws_upload_files, aws_download_files
-from caliban_toolbox.post_annotation.download_csv import download_report, unzip_report
+from caliban_toolbox.log_file import create_upload_log
+from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
+
+
+def copy_job(job_id, key):
+    """Create a Figure 8 job based on existing job
+
+    Args:
+        job_id: ID number of job to copy instructions and settings from when creating new job
+        key: API key to access Figure 8 account
+
+    Returns:
+        ID number of job created
+    """
+
+    url = 'https://api.figure-eight.com/v1/jobs/{}/copy.json?'.format(str(job_id))
+    API_key = {"key": key}
+
+    new_job = requests.get(url, params=API_key)
+    if new_job.status_code != 200:
+        print("copy_job not successful. Status code: ", new_job.status_code)
+    new_job_id = new_job.json()['id']
+
+    return new_job_id
+
+
+def upload_data(csv_path, job_id, key):
+    """Add data to an existing Figure 8 job by uploading a CSV file
+
+    Args:
+        csv_path: full path to csv
+        job_id: ID number of job to upload data to
+        key: API key to access Figure 8 account
+
+    Returns:
+        None
+    """
+
+    url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
+    url = url.replace('{job_id}', str(job_id))
+    url = url.replace('{api_key}', key)
+
+    csv_file = open(csv_path, 'r')
+    csv_data = csv_file.read()
+
+    headers = {"Content-Type": "text/csv"}
+
+    add_data = requests.put(url, data=csv_data, headers=headers)
+    if add_data.status_code != 200:
+        print("Upload_data not successful. Status code: ", add_data.status_code)
+    else:
+        print("Data successfully uploaded to Figure Eight.")
 
 
 def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, stage,
@@ -75,6 +125,63 @@ def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, st
     upload_data(os.path.join(base_dir, 'logs/upload_log.csv'), new_job_id, key)
 
 
+def download_report(job_id, log_dir):
+    """Download job report from Figure 8
+
+    Args:
+        job_id: Figure 8 job id
+        log_dir: full path to log_dir where report will be saved
+
+    Returns:
+        None
+    """
+
+    if not os.path.isdir(log_dir):
+        print('Log directory does not exist: have you uploaded this job to Figure 8?')
+        os.makedirs(log_dir)
+
+        # add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
+
+    save_path = os.path.join(log_dir, 'job_report.zip')
+
+    # password prompt for api info
+    key = str(getpass("Please enter your Figure Eight API key:"))
+
+    # construct url
+    url = "https://api.appen.com/v1/jobs/{}.csv?".format(job_id)
+
+    params = {"type": 'full', "key": key}
+
+    # make http request: python requests handles redirects
+    csv_request = requests.get(url, params=params, allow_redirects=True)
+    open(save_path, 'wb').write(csv_request.content)
+    print('Report saved to folder')
+
+
+def unzip_report(log_dir):
+    """Unzips .csv file and renames it appropriately
+
+    Args:
+        log_dir: full path to log_dir for saving zip
+
+    Returns:
+        None
+    """
+
+    # Extract zip
+    zip_path = os.path.join(log_dir, 'job_report.zip')
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        default_name = zip_ref.namelist()[0]  # get filename so can rename later
+        zip_ref.extractall(log_dir)
+
+    # rename from Figure 8 default
+    default_name_path = os.path.join(log_dir, default_name)  # should only be one file in zip
+    new_name_path = os.path.join(log_dir, 'job_report.csv')
+    os.rename(default_name_path, new_name_path)
+
+
 def download_fig_eight_output(base_dir):
     """Gets annotated files from a Figure 8 job
 
@@ -101,53 +208,3 @@ def download_fig_eight_output(base_dir):
 
     upload_log = pd.read_csv(os.path.join(base_dir, 'logs/upload_log.csv'))
     aws_download_files(upload_log, output_dir)
-
-
-def copy_job(job_id, key):
-    """Create a Figure 8 job based on existing job
-    
-    Args:
-        job_id: ID number of job to copy instructions and settings from when creating new job
-        key: API key to access Figure 8 account
-                
-    Returns:
-        ID number of job created
-    """
-
-    url = 'https://api.figure-eight.com/v1/jobs/{}/copy.json?'.format(str(job_id))
-    API_key = {"key": key}
-
-    new_job = requests.get(url, params=API_key)
-    if new_job.status_code != 200:
-        print("copy_job not successful. Status code: ", new_job.status_code)
-    new_job_id = new_job.json()['id']
-
-    return new_job_id
-
-
-def upload_data(csv_path, job_id, key):
-    """Add data to an existing Figure 8 job by uploading a CSV file
-    
-    Args:
-        csv_path: full path to csv
-        job_id: ID number of job to upload data to
-        key: API key to access Figure 8 account
-        
-    Returns:
-        None
-    """
-
-    url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
-    url = url.replace('{job_id}', str(job_id))
-    url = url.replace('{api_key}', key)
-
-    csv_file = open(csv_path, 'r')
-    csv_data = csv_file.read()
-
-    headers = {"Content-Type": "text/csv"}
-
-    add_data = requests.put(url, data=csv_data, headers=headers)
-    if add_data.status_code != 200:
-        print("Upload_data not successful. Status code: ", add_data.status_code)
-    else:
-        print("Data successfully uploaded to Figure Eight.")

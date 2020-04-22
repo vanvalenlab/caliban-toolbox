@@ -1,11 +1,8 @@
 import copy
-import importlib
 
-from caliban_toolbox.pre_annotation import relabel
+from caliban_toolbox import relabel
 
 import numpy as np
-
-importlib.reload(relabel)
 
 
 def test_relabel_preserve_relationships():
