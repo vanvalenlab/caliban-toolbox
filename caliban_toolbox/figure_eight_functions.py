@@ -84,13 +84,12 @@ def upload_data(csv_path, job_id, key):
         print("Data successfully uploaded to Figure Eight.")
 
 
-def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, stage,
+def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     
     Args:
         base_dir: full path to directory that contains CSV files
-        identifier: string, used to find correct CSV file in csv_direc
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
         aws_folder: folder in aws bucket where files be stored
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
@@ -117,7 +116,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, identifier, aws_folder, st
                                             rgb_mode=rgb_mode, label_only=label_only)
 
     # Generate log file for current job
-    create_upload_log(base_dir=base_dir, identifier=identifier, stage=stage, aws_folder=aws_folder,
+    create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=filenames, filepaths=filepaths, job_id=new_job_id,
                       pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
 

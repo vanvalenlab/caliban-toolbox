@@ -35,14 +35,12 @@ import requests
 from caliban_toolbox.aws_functions import connect_aws, aws_transfer_file
 
 
-def create_upload_log(base_dir, identifier, stage, aws_folder, filenames, filepaths, job_id,
+def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
                       pixel_only=False, label_only=False, rgb_mode=False):
     """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
 
     Args:
         base_dir: full path to directory where job results will be stored
-        identifier: a string to distinguish a job (or set of sequential jobs) from others
-            eg "celltype_cyto_movie_setnumber"
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
         aws_folder: folder in aws bucket where files be stored
         filenames: list of all files to be uploaded
@@ -58,7 +56,6 @@ def create_upload_log(base_dir, identifier, stage, aws_folder, filenames, filepa
 
     data = {'project_url': filepaths,
             'filename': filenames,
-            'identifier': identifier,
             'stage': stage,
             'aws_folder': aws_folder,
             'job_id': job_id,
@@ -77,9 +74,7 @@ def create_upload_log(base_dir, identifier, stage, aws_folder, filenames, filepa
         os.chmod(log_dir, mode)
 
     # save csv file
-    dataframe.to_csv(os.path.join(log_dir, 'upload_log.csv'), index = False)
-
-    return None
+    dataframe.to_csv(os.path.join(log_dir, 'upload_log.csv'), index=False)
 
 
 # TODO: update for caliban jobs
