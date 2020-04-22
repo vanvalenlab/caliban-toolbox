@@ -59,7 +59,7 @@ def download_report(job_id, log_dir):
     key = str(getpass("Please enter your Figure Eight API key:"))
 
     # construct url
-    url = "https://api.figure-eight.com/v1/jobs/{}.csv?".format(job_id)
+    url = "https://api.appen.com/v1/jobs/{}.csv?".format(job_id)
 
     params = {"type": 'full', "key": key}
 

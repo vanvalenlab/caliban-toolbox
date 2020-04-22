@@ -226,7 +226,7 @@ def reconstruct_image_stack(crop_dir, verbose=True):
         log_data = json.load(json_file)
 
     row_padding, col_padding = log_data['row_padding'], log_data['col_padding']
-    fov_names, channel_names = log_data['fov_names'], log_data['channel_names']
+    fov_names, = log_data['fov_names']
     # combine all npz crops into a single stack
     crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
 
