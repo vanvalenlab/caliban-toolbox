@@ -27,6 +27,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import numpy as np
+
 
 def overlay_grid_lines(overlay_img, row_starts, row_ends, col_starts, col_ends):
     """Visualize the location of image crops on the original uncropped image to assess crop size

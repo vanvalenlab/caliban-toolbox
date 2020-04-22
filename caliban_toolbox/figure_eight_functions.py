@@ -181,7 +181,7 @@ def unzip_report(log_dir):
     os.rename(default_name_path, new_name_path)
 
 
-def download_fig_eight_output(base_dir):
+def download_figure_eight_output(base_dir):
     """Gets annotated files from a Figure 8 job
 
     Args:
