@@ -32,6 +32,7 @@ import numpy as np
 import os
 import json
 
+from itertools import product
 
 import xarray as xr
 
@@ -334,62 +335,61 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data, save_dir, blank_lab
     if blank_labels == 'separate':
         os.makedirs(os.path.join(save_dir, 'separate'))
 
-    # loop through all crops in all images
-    for fov in range(fov_len):
-        for crop in range(num_crops):
-            for slice in range(num_slices):
-                # generate identifier for crop
-                npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
+    # for each fov, loop through 2D crops and 3D slices
+    for indices in product(range(fov_len), range(num_crops), range(num_slices)):
+        fov, crop, slice = indices
+        # generate identifier for crop
+        npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
-                # subset xarray based on supplied indices
-                current_xr = resized_xr[fov, :, crop, slice, ...]
-                labels = current_xr[..., -1:].values
-                channels = current_xr[..., :-1].values
+        # subset xarray based on supplied indices
+        current_xr = resized_xr[fov, :, crop, slice, ...]
+        labels = current_xr[..., -1:].values
+        channels = current_xr[..., :-1].values
 
-                # determine if labels are blank, and if so what to do with npz
-                if np.sum(labels) == 0:
+        # determine if labels are blank, and if so what to do with npz
+        if np.sum(labels) == 0:
 
-                    # blank labels get saved to separate folder
-                    if blank_labels == 'separate':
-                        if verbose:
-                            print('{} is blank, saving to separate folder'.format(npz_id))
-                        save_path = os.path.join(save_dir, blank_labels, npz_id)
+            # blank labels get saved to separate folder
+            if blank_labels == 'separate':
+                if verbose:
+                    print('{} is blank, saving to separate folder'.format(npz_id))
+                save_path = os.path.join(save_dir, blank_labels, npz_id)
 
-                        # save images as either npz or xarray
-                        if save_format == 'npz':
-                            np.savez(save_path + '.npz', X=channels, y=labels)
+                # save images as either npz or xarray
+                if save_format == 'npz':
+                    np.savez(save_path + '.npz', X=channels, y=labels)
 
-                        elif save_format == 'xr':
-                            current_xr.to_netcdf(save_path + '.xr')
+                elif save_format == 'xr':
+                    current_xr.to_netcdf(save_path + '.xr')
 
-                    # blank labels don't get saved, empty area of tissue
-                    elif blank_labels == 'skip':
-                        if verbose:
-                            print('{} is blank, skipping saving'.format(npz_id))
+            # blank labels don't get saved, empty area of tissue
+            elif blank_labels == 'skip':
+                if verbose:
+                    print('{} is blank, skipping saving'.format(npz_id))
 
-                    # blank labels get saved along with other crops
-                    elif blank_labels == 'include':
-                        if verbose:
-                            print('{} is blank, saving to folder'.format(npz_id))
-                        save_path = os.path.join(save_dir, npz_id)
+            # blank labels get saved along with other crops
+            elif blank_labels == 'include':
+                if verbose:
+                    print('{} is blank, saving to folder'.format(npz_id))
+                save_path = os.path.join(save_dir, npz_id)
 
-                        # save images as either npz or xarray
-                        if save_format == 'npz':
-                            np.savez(save_path + '.npz', X=channels, y=labels)
+                # save images as either npz or xarray
+                if save_format == 'npz':
+                    np.savez(save_path + '.npz', X=channels, y=labels)
 
-                        elif save_format == 'xr':
-                            current_xr.to_netcdf(save_path + '.xr')
+                elif save_format == 'xr':
+                    current_xr.to_netcdf(save_path + '.xr')
 
-                else:
-                    # crop is not blank, save based on file_format
-                    save_path = os.path.join(save_dir, npz_id)
+        else:
+            # crop is not blank, save based on file_format
+            save_path = os.path.join(save_dir, npz_id)
 
-                    # save images as either npz or xarray
-                    if save_format == 'npz':
-                        np.savez(save_path + '.npz', X=channels, y=labels)
+            # save images as either npz or xarray
+            if save_format == 'npz':
+                np.savez(save_path + '.npz', X=channels, y=labels)
 
-                    elif save_format == 'xr':
-                        current_xr.to_netcdf(save_path + '.xr')
+            elif save_format == 'xr':
+                current_xr.to_netcdf(save_path + '.xr')
 
     log_data['fov_names'] = fov_names.tolist()
     log_data['channel_names'] = original_xr.channels.values.tolist()
@@ -460,46 +460,46 @@ def load_npzs(crop_dir, log_data, verbose=True):
                       num_slices, row_crop_size, col_crop_size, 1))
     saved_files = os.listdir(crop_dir)
 
-    # loop through all npz files
-    for fov_idx, fov_name in enumerate(fov_names):
-        for crop in range(num_crops):
-            for slice in range(num_slices):
-                # load NPZs
-                if save_format == 'npz':
-                    npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name,
-                                                                          crop, slice))
-                    if os.path.exists(npz_path):
-                        temp_npz = np.load(npz_path)
+    # for each fov, loop over each 2D crop and 3D slice
+    for indices in product(range(fov_len), range(num_crops), range(num_slices)):
+        fov, crop, slice = indices
+        # load NPZs
+        if save_format == 'npz':
+            npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files,
+                                                                  fov_names[fov],
+                                                                  crop, slice))
+            if os.path.exists(npz_path):
+                temp_npz = np.load(npz_path)
 
-                        # last slice may be truncated, modify index
-                        if slice == num_slices - 1:
-                            current_stack_len = temp_npz['X'].shape[1]
-                        else:
-                            current_stack_len = slice_stack_len
+                # last slice may be truncated, modify index
+                if slice == num_slices - 1:
+                    current_stack_len = temp_npz['X'].shape[1]
+                else:
+                    current_stack_len = slice_stack_len
 
-                        stack[fov_idx, :current_stack_len, crop, slice, ...] = temp_npz['y']
-                    else:
-                        # npz not generated, did not contain any labels, keep blank
-                        if verbose:
-                            print('could not find npz {}, skipping'.format(npz_path))
+                stack[fov, :current_stack_len, crop, slice, ...] = temp_npz['y']
+            else:
+                # npz not generated, did not contain any labels, keep blank
+                if verbose:
+                    print('could not find npz {}, skipping'.format(npz_path))
 
-                # load xarray
-                elif save_format == 'xr':
-                    xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name,
-                                                                         crop, slice))
-                    if os.path.exists(xr_path):
-                        temp_xr = xr.open_dataarray(xr_path)
+        # load xarray
+        elif save_format == 'xr':
+            xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_names[fov],
+                                                                 crop, slice))
+            if os.path.exists(xr_path):
+                temp_xr = xr.open_dataarray(xr_path)
 
-                        # last slice may be truncated, modify index
-                        if slice == num_slices - 1:
-                            current_stack_len = temp_xr.shape[1]
-                        else:
-                            current_stack_len = stack_len
+                # last slice may be truncated, modify index
+                if slice == num_slices - 1:
+                    current_stack_len = temp_xr.shape[1]
+                else:
+                    current_stack_len = stack_len
 
-                        stack[fov_idx, :current_stack_len, crop, slice, ...] = temp_xr[..., -1:]
-                    else:
-                        # npz not generated, did not contain any labels, keep blank
-                        print('could not find xr {}, skipping'.format(xr_path))
+                stack[fov, :current_stack_len, crop, slice, ...] = temp_xr[..., -1:]
+            else:
+                # npz not generated, did not contain any labels, keep blank
+                print('could not find xr {}, skipping'.format(xr_path))
 
     return stack
 
@@ -523,62 +523,63 @@ def stitch_crops(annotated_data, log_data):
 
     row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
     col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
+    num_crops = log_data['num_crops']
 
     if annotated_data.shape[3] != 1:
         raise ValueError('Stacks must be combined before stitching can occur')
 
-    # loop through all crops in the stack for each image
-    for fov in range(fov_len):
-        for stack in range(stack_len):
-            crop_counter = 0
-            for row in range(len(row_starts)):
-                for col in range(len(col_starts)):
+    # for each fov and stack, loop through rows and columns of crop positions
+    for indices in product(range(fov_len), range(stack_len),
+                           range(len(row_starts)), range(len(col_starts))):
 
-                    # get current crop
-                    crop = annotated_data[fov, stack, crop_counter, 0, :, :, 0]
+        fov, stack, row, col = indices
 
-                    # increment values to ensure unique labels across final image
-                    lowest_allowed_val = np.amax(stitched_labels[fov, stack, ...])
-                    crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
+        # determine what crop # we're currently working on
+        crop_counter = row * len(row_starts) + col * len(col_starts)
 
-                    # get ids of cells in current crop
-                    potential_overlap_cells = np.unique(crop)
-                    potential_overlap_cells = \
-                        potential_overlap_cells[np.nonzero(potential_overlap_cells)]
+        # get current crop
+        crop = annotated_data[fov, stack, crop_counter, 0, :, :, 0]
 
-                    # get values of stitched image at location where crop will be placed
-                    stitched_crop = stitched_labels[fov, stack, 0, 0,
-                                                    row_starts[row]:row_ends[row],
-                                                    col_starts[col]:col_ends[col], 0]
+        # increment values to ensure unique labels across final image
+        lowest_allowed_val = np.amax(stitched_labels[fov, stack, ...])
+        crop = np.where(crop == 0, crop, crop + lowest_allowed_val)
 
-                    # loop through each cell in the crop to determine
-                    # if it overlaps with another cell in full image
-                    for cell in potential_overlap_cells:
+        # get ids of cells in current crop
+        potential_overlap_cells = np.unique(crop)
+        potential_overlap_cells = \
+            potential_overlap_cells[np.nonzero(potential_overlap_cells)]
 
-                        # get cell ids present in stitched image
-                        # at location of current cell in crop
-                        stitched_overlap_vals, stitched_overlap_counts = \
-                            np.unique(stitched_crop[crop == cell], return_counts=True)
+        # get values of stitched image at location where crop will be placed
+        stitched_crop = stitched_labels[fov, stack, 0, 0,
+                                        row_starts[row]:row_ends[row],
+                                        col_starts[col]:col_ends[col], 0]
 
-                        # remove IDs and counts corresponding to overlap with ID 0 (background)
-                        keep_vals = np.nonzero(stitched_overlap_vals)
-                        stitched_overlap_vals = stitched_overlap_vals[keep_vals]
-                        stitched_overlap_counts = stitched_overlap_counts[keep_vals]
+        # loop through each cell in the crop to determine
+        # if it overlaps with another cell in full image
+        for cell in potential_overlap_cells:
 
-                        # if there are overlaps, determine which is greatest in count,
-                        # and replace with that ID
-                        if len(stitched_overlap_vals) > 0:
-                            max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_counts)]
-                            crop[crop == cell] = max_overlap
+            # get cell ids present in stitched image
+            # at location of current cell in crop
+            stitched_overlap_vals, stitched_overlap_counts = \
+                np.unique(stitched_crop[crop == cell], return_counts=True)
 
-                    # combine the crop with the current values in the stitched image
-                    combined_crop = np.where(stitched_crop > 0, stitched_crop, crop)
+            # remove IDs and counts corresponding to overlap with ID 0 (background)
+            keep_vals = np.nonzero(stitched_overlap_vals)
+            stitched_overlap_vals = stitched_overlap_vals[keep_vals]
+            stitched_overlap_counts = stitched_overlap_counts[keep_vals]
 
-                    # use this combined crop to update the values of stitched image
-                    stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row],
-                                    col_starts[col]:col_ends[col], 0] = combined_crop
+            # if there are overlaps, determine which is greatest in count,
+            # and replace with that ID
+            if len(stitched_overlap_vals) > 0:
+                max_overlap = stitched_overlap_vals[np.argmax(stitched_overlap_counts)]
+                crop[crop == cell] = max_overlap
 
-                    crop_counter += 1
+        # combine the crop with the current values in the stitched image
+        combined_crop = np.where(stitched_crop > 0, stitched_crop, crop)
+
+        # use this combined crop to update the values of stitched image
+        stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row],
+                        col_starts[col]:col_ends[col], 0] = combined_crop
 
     # relabel images to remove skipped cell_ids
     return stitched_labels
