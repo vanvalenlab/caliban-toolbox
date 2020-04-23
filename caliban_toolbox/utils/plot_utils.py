@@ -94,7 +94,7 @@ def overlay_grid_lines(overlay_img, row_starts, row_ends, col_starts, col_ends):
 
 
 def overlay_crop_overlap(img_crop, row_starts, row_ends, col_starts, col_ends):
-    """Visualize degree of overlap between adjacent crops by plotting overlap regions
+    """Plot a single crop to evaluate amount of overlap with adjacent crops
 
     Args:
         img_crop: example crop to use for plotting overlap

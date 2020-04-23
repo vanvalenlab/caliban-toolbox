@@ -129,8 +129,7 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
 
 def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
     """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with pre_annotation.caliban_csv.create_next_CSV to create
-    the next stage of Caliban jobs without needing to download each result file."""
+    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
 
     copy_source = {'Bucket': output_bucket,
                    'Key': key_src}

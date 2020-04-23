@@ -87,9 +87,10 @@ def test_relabel_all_frames():
 #     # img = combined_stack[2, :, :, 0]
 #     # next_img = combined_stack[4, :, :, 0]
 #
-#     input_data = np.load('tests/caliban_toolbox/stack_j046_i003_all_channels.npz')['annotated']
-#     true_data =
-#         np.load('tests/caliban_toolbox/stack_j046_i003_all_channels_relabeled.npz')['annotated']
+#     input_data = np.load('tests/caliban_toolbox/
+#                          stack_j046_i003_all_channels.npz')['annotated']
+#     true_data = np.load('tests/caliban_toolbox/
+#                          stack_j046_i003_all_channels_relabeled.npz')['annotated']
 #     relabeled_data = relabel.predict_relationships(input_data[:, :, :, :1])
 #
 #     assert np.all(true_data == relabeled_data)

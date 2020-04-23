@@ -35,7 +35,7 @@ from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
 
 
 def copy_job(job_id, key):
-    """Create a Figure 8 job based on existing job
+    """Helper function to create a Figure 8 job based on existing job.
 
     Args:
         job_id: ID number of job to copy instructions and settings from when creating new job
@@ -45,7 +45,7 @@ def copy_job(job_id, key):
         int: ID number of job created
     """
 
-    url = 'https://api.figure-eight.com/v1/jobs/{}/copy.json?'.format(str(job_id))
+    url = 'https://api.appen.com/v1/jobs/{}/copy.json?'.format(str(job_id))
     API_key = {"key": key}
 
     new_job = requests.get(url, params=API_key)
@@ -65,7 +65,7 @@ def upload_data(csv_path, job_id, key):
         key: API key to access Figure 8 account
     """
 
-    url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
+    url = "https://api.appen.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
     url = url.replace('{job_id}', str(job_id))
     url = url.replace('{api_key}', key)
 

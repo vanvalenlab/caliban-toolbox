@@ -416,7 +416,7 @@ def get_saved_file_path(dir_list, fov_name, crop, slice, file_ext='.npz'):
         string: formatted file name
 
     Raises:
-        ValueError: If no file path matches were found
+        ValueError: If multiple file path matches were found
     """
 
     base_string = 'fov_{}_crop_{}_slice_{}'.format(fov_name, crop, slice)
