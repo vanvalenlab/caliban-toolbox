@@ -28,6 +28,7 @@ import os
 import stat
 import zipfile
 import pandas as pd
+import urllib
 
 from getpass import getpass
 from caliban_toolbox.log_file import create_upload_log
@@ -65,9 +66,11 @@ def upload_data(csv_path, job_id, key):
         key: API key to access Figure 8 account
     """
 
-    url = "https://api.appen.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
-    url = url.replace('{job_id}', str(job_id))
-    url = url.replace('{api_key}', key)
+    # format url with appropriate arguments
+    url = "https://api.appen.com/v1/jobs/{}/upload.json?{}"
+    url_dict = {'key': key, 'force': True}
+    url_encoded_dict = urllib.parse.urlencode(url_dict)
+    url = url.format(job_id, url_encoded_dict)
 
     csv_file = open(csv_path, 'r')
     csv_data = csv_file.read()

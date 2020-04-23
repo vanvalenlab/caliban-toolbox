@@ -29,6 +29,8 @@ import os
 import threading
 import re
 
+from urllib.parse import urlencode
+
 import numpy as np
 from getpass import getpass
 
@@ -89,16 +91,8 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
-    # optional flags to add to URL
-    optional_flags = np.any([pixel_only, label_only, rgb_mode])
-    if optional_flags:
-        optional_url = "?"
-        if pixel_only:
-            optional_url += "&pixel_only=true"
-        if label_only:
-            optional_url += "&label_only=true"
-        if rgb_mode:
-            optional_url += "&rgb=true"
+    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
+    url_encoded_dict = urlencode(url_dict)
 
     # upload images
     for img in files_to_upload:
@@ -114,12 +108,9 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
                        ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': img_path}})
         print('\n')
 
-        url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format('caliban-input',
-                                                                            'caliban-output',
-                                                                            subfolders, stage, img)
-
-        if optional_flags:
-            url += optional_url
+        url = 'https://caliban.deepcell.org/{}__{}__{}__' \
+              '{}__{}?{}'.format('caliban-input', 'caliban-output', subfolders, stage, img,
+                                 url_encoded_dict)
 
         # add caliban url to list
         filename_list.append(url)
