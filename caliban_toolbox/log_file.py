@@ -126,11 +126,9 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
 #             if rgb_mode:
 #                 optional_url += "&rgb=true"
 #
-#         new_filepath = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
-#                                                                                      output_bucket,
-#                                                                                      subfolders,
-#                                                                                      next_stage,
-#                                                                                      filename)
+#         new_filepath = "https://caliban.deepcell.org/
+#                         {0}__{1}__{2}__{3}__{4}".format(input_bucket, output_bucket, subfolders,
+#                          next_stage, filename)
 #
 #         if optional_flags:
 #             new_filepath += optional_url
