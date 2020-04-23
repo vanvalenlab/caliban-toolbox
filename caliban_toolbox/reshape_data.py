@@ -160,11 +160,9 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
     log_data['row_starts'] = row_starts.tolist()
     log_data['row_ends'] = row_ends.tolist()
     log_data['row_crop_size'] = crop_size[0]
-    log_data['num_row_crops'] = len(row_starts)
     log_data['col_starts'] = col_starts.tolist()
     log_data['col_ends'] = col_ends.tolist()
     log_data['col_crop_size'] = crop_size[1]
-    log_data['num_col_crops'] = len(col_starts)
     log_data['row_padding'] = int(row_padding)
     log_data['col_padding'] = int(col_padding)
     log_data['num_crops'] = data_xr_cropped.shape[2]
@@ -304,8 +302,8 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
 
-    num_row_crops = log_data.get('num_row_crops', 1)
-    num_col_crops = log_data.get('num_col_crops', 1)
+    # if these are present, it means data was cropped/sliced. Otherwise, default to 1
+    num_crops = log_data.get('num_crops', 1)
     num_slices = log_data.get('num_slices', 1)
 
     fov_names = original_xr.fovs.values
@@ -319,54 +317,41 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
 
     # loop through all crops in all images
     for fov in range(fov_len):
-        crop_counter = 0
-        for row in range(num_row_crops):
-            for col in range(num_col_crops):
-                for slice in range(num_slices):
-                    # generate identifier for crop
-                    npz_id = 'fov_{}_row_{}_col_{}_slice_{}'.format(fov_names[fov], row, col, slice)
+        for crop in range(num_crops):
+            for slice in range(num_slices):
+                # generate identifier for crop
+                npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
-                    # subset xarray based on supplied indices
-                    current_xr = resized_xr[fov, :, crop_counter, slice,  ...]
-                    labels = current_xr[..., -1:].values
-                    channels = current_xr[..., :-1].values
+                # subset xarray based on supplied indices
+                current_xr = resized_xr[fov, :, crop, slice,  ...]
+                labels = current_xr[..., -1:].values
+                channels = current_xr[..., :-1].values
 
-                    # determine if labels are blank, and if so what to do with npz
-                    if np.sum(labels) == 0:
+                # determine if labels are blank, and if so what to do with npz
+                if np.sum(labels) == 0:
 
-                        # blank labels get saved to separate folder
-                        if blank_labels == 'separate':
-                            if verbose:
-                                print('{} is blank, saving to separate folder'.format(npz_id))
-                            save_path = os.path.join(save_dir, blank_labels, npz_id)
+                    # blank labels get saved to separate folder
+                    if blank_labels == 'separate':
+                        if verbose:
+                            print('{} is blank, saving to separate folder'.format(npz_id))
+                        save_path = os.path.join(save_dir, blank_labels, npz_id)
 
-                            # save images as either npz or xarray
-                            if save_format == 'npz':
-                                np.savez(save_path + '.npz', X=channels, y=labels)
+                        # save images as either npz or xarray
+                        if save_format == 'npz':
+                            np.savez(save_path + '.npz', X=channels, y=labels)
 
-                            elif save_format == 'xr':
-                                current_xr.to_netcdf(save_path + '.xr')
+                        elif save_format == 'xr':
+                            current_xr.to_netcdf(save_path + '.xr')
 
-                        # blank labels don't get saved, empty area of tissue
-                        elif blank_labels == 'skip':
-                            if verbose:
-                                print('{} is blank, skipping saving'.format(npz_id))
+                    # blank labels don't get saved, empty area of tissue
+                    elif blank_labels == 'skip':
+                        if verbose:
+                            print('{} is blank, skipping saving'.format(npz_id))
 
-                        # blank labels get saved along with other crops
-                        elif blank_labels == 'include':
-                            if verbose:
-                                print('{} is blank, saving to folder'.format(npz_id))
-                            save_path = os.path.join(save_dir, npz_id)
-
-                            # save images as either npz or xarray
-                            if save_format == 'npz':
-                                np.savez(save_path + '.npz', X=channels, y=labels)
-
-                            elif save_format == 'xr':
-                                current_xr.to_netcdf(save_path + '.xr')
-
-                    else:
-                        # crop is not blank, save based on file_format
+                    # blank labels get saved along with other crops
+                    elif blank_labels == 'include':
+                        if verbose:
+                            print('{} is blank, saving to folder'.format(npz_id))
                         save_path = os.path.join(save_dir, npz_id)
 
                         # save images as either npz or xarray
@@ -376,7 +361,16 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
                         elif save_format == 'xr':
                             current_xr.to_netcdf(save_path + '.xr')
 
-                crop_counter += 1
+                else:
+                    # crop is not blank, save based on file_format
+                    save_path = os.path.join(save_dir, npz_id)
+
+                    # save images as either npz or xarray
+                    if save_format == 'npz':
+                        np.savez(save_path + '.npz', X=channels, y=labels)
+
+                    elif save_format == 'xr':
+                        current_xr.to_netcdf(save_path + '.xr')
 
     log_data['fov_names'] = fov_names.tolist()
     log_data['channel_names'] = original_xr.channels.values.tolist()
@@ -389,14 +383,13 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
         json.dump(log_data, write_file)
 
 
-def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext='.npz'):
+def get_saved_file_path(dir_list, fov_name, crop, slice, file_ext='.npz'):
     """Helper function to identify correct file path for an npz file
 
     Args:
         dir_list: list of files in directory
         fov_name: string of the current fov_name
-        row: int of current row
-        col: int of current col
+        crop: int of current crop
         slice: int of current slice
         file_ext: extension file was saved with
 
@@ -404,7 +397,7 @@ def get_saved_file_path(dir_list, fov_name, row, col, slice, file_ext='.npz'):
         file_path: string of formatted file path with appropriate ending
     """
 
-    base_string = 'fov_{}_row_{}_col_{}_slice_{}'.format(fov_name, row, col, slice)
+    base_string = 'fov_{}_crop_{}_slice_{}'.format(fov_name, crop, slice)
     string_matches = [string for string in dir_list if base_string + '_save_version' in string]
 
     if len(string_matches) == 0:
@@ -431,60 +424,58 @@ def load_npzs(crop_dir, log_data, verbose=True):
     """
 
     fov_names = log_data['fov_names']
-    num_crops, num_slices = log_data.get('num_crops', 1), log_data.get('num_slices', 1)
-    num_row_crops, num_col_crops = log_data.get('num_row_crops', 1), log_data.get('num_col_crops', 1)
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
-    slice_stack_len = log_data.get('slice_stack_len', stack_len)
-
-    row_crop_size, col_crop_size = log_data.get('row_crop_size', row_size), log_data.get('col_crop_size', col_size)
     save_format = log_data['save_format']
 
+    # if cropped/sliced, get size of dimensions. Otherwise, use size in original data
+    row_crop_size = log_data.get('row_crop_size', row_size)
+    col_crop_size = log_data.get('col_crop_size', col_size)
+    slice_stack_len = log_data.get('slice_stack_len', stack_len)
+
+    # if cropped/sliced, get number of crops/slices
+    num_crops, num_slices = log_data.get('num_crops', 1), log_data.get('num_slices', 1)
+    print((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size))
     stack = np.zeros((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size, 1))
     saved_files = os.listdir(crop_dir)
 
     # loop through all npz files
     for fov_idx, fov_name in enumerate(fov_names):
-        crop_idx = 0
-        for row in range(num_row_crops):
-            for col in range(num_col_crops):
-                for slice in range(num_slices):
+        for crop in range(num_crops):
+            for slice in range(num_slices):
+                # load NPZs
+                if save_format == 'npz':
+                    npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, crop, slice))
+                    if os.path.exists(npz_path):
+                        temp_npz = np.load(npz_path)
 
-                    # load NPZs
-                    if save_format == 'npz':
-                        npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
-                        if os.path.exists(npz_path):
-                            temp_npz = np.load(npz_path)
-
-                            # last slice may be truncated, modify index
-                            if slice == num_slices - 1:
-                                current_stack_len = temp_npz['X'].shape[1]
-                            else:
-                                current_stack_len = slice_stack_len
-
-                            stack[fov_idx, :current_stack_len, crop_idx, slice, ...] = temp_npz['y']
+                        # last slice may be truncated, modify index
+                        if slice == num_slices - 1:
+                            current_stack_len = temp_npz['X'].shape[1]
                         else:
-                            # npz not generated, did not contain any labels, keep blank
-                            if verbose:
-                                print('could not find npz {}, skipping'.format(npz_path))
+                            current_stack_len = slice_stack_len
 
-                    # load xarray
-                    elif save_format == 'xr':
-                        xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, row, col, slice))
-                        if os.path.exists(xr_path):
-                            temp_xr = xr.open_dataarray(xr_path)
+                        stack[fov_idx, :current_stack_len, crop, slice, ...] = temp_npz['y']
+                    else:
+                        # npz not generated, did not contain any labels, keep blank
+                        if verbose:
+                            print('could not find npz {}, skipping'.format(npz_path))
 
-                            # last slice may be truncated, modify index
-                            if slice == num_slices - 1:
-                                current_stack_len = temp_xr.shape[1]
-                            else:
-                                current_stack_len = stack_len
+                # load xarray
+                elif save_format == 'xr':
+                    xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_name, crop, slice))
+                    if os.path.exists(xr_path):
+                        temp_xr = xr.open_dataarray(xr_path)
 
-                            stack[fov_idx, :current_stack_len, crop_idx, slice, ...] = temp_xr[..., -1:]
+                        # last slice may be truncated, modify index
+                        if slice == num_slices - 1:
+                            current_stack_len = temp_xr.shape[1]
                         else:
-                            # npz not generated, did not contain any labels, keep blank
-                            print('could not find xr {}, skipping'.format(xr_path))
+                            current_stack_len = stack_len
 
-                crop_idx += 1
+                        stack[fov_idx, :current_stack_len, crop, slice, ...] = temp_xr[..., -1:]
+                    else:
+                        # npz not generated, did not contain any labels, keep blank
+                        print('could not find xr {}, skipping'.format(xr_path))
 
     return stack
 

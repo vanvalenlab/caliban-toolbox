@@ -278,7 +278,7 @@ def test_save_npzs_for_caliban():
                                                 save_format="npz", verbose=False)
 
         # check that correct size was saved
-        test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_row_0_col_0_slice_0.npz"))
+        test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_crop_0_slice_0.npz"))
 
         assert test_npz_labels["y"].shape == (slice_stack_len, row_len, col_len, 1)
 
@@ -356,34 +356,34 @@ def test_save_npzs_for_caliban():
 
 def test_get_npz_file_path():
     # create list of npz_ids
-    dir_list = ["fov_fov1_row_2_col_3_slice_4.npz", "fov_fov1_row_2_col_3_slice_5_save_version_0.npz",
-                "fov_fov1_row_2_col_3_slice_6_save_version_0.npz", "fov_fov1_row_2_col_3_slice_6_save_version_1.npz",
-                "fov_fov1_row_2_col_3_slice_7_save_version_0.npz",
-                "fov_fov1_row_2_col_3_slice_7_save_version_0_save_version_2.npz"]
+    dir_list = ["fov_fov1_crop_2_slice_4.npz", "fov_fov1_crop_2_slice_5_save_version_0.npz",
+                "fov_fov1_crop_2_slice_6_save_version_0.npz", "fov_fov1_crop_2_slice_6_save_version_1.npz",
+                "fov_fov1_crop_2_slice_7_save_version_0.npz",
+                "fov_fov1_crop_2_slice_7_save_version_0_save_version_2.npz"]
 
-    fov, row, col = "fov1", 2, 3
+    fov, crop = "fov1", 2
 
     # test unmodified npz
     slice = 4
-    output_string = reshape_data.get_saved_file_path(dir_list, fov, row, col, slice)
+    output_string = reshape_data.get_saved_file_path(dir_list, fov, crop, slice)
 
     assert output_string == dir_list[0]
 
     # test single modified npz
     slice = 5
-    output_string = reshape_data.get_saved_file_path(dir_list, fov, row, col, slice)
+    output_string = reshape_data.get_saved_file_path(dir_list, fov, crop, slice)
     assert output_string == dir_list[1]
 
     # test that error is raised when multiple save versions present
     slice = 6
     with pytest.raises(ValueError):
-        output_string = reshape_data.get_saved_file_path(dir_list, fov, row, col, slice)
+        output_string = reshape_data.get_saved_file_path(dir_list, fov, crop, slice)
 
     # test that error is raised when multiple save versions present due to resaves
     slice = 7
 
     with pytest.raises(ValueError):
-        output_string = reshape_data.get_saved_file_path(dir_list, fov, row, col, slice)
+        output_string = reshape_data.get_saved_file_path(dir_list, fov, crop, slice)
 
 
 def test_load_npzs():
