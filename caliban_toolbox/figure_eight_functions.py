@@ -114,7 +114,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                       pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
 
     # upload NPZs using log file
-    upload_data(os.path.join(base_dir, 'logs/upload_log.csv'), new_job_id, key)
+    upload_data(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), new_job_id, key)
 
 
 def download_report(job_id, log_dir):
@@ -176,7 +176,8 @@ def download_figure_eight_output(base_dir):
     """
 
     # get information from job creation
-    log_file = pd.read_csv(os.path.join(base_dir, 'logs/upload_log.csv'))
+    # TODO: check for latest stage job report and use that one
+    log_file = pd.read_csv(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'))
     job_id = log_file['job_id'][0]
 
     # download Figure 8 report

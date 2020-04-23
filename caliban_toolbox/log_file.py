@@ -71,7 +71,7 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
         os.chmod(log_dir, mode)
 
     # save csv file
-    dataframe.to_csv(os.path.join(log_dir, 'upload_log.csv'), index=False)
+    dataframe.to_csv(os.path.join(log_dir, 'stage_0_upload_log.csv'), index=False)
 
 
 # TODO: update for caliban jobs
