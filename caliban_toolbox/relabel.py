@@ -13,7 +13,7 @@ def relabel_preserve_relationships(annotations, start_val=1):
         start_val: Value where relabeling will begin
 
     Returns:
-        relabeled_annotations: xarray containing annotations that have been relabeled
+        xr.DataArray: annotations that have been relabeled
     """
 
     fov_len, stack_len, num_crops, num_slices, rows, cols, channels = annotations.shape
@@ -50,7 +50,7 @@ def relabel_all_frames(input_data, start_val=1):
         start_val: Value of first label in each frame
 
     Returns:
-        relabeled_data: array of relabeled data
+        numpy.array: relabeled data
     """
 
     relabeled_annotations = np.zeros(input_data.shape)
@@ -80,7 +80,7 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
         threshold: iou cutoff to determine if cells match
 
     Returns:
-        next_relabeled: corrected version of next_img
+        numpy.array: corrected version of next_img
     """
 
     # relabel to remove skipped values, keeps subsequent predictions cleaner
@@ -209,7 +209,7 @@ def predict_relationships(image_stack, start_val=1, threshold=0.1):
         threshold: iou threshold for classifying cells as a match
 
     Returns:
-        relabeled_stack: stack of relabeled images
+        numpy.array: stack of relabeled images
     """
 
     # create new array to store the relabeled annotations
@@ -255,7 +255,7 @@ def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1
         threshold: minimum iou threshold to count an overlap for predict relabeling
 
     Returns:
-        array of relabel
+        numpy.array: relabeled data
     """
 
     allowed_relabels = ['preserve', 'all_frames', 'predict']

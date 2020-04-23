@@ -49,9 +49,6 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
-
-    Returns:
-        None
     """
 
     data = {'project_url': filepaths,
@@ -83,7 +80,7 @@ def create_next_CSV(csv_dir, job_id, next_stage):
     the next job in the sequence.
 
     Returns:
-        identifier: string, identifier used for previous job in sequence. Returned to make it easy
+        string: identifier used for previous job in sequence. Returned to make it easy
             to move the next job along without having to look somewhere to find identifier"""
 
     # job_report_csv creates CSV dir if does not already exist, so we use parent directory here

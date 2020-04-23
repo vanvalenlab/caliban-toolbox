@@ -30,8 +30,6 @@ import threading
 import re
 
 import numpy as np
-import pandas as pd
-
 from getpass import getpass
 
 from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
@@ -75,8 +73,6 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
         upload_folder: path to folder containing files that will be uploaded
 
-    Returns:
-        None
     """
 
     s3 = connect_aws()
@@ -145,9 +141,6 @@ def aws_download_files(upload_log, output_dir):
     Args:
         upload_log: pandas file containing information from upload process
         output_dir: directory where files will be saved
-
-    Returns:
-        None
     """
 
     s3 = connect_aws()

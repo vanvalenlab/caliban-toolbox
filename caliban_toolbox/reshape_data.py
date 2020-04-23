@@ -45,9 +45,9 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
     Returns:
-        start_indices: array of coordinates for where each crop will start in given dimension
-        end_indices: array of coordinates for where each crop will end in given dimension
-        padding: number of pixels of padding at start and end of image in given dimension
+        numpy.array: coordinates for where each crop will start in given dimension
+        numpy.array: coordinates for where each crop will end in given dimension
+        int: number of pixels of padding at start and end of image in given dimension
     """
 
     # compute overlap fraction in pixels
@@ -77,9 +77,8 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
         padding: tuple of (row_pad, col_pad) which specifies the amount of padding to add the final image
 
     Returns:
-        cropped_stack: stack of cropped images of
-            shape [fovs, stacks, crops, slices, cropped_rows, cropped_cols, channels]
-        padded_image_shape: shape of the final padded image
+        numpy.array: 7D tensor of cropped images
+        tuple: shape of the final padded image
     """
 
     # determine key parameters of crop
@@ -123,7 +122,8 @@ def crop_multichannel_data(data_xr, crop_size, overlap_frac, test_parameters=Fal
         test_parameters: boolean to determine whether to run all fovs and save to disk, or only first and return values
 
     Returns:
-        data_xr_cropped: xarray of [fovs, stacks, crops, slices, rows_cropped, cols_cropped, channels
+        xarray.DataArray: 7D tensor of cropped data
+        dict: relevant data for reconstructing original imaging after cropping
     """
 
     # sanitize inputs
@@ -179,8 +179,8 @@ def compute_slice_indices(stack_len, slice_len, slice_overlap):
         slice_overlap: number of z/t frames that will overlap in each slice
 
     Returns:
-        slice_start_indices: array of coordinates for the start location of each slice
-        slice_end_indices: array of coordinates for the start location of each slice
+        numpy.array: coordinates for the start location of each slice
+        numpy.array: coordinates for the end location of each slice
     """
 
     if slice_overlap >= slice_len:
@@ -210,7 +210,7 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
         slice_end_indices: list of indices for where slices end
 
     Returns:
-        slice_xr: xarray of sliced images of [fovs, stacks, crops, slices, rows, cols, channels]
+        xarray.DataArray: 7D tensor of sliced images
     """
 
     # get input image dimensions
@@ -257,8 +257,8 @@ def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
         slice_overlap: number of z/t frames in each slice that overlap one another
 
     Returns:
-        slice_xr: xarray of [fovs, stacks, crops, slices, rows, cols, channels] that has been split
-        log_data: dictionary containing data for reconstructing original image
+        xarray.DataArray: 7D tensor of sliced data
+        dict: relevant data for reconstructing original imaging after slicing
     """
 
     # sanitize inputs
@@ -294,9 +294,6 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
         blank_labels: whether to include NPZs with blank labels (poor predictions) or skip (no cells)
         save_format: format to save the data (currently only NPZ)
         verbose: flag to control print statements
-
-    Returns:
-        None (saves npz and JSON to disk)
     """
 
     if not os.path.isdir(save_dir):
@@ -394,7 +391,10 @@ def get_saved_file_path(dir_list, fov_name, crop, slice, file_ext='.npz'):
         file_ext: extension file was saved with
 
     Returns:
-        file_path: string of formatted file path with appropriate ending
+        string: formatted file name
+
+    Raises:
+        ValueError: If no file path matches were found
     """
 
     base_string = 'fov_{}_crop_{}_slice_{}'.format(fov_name, crop, slice)
@@ -420,7 +420,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
         verbose: flag to control print statements
 
     Returns:
-        stack: combined array of all labeled images
+        numpy.array: 7D tensor of labeled crops
     """
 
     fov_names = log_data['fov_names']
@@ -434,7 +434,6 @@ def load_npzs(crop_dir, log_data, verbose=True):
 
     # if cropped/sliced, get number of crops/slices
     num_crops, num_slices = log_data.get('num_crops', 1), log_data.get('num_slices', 1)
-    print((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size))
     stack = np.zeros((fov_len, slice_stack_len, num_crops, num_slices, row_crop_size, col_crop_size, 1))
     saved_files = os.listdir(crop_dir)
 
@@ -488,7 +487,7 @@ def stitch_crops(annotated_data, log_data):
         log_data: dictionary of parameters for reconstructing original image data
 
     Returns:
-        stitched_image: stitched labels of [fovs, stacks, crops, slices, rows, cols, channels]
+        numpy.array: 7D tensor of reconstructed labels
     """
 
     # Initialize image with single dimension for channels
@@ -558,9 +557,6 @@ def reconstruct_image_stack(crop_dir, verbose=True):
     Args:
         crop_dir: directory where cropped files are stored
         verbose: flag to control print statements
-
-    Returns:
-        None (saves stitched xarray to folder)
     """
 
     # sanitize inputs
@@ -602,7 +598,7 @@ def stitch_slices(slice_stack, log_data):
         log_data: log data produced from creation of slice stack
 
     Returns:
-        stitched_slices: xarray of shape [fovs, stacks, crops, slices, rows, cols, segmentation_label]
+        xarray.DataArray: 7D tensor of stitched labeled slices
     """
 
     # get parameters from dict
@@ -637,9 +633,10 @@ def reconstruct_slice_data(save_dir, verbose=True):
 
     Args:
         save_dir: full path to directory where slice pieces are stored
+        verbose: flag to control print statements
 
     Returns:
-        stitched_xr: xarray of [fovs, slices, rows, cols, segmentation_label] containing stitched labels
+        xarray.DataArray: 7D tensor of stitched labeled slices
     """
 
     if not os.path.isdir(save_dir):

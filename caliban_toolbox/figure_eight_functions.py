@@ -42,7 +42,7 @@ def copy_job(job_id, key):
         key: API key to access Figure 8 account
 
     Returns:
-        ID number of job created
+        int: ID number of job created
     """
 
     url = 'https://api.figure-eight.com/v1/jobs/{}/copy.json?'.format(str(job_id))
@@ -63,9 +63,6 @@ def upload_data(csv_path, job_id, key):
         csv_path: full path to csv
         job_id: ID number of job to upload data to
         key: API key to access Figure 8 account
-
-    Returns:
-        None
     """
 
     url = "https://api.figure-eight.com/v1/jobs/{job_id}/upload.json?key={api_key}&force=true"
@@ -96,9 +93,6 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
-
-    Returns:
-        None
     """
 
     key = str(getpass("Figure eight api key? "))
@@ -130,9 +124,6 @@ def download_report(job_id, log_dir):
     Args:
         job_id: Figure 8 job id
         log_dir: full path to log_dir where report will be saved
-
-    Returns:
-        None
     """
 
     if not os.path.isdir(log_dir):
@@ -164,9 +155,6 @@ def unzip_report(log_dir):
 
     Args:
         log_dir: full path to log_dir for saving zip
-
-    Returns:
-        None
     """
 
     # Extract zip
@@ -186,9 +174,6 @@ def download_figure_eight_output(base_dir):
 
     Args:
         base_dir: directory containing relevant job files
-
-    Returns:
-        None
     """
 
     # get information from job creation
