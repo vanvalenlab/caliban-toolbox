@@ -523,19 +523,21 @@ def stitch_crops(annotated_data, log_data):
 
     row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
     col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
-    num_crops = log_data['num_crops']
 
     if annotated_data.shape[3] != 1:
         raise ValueError('Stacks must be combined before stitching can occur')
 
+    print('annotated shape: {}'.format(annotated_data.shape))
+    print('num rows, num cols {} {}'.format(len(row_starts), len(col_starts)))
     # for each fov and stack, loop through rows and columns of crop positions
     for indices in product(range(fov_len), range(stack_len),
                            range(len(row_starts)), range(len(col_starts))):
 
         fov, stack, row, col = indices
+        print('row, col {} {}'.format(row, col))
 
         # determine what crop # we're currently working on
-        crop_counter = row * len(row_starts) + col * len(col_starts)
+        crop_counter = row * len(row_starts) + col
 
         # get current crop
         crop = annotated_data[fov, stack, crop_counter, 0, :, :, 0]

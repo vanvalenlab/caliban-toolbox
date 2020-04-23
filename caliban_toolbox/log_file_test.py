@@ -19,6 +19,6 @@ def test_create_upload_log():
                           filenames=filenames, filepaths=filepaths, job_id=job_id,
                           pixel_only=False, rgb_mode=True, label_only=True)
 
-        log_file = pd.read_csv(os.path.join(temp_dir, 'logs/upload_log.csv'))
+        log_file = pd.read_csv(os.path.join(temp_dir, 'logs/stage_0_upload_log.csv'))
 
         assert np.all(log_file['filename'] == filenames)
