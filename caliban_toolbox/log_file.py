@@ -108,7 +108,8 @@ def create_next_CSV(csv_dir, job_id, next_stage):
         key_dst = "{0}/{1}/{2}".format(subfolders, next_stage, filename)
 
         # transfer output file to new key in input bucket
-        print("Moving {0} to {1}/{2} in {3}.".format(filename, subfolders, next_stage, input_bucket))
+        print("Moving {0} to {1}/{2} in {3}.".format(filename, subfolders,
+                                                     next_stage, input_bucket))
         aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst)
 
         subfolders = re.split('/', subfolders)
@@ -162,9 +163,9 @@ def save_annotations_from_csv(csv_path, annotations_folder):
         annotations_folder: full path to directory where downloaded annotations should be saved
 
     Returns:
-        List of images that have missing annotations; list is empty if job completed successfully. If job
-            did not complete successfully, a csv file is created that contains just the rows that should be
-            re-uploaded"""
+        List of images that have missing annotations; list is empty if job completed successfully.
+        If job did not complete successfully, a csv file is created that contains just
+        the rows that should be re-uploaded"""
 
     if not os.path.isdir(annotations_folder):
         os.makedirs(annotations_folder)
@@ -203,8 +204,11 @@ def save_annotations_from_csv(csv_path, annotations_folder):
             annotation_save_path = os.path.join(annotations_folder, new_ann_name)
 
             # remove image from broken_link information, if this is a row that was re-run successfully
-            broken_link_reupload_df.drop(broken_link_reupload_df[broken_link_reupload_df["image_url"] == image_url].index, inplace=True)
-            broken_link_full_df.drop(broken_link_full_df[broken_link_full_df["image_url"] == image_url].index, inplace=True)
+            broken_link_reupload_df.drop(broken_link_reupload_df[
+                                             broken_link_reupload_df["image_url"] ==
+                                             image_url].index, inplace=True)
+            broken_link_full_df.drop(broken_link_full_df[broken_link_full_df["image_url"] ==
+                                                         image_url].index, inplace=True)
 
             # download image from annotation
             img_request = requests.get(annotation_url)
@@ -216,8 +220,10 @@ def save_annotations_from_csv(csv_path, annotations_folder):
                 broken_link_reupload_df.loc[0] = csv_data.loc[row]
                 broken_link_full_df.loc[0] = csv_data.loc[row]
             else:
-                broken_link_reupload_df.loc[broken_link_reupload_df.last_valid_index()+1] = csv_data.loc[row]
-                broken_link_full_df.loc[broken_link_full_df.last_valid_index()+1] = csv_data.loc[row]
+                broken_link_reupload_df.loc[broken_link_reupload_df.last_valid_index()+1] = \
+                    csv_data.loc[row]
+                broken_link_full_df.loc[broken_link_full_df.last_valid_index()+1] = \
+                    csv_data.loc[row]
 
     if broken_link_full_df.last_valid_index() is not None:
         # only save dataframes with broken_link info if there is something in them

@@ -105,15 +105,17 @@ def get_images_from_directory(data_location, channel_names, data_format="channel
 
 
 def list_npzs_folder(npz_dir):
-    '''
-    Helper to get all npz names from a given folder. Analogous
-    to get_img_names. Filenames are returned in a sorted list.
-    Inputs:
-        npz_dir: full path to folder that you want to get npz names from
-    Output:
-        sorted list of npz files
-    '''
+    """Gets all npzs in a given folder
+
+    Args:
+        npz_dir: full path to folder containing npzs
+
+    Returns:
+        list: sorted npz files
+    """
+
     all_files = os.listdir(npz_dir)
     npz_list = [i for i in all_files if ".npz" in i]
     npz_list = sorted_nicely(npz_list)
+
     return npz_list

@@ -261,7 +261,8 @@ def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1
     allowed_relabels = ['preserve', 'all_frames', 'predict']
 
     if relabel_type not in allowed_relabels:
-        raise ValueError('relable_type must be one of [preserve, all_frames, predict]: got {}'.format(relabel_type))
+        raise ValueError('relable_type must be one of [preserve, all_frames, predict]: '
+                         'got {}'.format(relabel_type))
 
     if relabel_type == 'preserve':
         relabeled = relabel_preserve_relationships(input_data, start_val)

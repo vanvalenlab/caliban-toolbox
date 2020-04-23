@@ -25,8 +25,6 @@
 # ==============================================================================
 from __future__ import absolute_import
 
-from ipywidgets import interact, interactive, fixed
-
 from skimage import filters, img_as_uint
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -39,7 +37,8 @@ from caliban_toolbox.utils.utils import get_img_names
 
 def choose_img(name, dirpath):
     '''
-    Pick an image from a directory to see effects of contrast adjustment steps; image chosen is displayed
+    Pick an image from a directory to see effects of contrast adjustment steps;
+    image chosen is displayed
 
     Args:
         name: name of image file
@@ -89,8 +88,9 @@ def choose_img_pair(frame, raw_dir, overlay_dir):
     return raw_img_path, overlay_img_path
 
 
-def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=100, invert_img=True, gamma_adjust=1.0,
-                             equalize_hist=False, equalize_adapthist=False, v_min=0, v_max=255):
+def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=100, invert_img=True,
+                             gamma_adjust=1.0, equalize_hist=False, equalize_adapthist=False,
+                             v_min=0, v_max=255):
     """Display effects of contrast adjustment on an image
     
     Args:
@@ -102,8 +102,10 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
         gamma_adjust: how much to adjust the overall brightness of the image
         equalize_hist: whether to use histogram equalization on the image
         equalize_adapthist: whether to use adaptive histogram equilazation on the image
-        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
-        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
+        v_min: minimum value from image to be rescaled,
+               pixels with intensities below this value will be set to zero
+        v_max: maximum value from image to be rescaled,
+               pixels with intensities above this value will be set to 255
     
     Returns:
         Contrast-adjusted image"""
@@ -113,18 +115,19 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
     if sobel_toggle:
         new_image += sobel_factor * filters.sobel(new_image)
         
-    new_image = sk.exposure.adjust_gamma(new_image, gamma_adjust, gain = 1)
+    new_image = sk.exposure.adjust_gamma(new_image, gamma_adjust, gain=1)
     
     if invert_img:
         new_image = sk.util.invert(new_image)
         
-    new_image=sk.exposure.rescale_intensity(new_image, in_range = 'image', out_range = 'float')
+    new_image=sk.exposure.rescale_intensity(new_image, in_range='image', out_range='float')
     
     if equalize_hist:
         new_image = sk.exposure.equalize_hist(new_image, nbins=256, mask=None)
         
     if equalize_adapthist:
-        new_image = sk.exposure.equalize_adapthist(new_image, kernel_size=None, clip_limit=0.01, nbins=256)
+        new_image = sk.exposure.equalize_adapthist(new_image, kernel_size=None,
+                                                   clip_limit=0.01, nbins=256)
      
     new_image = sk.exposure.rescale_intensity(new_image, in_range='image', out_range=np.uint8)
     new_image = new_image.astype(np.uint8)
@@ -143,21 +146,14 @@ def adjust_image(image, adjust_kwargs):
 
     Args:
         image: image to adjust, as array, with dtype np.float32
-        sigma: how much to blur image with gaussian filter (values between 0 and 1 sharpen image)
-        hist: whether to use histogram equalization on the image
-        adapthist: whether to use adaptive histogram equilazation on the image
-        gamma: how much to adjust the overall brightness of the image
-        sobel_option: whether to apply a sobel filter to the image (find edges of objects)
-        sobel: how heavily the sobel filter is applied
-        invert: whether to invert light and dark in the image
-        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
-        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
+        adjust_kwargs: dictionary of parameters for adjusting image
 
     Returns:
-        Contrast adjusted image as a numpy array (np.uint8)"""
+        numpy.array: adjusted image"""
 
     if len(image.shape) > 2:
-        print("Too many dimensions in your image. Make sure to split out channels and don't feed in image stacks")
+        print("Too many dimensions in your image. "
+              "Make sure to split out channels and don't feed in image stacks")
         return
 
     # get values
@@ -210,11 +206,11 @@ def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
         img_1: first image of pair to form composite, as numpy array
         img_2: second image of pair to form composite, as numpy array
         prop_img_1: what percentage of the composite image comes from the first input image
-        v_min: minimum value from image to be rescaled, pixels with intensities below this value will be set to zero
-        v_max: maximum value from image to be rescaled, pixels with intensities above this value will be set to 255
-        
-    Returns:
-        None"""
+        v_min: minimum value from image to be rescaled,
+               pixels with intensities below this value will be set to zero
+        v_max: maximum value from image to be rescaled,
+               pixels with intensities above this value will be set to 255
+    """
 
     prop_img_2 = 1.0 - prop_img_1
     mod_img = img_1 * prop_img_1 + img_2 * prop_img_2
@@ -235,19 +231,21 @@ def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
     # show modified image
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(mod_img, cmap = mpl.cm.gray)
-    
-    return None
 
 
 def overlay_images(img_1, img_2, prop_img_1, v_min, v_max):
     """Takes two images and overlays them on top of each other
 
-    Inputs
+    Args:
         img_1: first image to be overlaid
         img_2: second image to be overlaid
         prop_img_1: proportion of img_1 to be included in overlay
         v_min: minimum value from image for rescaling, pixles below this value will be set to 0
-        v_max: maximum value from image for rescaling, pixels above this value will be set to 255"""
+        v_max: maximum value from image for rescaling, pixels above this value will be set to 255
+
+    Returns:
+        numpy.array: overlaid image
+    """
 
     prop_img_2 = 1.0 - prop_img_1
     mod_img = img_1 * prop_img_1 + img_2 * prop_img_2
@@ -266,7 +264,7 @@ def overlay_images(img_1, img_2, prop_img_1, v_min, v_max):
 
 
 def choose_img_from_stack(stack, slice_idx, chan_name):
-    """Helper function for interactively selecting an image to test out modifications from a stack of images
+    """Helper function for interactively selecting an image to test modifications
 
     Inputs
         stack: a 4D stack of images [slices, rows, cols, channels]
@@ -274,8 +272,9 @@ def choose_img_from_stack(stack, slice_idx, chan_name):
         chan_index: index of the channel to use
 
     Returns
-        slice_index: the slice index that was selected by the user
-        chan_index: the chan_index that was selected by the user"""
+        int: the slice index that was selected by the user
+        int: the chan_index that was selected by the user
+    """
 
     chan_idx = np.where(stack.channels.values == chan_name)[0][0]
     img = stack[slice_idx, :, :, chan_idx]

@@ -58,7 +58,8 @@ def connect_aws():
     AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
     AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
 
-    session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
+                            aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
     print('Connected to AWS')
     s3 = session.client('s3')
 
@@ -72,7 +73,9 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
         aws_folder: folder where uploaded files will be stored
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
         upload_folder: path to folder containing files that will be uploaded
-
+        pixel_only: boolean flag to set pixel_only mode
+        label_only: boolean flag to set label_only mode
+        rgb_mode: boolean flag to set rgb_mode
     """
 
     s3 = connect_aws()
@@ -112,7 +115,8 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
         print('\n')
 
         url = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format('caliban-input',
-            'caliban-output', subfolders, stage, img)
+                                                                            'caliban-output',
+                                                                            subfolders, stage, img)
 
         if optional_flags:
             url += optional_url
