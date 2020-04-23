@@ -93,10 +93,15 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
 
     # create xarray to hold crops
     cropped_stack = np.zeros((fov_len, stack_len, crop_num, slice_num, crop_size_row, crop_size_col, channel_len))
-    cropped_xr = xr.DataArray(data=cropped_stack, coords=[input_data.fovs, input_data.stacks, range(crop_num),
-                                                          input_data.slices, range(crop_size_row),
-                                                          range(crop_size_col), input_data.channels],
-                              dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
+
+    # labels for each index within a dimension
+    coordinate_labels = [input_data.fovs, input_data.stacks, range(crop_num), input_data.slices,
+                         range(crop_size_row), range(crop_size_col), input_data.channels]
+
+    # labels for each dimension
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+
+    cropped_xr = xr.DataArray(data=cropped_stack, coords=coordinate_labels, dims=dimension_labels)
 
     # pad the input to account for imperfectly overlapping final crop in rows and cols
     formatted_padding = ((0, 0), (0, 0), (0, 0), (0, 0), (0, padding[0]), (0, padding[1]), (0, 0))
@@ -224,10 +229,15 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
 
     # create xarray to hold slices
     slice_data = np.zeros((fov_len, sliced_stack_len, crop_num, slice_num, row_len, col_len, chan_len))
-    slice_xr = xr.DataArray(data=slice_data, coords=[data_xr.fovs, range(sliced_stack_len), range(crop_num),
-                                                     range(slice_num), range(row_len), range(col_len),
-                                                     data_xr.channels],
-                              dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
+
+    # labels for each index within a dimension
+    coordinate_labels = [data_xr.fovs, range(sliced_stack_len), range(crop_num), range(slice_num),
+                         range(row_len), range(col_len), data_xr.channels]
+
+    # labels for each dimension
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+
+    slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=dimension_labels)
 
     # loop through slice indices to generate sliced data
     slice_counter = 0
@@ -582,10 +592,16 @@ def reconstruct_image_stack(crop_dir, verbose=True):
         stitched_images = stitched_images[:, :, :, :, :, :-col_padding, :]
 
     _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
-    stitched_xr = xr.DataArray(data=stitched_images,
-                               coords=[fov_names, range(stack_len), range(1), range(1), range(row_len), range(col_len),
-                                       ['segmentation_label']], dims=['fovs', 'stacks', 'crops', 'slices',
-                                                                      'rows', 'cols', 'channels'])
+
+    # labels for each index within a dimension
+    coordinate_labels = [fov_names, range(stack_len), range(1),
+                         range(1), range(row_len), range(col_len), ['segmentation_label']]
+
+    # labels for each dimension
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+
+    stitched_xr = xr.DataArray(data=stitched_images, coords=coordinate_labels,
+                               dims=dimension_labels)
 
     stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.nc'))
 
@@ -621,10 +637,15 @@ def stitch_slices(slice_stack, log_data):
     slice_len = slice_end_indices[last_idx] - slice_start_indices[last_idx]
     stitched_slices[:, slice_start_indices[last_idx]:slice_end_indices[last_idx], :, 0, ...] = slice_stack[:, :slice_len, :, last_idx, ...]
 
-    stitched_xr = xr.DataArray(stitched_slices,
-                               coords=[fov_names, range(stack_len), range(crop_num), range(1), range(row_len),
-                                       range(col_len), ['segmentation_label']],
-                               dims=['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels'])
+    # labels for each index within a dimension
+    coordinate_labels = [fov_names, range(stack_len), range(crop_num), range(1), range(row_len),
+                         range(col_len), ['segmentation_label']]
+
+    # labels for each dimension
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+
+    stitched_xr = xr.DataArray(stitched_slices, coords=coordinate_labels, dims=dimension_labels)
+
     return stitched_xr
 
 
