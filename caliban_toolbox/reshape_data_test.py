@@ -11,6 +11,7 @@ from caliban_toolbox import reshape_data
 import xarray as xr
 
 import importlib
+
 importlib.reload(reshape_data)
 
 
@@ -34,9 +35,11 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
     fovs = ["fov" + str(x) for x in range(1, fov_len + 1)]
     channels = ["channel" + str(x) for x in range(1, chan_len + 1)]
 
-    test_stack_xr = xr.DataArray(data=test_img, coords=[fovs, range(stack_len), range(crop_num), range(slice_num),
-                                                        range(row_len), range(col_len), channels],
-                           dims=["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"])
+    test_stack_xr = xr.DataArray(data=test_img,
+                                 coords=[fovs, range(stack_len), range(crop_num), range(slice_num),
+                                         range(row_len), range(col_len), channels],
+                                 dims=["fovs", "stacks", "crops", "slices",
+                                       "rows", "cols", "channels"])
 
     return test_stack_xr
 
@@ -45,80 +48,87 @@ def test_compute_crop_indices():
     # test corner case of only one crop
     img_len, crop_size, overlap_frac = 100, 100, 0.2
     starts, ends, padding = reshape_data.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                                   overlap_frac=overlap_frac)
-    assert(len(starts) == 1)
-    assert(len(ends) == 1)
+                                                              overlap_frac=overlap_frac)
+    assert (len(starts) == 1)
+    assert (len(ends) == 1)
 
     # test crop size that doesn't divide evenly into image size
     img_len, crop_size, overlap_frac = 105, 20, 0.2
     starts, ends, padding = reshape_data.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                                   overlap_frac=overlap_frac)
+                                                              overlap_frac=overlap_frac)
     crop_num = np.ceil(img_len / (crop_size - (crop_size * overlap_frac)))
-    assert(len(starts) == crop_num)
-    assert(len(ends) == crop_num)
+    assert (len(starts) == crop_num)
+    assert (len(ends) == crop_num)
 
     crop_end = crop_num * (crop_size - (crop_size * overlap_frac)) + crop_size * overlap_frac
-    assert(ends[-1] == crop_end)
+    assert (ends[-1] == crop_end)
 
     # test overlap of 0 between crops
     img_len, crop_size, overlap_frac = 200, 20, 0
     starts, ends, padding = reshape_data.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                                   overlap_frac=overlap_frac)
+                                                              overlap_frac=overlap_frac)
     assert (np.all(starts == range(0, 200, 20)))
     assert (np.all(ends == range(20, 201, 20)))
     assert (padding == 0)
 
 
 def test_crop_helper():
-
     # img params
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 200, 200, 1
     crop_size, overlap_frac = 200, 0.2
 
     # test only one crop
-    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                             row_len=row_len, col_len=col_len, chan_len=chan_len)
+    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                             slice_num=slice_num, row_len=row_len, col_len=col_len,
+                             chan_len=chan_len)
 
     starts, ends, padding = reshape_data.compute_crop_indices(img_len=row_len, crop_size=crop_size,
-                                                                               overlap_frac=overlap_frac)
-    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=starts, row_ends=ends,
-                                                    col_starts=starts, col_ends=ends,
-                                                    padding=(padding, padding))
+                                                              overlap_frac=overlap_frac)
+    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=starts,
+                                               row_ends=ends, col_starts=starts, col_ends=ends,
+                                               padding=(padding, padding))
 
-    assert(cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
+    assert (cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
 
     # test crops of different row/col dimensions
     row_crop, col_crop = 50, 40
-    row_starts, row_ends, row_padding = reshape_data.compute_crop_indices(img_len=row_len, crop_size=row_crop,
-                                                                               overlap_frac=overlap_frac)
+    row_starts, row_ends, row_padding = \
+        reshape_data.compute_crop_indices(img_len=row_len, crop_size=row_crop,
+                                          overlap_frac=overlap_frac)
 
-    col_starts, col_ends, col_padding = reshape_data.compute_crop_indices(img_len=col_len, crop_size=col_crop,
-                                                                               overlap_frac=overlap_frac)
+    col_starts, col_ends, col_padding = \
+        reshape_data.compute_crop_indices(img_len=col_len, crop_size=col_crop,
+                                          overlap_frac=overlap_frac)
 
-    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=row_starts, row_ends=row_ends,
-                                                    col_starts=col_starts, col_ends=col_ends,
-                                                    padding=(row_padding, col_padding))
+    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=row_starts,
+                                               row_ends=row_ends, col_starts=col_starts,
+                                               col_ends=col_ends,
+                                               padding=(row_padding, col_padding))
 
-    assert(cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
+    assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
 
     # test that correct region of image is being cropped
     row_crop, col_crop = 40, 40
 
     # assign each pixel in the image a unique value
     linear_sequence = np.arange(0, fov_len * 1 * 1 * row_len * col_len * chan_len)
-    linear_sequence_reshaped = np.reshape(linear_sequence, (fov_len, 1, 1, 1, row_len, col_len, chan_len))
+    linear_sequence_reshaped = np.reshape(linear_sequence, (fov_len, 1, 1, 1, row_len,
+                                                            col_len, chan_len))
     test_xr[:, :, :, :, :, :, :] = linear_sequence_reshaped
 
     # crop the image
-    row_starts, row_ends, row_padding = reshape_data.compute_crop_indices(img_len=row_len, crop_size=row_crop,
-                                                                               overlap_frac=overlap_frac)
+    row_starts, row_ends, row_padding = \
+        reshape_data.compute_crop_indices(img_len=row_len, crop_size=row_crop,
+                                          overlap_frac=overlap_frac)
 
-    col_starts, col_ends, col_padding = reshape_data.compute_crop_indices(img_len=col_len, crop_size=col_crop,
-                                                                               overlap_frac=overlap_frac)
+    col_starts, col_ends, col_padding = \
+        reshape_data.compute_crop_indices(img_len=col_len, crop_size=col_crop,
+                                          overlap_frac=overlap_frac)
 
-    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=row_starts, row_ends=row_ends,
-                                                    col_starts=col_starts, col_ends=col_ends,
-                                                    padding=(row_padding, col_padding))
+    cropped, padded = reshape_data.crop_helper(input_data=test_xr, row_starts=row_starts,
+                                               row_ends=row_ends, col_starts=col_starts,
+                                               col_ends=col_ends,
+                                               padding=(row_padding, col_padding))
 
     # check that the values of each crop match the value in uncropped image
     for img in range(test_xr.shape[0]):
@@ -127,26 +137,32 @@ def test_crop_helper():
             for col in range(len(col_starts)):
                 crop = cropped[img, 0, crop_counter, 0, :, :, 0].values
 
-                original_image_crop = test_xr[img, 0, 0, 0, row_starts[row]:row_ends[row], col_starts[col]:col_ends[col], 0].values
-                assert(np.all(crop == original_image_crop))
+                original_image_crop = test_xr[img, 0, 0, 0, row_starts[row]:row_ends[row],
+                                              col_starts[col]:col_ends[col], 0].values
+                assert (np.all(crop == original_image_crop))
 
                 crop_counter += 1
 
 
 def test_crop_multichannel_data():
     # img params
-    fov_len, stack_len, crop_num, slice_num, row_len, col_len, channel_len = 2, 1, 1, 1, 200, 200, 1
+    fov_len, stack_len, crop_num, slice_num, row_len = 2, 1, 1, 1, 200
+    col_len, channel_len = 200, 1
     crop_size = (50, 50)
     overlap_frac = 0.2
 
     # test only one crop
-    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                             row_len=row_len, col_len=col_len, chan_len=channel_len)
+    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                             slice_num=slice_num, row_len=row_len, col_len=col_len,
+                             chan_len=channel_len)
 
-    data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=test_xr, crop_size=crop_size,
-                                                                         overlap_frac=overlap_frac, test_parameters=False)
+    data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=test_xr,
+                                                                    crop_size=crop_size,
+                                                                    overlap_frac=overlap_frac,
+                                                                    test_parameters=False)
 
-    expected_crop_num = len(reshape_data.compute_crop_indices(row_len, crop_size[0], overlap_frac)[0]) ** 2
+    expected_crop_num = len(reshape_data.compute_crop_indices(row_len, crop_size[0],
+                                                              overlap_frac)[0]) ** 2
     assert (data_xr_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
                                       crop_size[0], crop_size[1], channel_len))
 
@@ -154,20 +170,21 @@ def test_crop_multichannel_data():
 
 
 def test_compute_slice_indices():
-
     # test when slice divides evenly into stack len
     stack_len = 40
     slice_len = 4
     slice_overlap = 0
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_len,
-                                                                                           slice_overlap)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_len,
+                                                                                slice_overlap)
     assert np.all(np.equal(slice_start_indices, np.arange(0, stack_len, slice_len)))
 
     # test when slice_num does not divide evenly into stack_len
     stack_len = 42
     slice_len = 5
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_len,
-                                                                                           slice_overlap)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_len,
+                                                                                slice_overlap)
 
     expected_start_indices = np.arange(0, stack_len, slice_len)
     assert np.all(np.equal(slice_start_indices, expected_start_indices))
@@ -176,72 +193,83 @@ def test_compute_slice_indices():
     stack_len = 40
     slice_len = 4
     slice_overlap = 1
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_len,
-                                                                                           slice_overlap)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_len,
+                                                                                slice_overlap)
+
     assert len(slice_start_indices) == int(np.floor(stack_len / (slice_len - slice_overlap)))
     assert slice_end_indices[-1] == stack_len
     assert slice_end_indices[0] - slice_start_indices[0] == slice_len
 
 
 def test_slice_helper():
-
     # test output shape with even division of slice
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_stack_len, 0)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_stack_len, 0)
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     slice_output = reshape_data.slice_helper(input_data, slice_start_indices, slice_end_indices)
 
-    assert slice_output.shape == (fov_len, slice_stack_len, crop_num, int(np.ceil(stack_len / slice_stack_len)),
-                                    row_len, col_len, chan_len)
+    assert slice_output.shape == (fov_len, slice_stack_len, crop_num,
+                                  int(np.ceil(stack_len / slice_stack_len)),
+                                  row_len, col_len, chan_len)
 
     # test output shape with uneven division of slice
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 6
 
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_stack_len, 0)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_stack_len, 0)
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     slice_output = reshape_data.slice_helper(input_data, slice_start_indices, slice_end_indices)
 
-    assert slice_output.shape == (fov_len, slice_stack_len, crop_num, (np.ceil(stack_len / slice_stack_len)),
-                                    row_len, col_len, chan_len)
+    assert slice_output.shape == (fov_len, slice_stack_len, crop_num,
+                                  (np.ceil(stack_len / slice_stack_len)),
+                                  row_len, col_len, chan_len)
 
     # test output shape with slice overlaps
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 6
     slice_overlap = 1
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_stack_len,
-                                                                                           slice_overlap)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_stack_len,
+                                                                                slice_overlap)
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     slice_output = reshape_data.slice_helper(input_data, slice_start_indices, slice_end_indices)
 
     assert slice_output.shape == (fov_len, slice_stack_len, crop_num,
-                                    (np.ceil(stack_len / (slice_stack_len - slice_overlap))),
-                                    row_len, col_len, chan_len)
+                                  (np.ceil(stack_len / (slice_stack_len - slice_overlap))),
+                                  row_len, col_len, chan_len)
 
     # test output values
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
-    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len, slice_stack_len, 0)
+    slice_start_indices, slice_end_indices = reshape_data.compute_slice_indices(stack_len,
+                                                                                slice_stack_len, 0)
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     # tag upper left hand corner of each image
     tags = np.arange(stack_len)
     input_data[0, :, 0, 0, 0, 0, 0] = tags
 
-    slice_output = reshape_data.slice_helper(input_data,  slice_start_indices, slice_end_indices)
+    slice_output = reshape_data.slice_helper(input_data, slice_start_indices, slice_end_indices)
 
     # loop through each slice, make sure values increment as expected
     for i in range(slice_output.shape[1]):
@@ -249,17 +277,18 @@ def test_slice_helper():
 
 
 def test_create_slice_data():
-
     # test output shape with even division of slice
     fov_len, stack_len, num_crops, num_slices, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops, slice_num=num_slices,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+                                slice_num=num_slices, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     slice_xr, slice_indices = reshape_data.create_slice_data(input_data, slice_stack_len)
 
-    assert slice_xr.shape == (fov_len, slice_stack_len, num_crops, int(np.ceil(stack_len / slice_stack_len)),
+    assert slice_xr.shape == (fov_len, slice_stack_len, num_crops,
+                              int(np.ceil(stack_len / slice_stack_len)),
                               row_len, col_len, chan_len)
 
 
@@ -267,15 +296,17 @@ def test_save_npzs_for_caliban():
     fov_len, stack_len, num_crops, num_slices, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops, slice_num=num_slices,
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+                                slice_num=num_slices,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     slice_xr, log_data = reshape_data.create_slice_data(input_data, slice_stack_len)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                                log_data=copy.copy(log_data),save_dir=temp_dir, blank_labels="include",
-                                                save_format="npz", verbose=False)
+                                           log_data=copy.copy(log_data), save_dir=temp_dir,
+                                           blank_labels="include",
+                                           save_format="npz", verbose=False)
 
         # check that correct size was saved
         test_npz_labels = np.load(os.path.join(temp_dir, "fov_fov1_crop_0_slice_0.npz"))
@@ -294,13 +325,17 @@ def test_save_npzs_for_caliban():
         # check that combined crop and slice saving works
         crop_size = (10, 10)
         overlap_frac = 0.2
-        data_xr_cropped, log_data_crop = reshape_data.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                                  overlap_frac=overlap_frac,
-                                                                                  test_parameters=False)
+        data_xr_cropped, log_data_crop = \
+            reshape_data.crop_multichannel_data(data_xr=slice_xr,
+                                                crop_size=crop_size,
+                                                overlap_frac=overlap_frac,
+                                                test_parameters=False)
 
         reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                                log_data={**log_data, **log_data_crop}, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz", verbose=False)
+                                           log_data={**log_data, **log_data_crop},
+                                           save_dir=temp_dir,
+                                           blank_labels="include", save_format="npz",
+                                           verbose=False)
         expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
         files = os.listdir(temp_dir)
         files = [file for file in files if "npz" in file]
@@ -316,8 +351,9 @@ def test_save_npzs_for_caliban():
     # test that function correctly includes blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
         reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                                log_data=copy.copy(log_data), save_dir=temp_dir, blank_labels="include",
-                                                save_format="npz", verbose=False)
+                                           log_data=copy.copy(log_data), save_dir=temp_dir,
+                                           blank_labels="include",
+                                           save_format="npz", verbose=False)
 
         # check that there is the expected number of files saved to directory
         files = os.listdir(temp_dir)
@@ -328,8 +364,9 @@ def test_save_npzs_for_caliban():
     # test that function correctly skips blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
         reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                                log_data=copy.copy(log_data), save_dir=temp_dir, save_format="npz",
-                                                blank_labels="skip", verbose=False)
+                                           log_data=copy.copy(log_data), save_dir=temp_dir,
+                                           save_format="npz",
+                                           blank_labels="skip", verbose=False)
 
         #  check that expected number of files in directory
         files = os.listdir(temp_dir)
@@ -339,8 +376,9 @@ def test_save_npzs_for_caliban():
     # test that function correctly saves blank crops to separate folder
     with tempfile.TemporaryDirectory() as temp_dir:
         reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                                log_data=copy.copy(log_data), save_dir=temp_dir, save_format="npz",
-                                                blank_labels="separate", verbose=False)
+                                           log_data=copy.copy(log_data), save_dir=temp_dir,
+                                           save_format="npz",
+                                           blank_labels="separate", verbose=False)
 
         # check that expected number of files in each directory
         files = os.listdir(temp_dir)
@@ -351,13 +389,15 @@ def test_save_npzs_for_caliban():
         files = [file for file in files if "npz" in file]
         assert len(files) == expected_crop_num - 3
 
+
 # postprocessing
 
 
 def test_get_npz_file_path():
     # create list of npz_ids
     dir_list = ["fov_fov1_crop_2_slice_4.npz", "fov_fov1_crop_2_slice_5_save_version_0.npz",
-                "fov_fov1_crop_2_slice_6_save_version_0.npz", "fov_fov1_crop_2_slice_6_save_version_1.npz",
+                "fov_fov1_crop_2_slice_6_save_version_0.npz",
+                "fov_fov1_crop_2_slice_6_save_version_1.npz",
                 "fov_fov1_crop_2_slice_7_save_version_0.npz",
                 "fov_fov1_crop_2_slice_7_save_version_0_save_version_2.npz"]
 
@@ -388,12 +428,13 @@ def test_get_npz_file_path():
 
 def test_load_npzs():
     with tempfile.TemporaryDirectory() as temp_dir:
-
         # first generate image stack that will be sliced up
-        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        fov_len, stack_len, crop_num, slice_num = 1, 40, 1, 1
+        row_len, col_len, chan_len = 50, 50, 3
         slice_stack_len = 4
 
-        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                    slice_num=slice_num,
                                     row_len=row_len, col_len=col_len, chan_len=chan_len)
 
         # slice the data
@@ -402,9 +443,12 @@ def test_load_npzs():
         # crop the data
         crop_size = (10, 10)
         overlap_frac = 0.2
-        data_xr_cropped, log_data_crop = reshape_data.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                                  overlap_frac=overlap_frac,
-                                                                                  test_parameters=False)
+        data_xr_cropped, log_data_crop = \
+            reshape_data.crop_multichannel_data(
+                data_xr=slice_xr,
+                crop_size=crop_size,
+                overlap_frac=overlap_frac,
+                test_parameters=False)
         # tag the upper left hand corner of the label in each slice
         slice_tags = np.arange(data_xr_cropped.shape[3])
         crop_tags = np.arange(data_xr_cropped.shape[2])
@@ -415,8 +459,9 @@ def test_load_npzs():
 
         # save the tagged data
         reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                                log_data=combined_log_data, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz", verbose=False)
+                                           log_data=combined_log_data, save_dir=temp_dir,
+                                           blank_labels="include", save_format="npz",
+                                           verbose=False)
 
         with open(os.path.join(temp_dir, "log_data.json")) as json_file:
             saved_log_data = json.load(json_file)
@@ -424,7 +469,7 @@ def test_load_npzs():
         loaded_slices = reshape_data.load_npzs(temp_dir, saved_log_data, verbose=False)
 
         # dims other than channels are the same
-        assert(np.all(loaded_slices.shape[:-1] == data_xr_cropped.shape[:-1]))
+        assert (np.all(loaded_slices.shape[:-1] == data_xr_cropped.shape[:-1]))
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -432,10 +477,12 @@ def test_load_npzs():
     # test slices with unequal last length
     with tempfile.TemporaryDirectory() as temp_dir:
         # first generate image stack that will be sliced up
-        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        fov_len, stack_len, crop_num, slice_num = 1, 40, 1, 1
+        row_len, col_len, chan_len = 50, 50, 3
         slice_stack_len = 7
 
-        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                    slice_num=slice_num,
                                     row_len=row_len, col_len=col_len, chan_len=chan_len)
 
         # slice the data
@@ -444,9 +491,13 @@ def test_load_npzs():
         # crop the data
         crop_size = (10, 10)
         overlap_frac = 0.2
-        data_xr_cropped, log_data_crop = reshape_data.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                                  overlap_frac=overlap_frac,
-                                                                                  test_parameters=False)
+        data_xr_cropped, log_data_crop = \
+            reshape_data.crop_multichannel_data(
+                data_xr=slice_xr,
+                crop_size=crop_size,
+                overlap_frac=overlap_frac,
+                test_parameters=False)
+
         # tag the upper left hand corner of the annotations in each slice
         slice_tags = np.arange(data_xr_cropped.shape[3])
         crop_tags = np.arange(data_xr_cropped.shape[2])
@@ -457,13 +508,14 @@ def test_load_npzs():
 
         # save the tagged data
         reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
-                                                log_data=combined_log_data, save_dir=temp_dir,
-                                                blank_labels="include", save_format="npz", verbose=False)
+                                           log_data=combined_log_data, save_dir=temp_dir,
+                                           blank_labels="include", save_format="npz",
+                                           verbose=False)
 
         loaded_slices = reshape_data.load_npzs(temp_dir, combined_log_data)
 
         # dims other than channels are the same
-        assert(np.all(loaded_slices.shape[:-1] == data_xr_cropped.shape[:-1]))
+        assert (np.all(loaded_slices.shape[:-1] == data_xr_cropped.shape[:-1]))
 
         assert np.all(np.equal(loaded_slices[0, 0, :, 0, 0, 0, 0], crop_tags))
         assert np.all(np.equal(loaded_slices[0, 0, 0, :, 0, 0, 0], slice_tags))
@@ -473,7 +525,8 @@ def test_stitch_crops():
     # generate stack of crops from image with grid pattern
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     # create image with artificial objects to be segmented
@@ -482,13 +535,15 @@ def test_stitch_crops():
     for i in range(12):
         for j in range(11):
             for fov in range(input_data.shape[0]):
-                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10), 3] = cell_idx
+                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10),
+                           (j * 37):(j * 37 + 8 + fov * 10), 3] = cell_idx
             cell_idx += 1
 
     # crop the image
     crop_size, overlap_frac = 400, 0.2
-    cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data, crop_size=(crop_size, crop_size),
-                                                                 overlap_frac=overlap_frac)
+    cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data,
+                                                            crop_size=(crop_size, crop_size),
+                                                            overlap_frac=overlap_frac)
     cropped_labels = cropped[..., -1:].values
     log_data["original_shape"] = input_data.shape
 
@@ -505,9 +560,8 @@ def test_stitch_crops():
     # dims other than channels are the same
     assert np.all(stitched_img.shape[:-1] == input_data.shape[:-1])
 
-
     # check that objects are at same location
-    assert(np.all(np.equal(stitched_img[..., 0] > 0, input_data.values[..., 3] > 0)))
+    assert (np.all(np.equal(stitched_img[..., 0] > 0, input_data.values[..., 3] > 0)))
 
     # check that same number of unique objects
     assert len(np.unique(stitched_img)) == len(np.unique(input_data.values))
@@ -516,7 +570,8 @@ def test_stitch_crops():
     # generate stack of crops from image with grid pattern
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 1, 1, 1, 800, 800, 1
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
     side_len = 40
     cell_num = input_data.shape[4] // side_len
@@ -526,29 +581,34 @@ def test_stitch_crops():
     cell_idx = 0
     for row in range(cell_num):
         for col in range(cell_num):
-            input_data[0, 0, 0, 0, row * side_len:(row + 1) * side_len, col * side_len:(col + 1) * side_len, 0] = cell_id[cell_idx]
+            input_data[0, 0, 0, 0, row * side_len:(row + 1) * side_len,
+                       col * side_len:(col + 1) * side_len, 0] = cell_id[cell_idx]
             cell_idx += 1
 
     crop_size, overlap_frac = 100, 0.2
 
     starts, ends, padding = reshape_data.compute_crop_indices(img_len=row_len, crop_size=crop_size,
-                                                                   overlap_frac=overlap_frac)
+                                                              overlap_frac=overlap_frac)
 
-    # generate a vector of random offsets to jitter the crop window, simulating mismatches between frames
+    # generate a vector of random offsets to jitter the crop window,
+    # simulating mismatches between frames
     offset_len = 5
-    row_offset = np.append(np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
-    col_offset = np.append(np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
+    row_offset = np.append(
+        np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
+    col_offset = np.append(
+        np.append(0, np.random.randint(-offset_len, offset_len, len(starts) - 2)), 0)
 
     # modify indices by random offset
     row_starts, row_ends = starts + row_offset, ends + row_offset
     col_starts, col_ends = starts + col_offset, ends + col_offset
 
-    cropped, padded = reshape_data.crop_helper(input_data=input_data, row_starts=row_starts, row_ends=row_ends,
-                                                    col_starts=col_starts, col_ends=col_ends,
-                                                    padding=(padding, padding))
+    cropped, padded = reshape_data.crop_helper(input_data=input_data, row_starts=row_starts,
+                                               row_ends=row_ends,
+                                               col_starts=col_starts, col_ends=col_ends,
+                                               padding=(padding, padding))
 
-
-    # generate log data, since we had to go inside the upper level function to modify crop_helper inputs
+    # generate log data, since we had to go inside the upper level
+    # function to modify crop_helper inputs
     log_data = {}
     log_data["row_starts"] = row_starts.tolist()
     log_data["row_ends"] = row_ends.tolist()
@@ -580,22 +640,24 @@ def test_stitch_crops():
     assert np.all(stitched_img.shape[:-1] == input_data.shape[:-1])
 
     # same number of unique objects before and after
-    assert(len(np.unique(relabeled)) == len(np.unique(input_data[0, 0, 0, 0, :, :, 0])))
+    assert (len(np.unique(relabeled)) == len(np.unique(input_data[0, 0, 0, 0, :, :, 0])))
 
     # no cell is smaller than offset subtracted from each side
     min_size = (side_len - offset_len * 2) ** 2
     max_size = (side_len + offset_len * 2) ** 2
 
-    assert(np.all(props["area"] <= max_size))
-    assert(np.all(props["area"] >= min_size))
+    assert (np.all(props["area"] <= max_size))
+    assert (np.all(props["area"] >= min_size))
 
 
 def test_reconstruct_image_data():
     # generate stack of crops from image with grid pattern
     with tempfile.TemporaryDirectory() as temp_dir:
-        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
+        fov_len, stack_len, crop_num, slice_num = 2, 1, 1, 1
+        row_len, col_len, chan_len = 400, 400, 4
 
-        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                    slice_num=slice_num,
                                     row_len=row_len, col_len=col_len, chan_len=chan_len)
 
         # create image with
@@ -603,20 +665,22 @@ def test_reconstruct_image_data():
         for i in range(12):
             for j in range(11):
                 for fov in range(input_data.shape[0]):
-                    input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10),
-                    3] = cell_idx
+                    input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10),
+                               (j * 37):(j * 37 + 8 + fov * 10), 3] = cell_idx
                 cell_idx += 1
 
         crop_size, overlap_frac = 40, 0.2
 
         # crop data
-        data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data,
-                                                                             crop_size=(crop_size, crop_size),
-                                                                             overlap_frac=0.2)
+        data_xr_cropped, log_data = \
+            reshape_data.crop_multichannel_data(data_xr=input_data,
+                                                crop_size=(crop_size, crop_size),
+                                                overlap_frac=0.2)
 
         # stitch data
-        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir, verbose=False)
+        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                           log_data=log_data,
+                                           save_dir=temp_dir, verbose=False)
 
         reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -626,10 +690,10 @@ def test_reconstruct_image_data():
         assert np.all(stitched_xr.shape[:-1] == input_data.shape[:-1])
 
         # all the same pixels are marked
-        assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+        assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
         # there are the same number of cells
-        assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+        assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # test single crop in x
@@ -637,12 +701,13 @@ def test_reconstruct_image_data():
 
         # crop data
         data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data,
-                                                                             crop_size=crop_size,
-                                                                             overlap_frac=0.2)
+                                                                        crop_size=crop_size,
+                                                                        overlap_frac=0.2)
 
         # stitch data
-        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir, verbose=False)
+        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                           log_data=log_data,
+                                           save_dir=temp_dir, verbose=False)
 
         reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -663,12 +728,13 @@ def test_reconstruct_image_data():
 
         # crop data
         data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data,
-                                                                             crop_size=crop_size,
-                                                                             overlap_frac=0.2)
+                                                                        crop_size=crop_size,
+                                                                        overlap_frac=0.2)
 
         # stitch data
-        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                                save_dir=temp_dir, verbose=False)
+        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                           log_data=log_data,
+                                           save_dir=temp_dir, verbose=False)
 
         reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -688,39 +754,42 @@ def test_stitch_slices():
     # generate data
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                chan_len=chan_len)
 
     # create image with
     cell_idx = 1
     for i in range(12):
         for j in range(11):
             for fov in range(input_data.shape[0]):
-                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10), (j * 37):(j * 37 + 8 + fov * 10),
-                3] = cell_idx
+                input_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10),
+                           (j * 37):(j * 37 + 8 + fov * 10), 3] = cell_idx
             cell_idx += 1
 
     crop_size, overlap_frac = 50, 0.2
     save_dir = "tests/caliban_toolbox/test_crop_and_stitch"
 
     # crop data
-    data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=input_data,
-                                                                         crop_size=(crop_size, crop_size),
-                                                                         overlap_frac=0.2)
+    data_xr_cropped, log_data = \
+        reshape_data.crop_multichannel_data(data_xr=input_data,
+                                            crop_size=(crop_size, crop_size),
+                                            overlap_frac=0.2)
 
     # stitch data
-    reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data, log_data=log_data,
-                                            save_dir=save_dir)
+    reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+                                       log_data=log_data,
+                                       save_dir=save_dir)
 
     reshape_data.reconstruct_image_stack(crop_dir=save_dir)
 
     stitched_xr = xr.open_dataarray(os.path.join(save_dir, "stitched_images.nc"))
 
     # all the same pixels are marked
-    assert(np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
+    assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, input_data[:, :, 0] > 0)))
 
     # there are the same number of cells
-    assert(len(np.unique(stitched_xr)) == len(np.unique(input_data)))
+    assert (len(np.unique(stitched_xr)) == len(np.unique(input_data)))
 
     # clean up
     shutil.rmtree(save_dir)
@@ -730,7 +799,8 @@ def test_stitch_slices():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     # generate ordered data
@@ -743,9 +813,10 @@ def test_stitch_slices():
     # TODO move crop + slice testing to another test function
     crop_size = (10, 10)
     overlap_frac = 0.2
-    data_xr_cropped, log_data_crop = reshape_data.crop_multichannel_data(data_xr=slice_xr, crop_size=crop_size,
-                                                                              overlap_frac=overlap_frac,
-                                                                              test_parameters=False)
+    data_xr_cropped, log_data_crop = reshape_data.crop_multichannel_data(data_xr=slice_xr,
+                                                                         crop_size=crop_size,
+                                                                         overlap_frac=overlap_frac,
+                                                                         test_parameters=False)
 
     # # get parameters
     # row_crop_size, col_crop_size = crop_size[0], crop_size[1]
@@ -766,7 +837,8 @@ def test_stitch_slices():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 7
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     # generate ordered data
@@ -790,10 +862,12 @@ def test_stitch_slices():
 def test_reconstruct_slice_data():
     with tempfile.TemporaryDirectory() as temp_dir:
         # generate data
-        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
+        fov_len, stack_len, crop_num, slice_num = 1, 40, 1, 1
+        row_len, col_len, chan_len = 50, 50, 3
         slice_stack_len = 4
 
-        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num, slice_num=slice_num,
+        input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                    slice_num=slice_num,
                                     row_len=row_len, col_len=col_len, chan_len=chan_len)
 
         # tag upper left hand corner of the label in each image
@@ -803,8 +877,9 @@ def test_reconstruct_slice_data():
         slice_xr, slice_log_data = reshape_data.create_slice_data(input_data, slice_stack_len)
 
         reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
-                                                log_data={**slice_log_data}, save_dir=temp_dir, blank_labels="include",
-                                                save_format="npz", verbose=False)
+                                           log_data={**slice_log_data}, save_dir=temp_dir,
+                                           blank_labels="include",
+                                           save_format="npz", verbose=False)
 
         stitched_slices = reshape_data.reconstruct_slice_data(temp_dir)
 

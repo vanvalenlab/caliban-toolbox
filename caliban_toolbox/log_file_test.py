@@ -8,7 +8,7 @@ from caliban_toolbox.log_file import create_upload_log
 
 
 def test_create_upload_log():
-    filepaths= ['file_path_' + str(x) for x in range(10)]
+    filepaths = ['file_path_' + str(x) for x in range(10)]
     filenames = ['file_name_' + str(x) for x in range(10)]
     stage = 'all_the_world_is_a_stage'
     aws_folder = 'aws_folder_path'

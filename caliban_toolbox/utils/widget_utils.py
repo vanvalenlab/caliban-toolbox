@@ -92,7 +92,7 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
                              gamma_adjust=1.0, equalize_hist=False, equalize_adapthist=False,
                              v_min=0, v_max=255):
     """Display effects of contrast adjustment on an image
-    
+
     Args:
         image: image to adjust, as array
         blur: how much to blur image with gaussian filter (values between 0 and 1 sharpen image)
@@ -106,35 +106,33 @@ def adjust_image_interactive(image, blur=1.0, sobel_toggle=True, sobel_factor=10
                pixels with intensities below this value will be set to zero
         v_max: maximum value from image to be rescaled,
                pixels with intensities above this value will be set to 255
-    
     Returns:
         Contrast-adjusted image"""
 
     new_image = filters.gaussian(image, sigma=blur, multichannel=False)
-    
+
     if sobel_toggle:
         new_image += sobel_factor * filters.sobel(new_image)
-        
+
     new_image = sk.exposure.adjust_gamma(new_image, gamma_adjust, gain=1)
-    
     if invert_img:
         new_image = sk.util.invert(new_image)
-        
-    new_image=sk.exposure.rescale_intensity(new_image, in_range='image', out_range='float')
-    
+
+    new_image = sk.exposure.rescale_intensity(new_image, in_range='image', out_range='float')
+
     if equalize_hist:
         new_image = sk.exposure.equalize_hist(new_image, nbins=256, mask=None)
-        
+
     if equalize_adapthist:
         new_image = sk.exposure.equalize_adapthist(new_image, kernel_size=None,
                                                    clip_limit=0.01, nbins=256)
-     
+
     new_image = sk.exposure.rescale_intensity(new_image, in_range='image', out_range=np.uint8)
     new_image = new_image.astype(np.uint8)
 
     # adjust min/max of image after it is rescaled to np.uint8
     new_image = sk.exposure.rescale_intensity(new_image, in_range=(v_min, v_max))
-    
+
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(new_image, cmap=mpl.cm.gray)
 
@@ -217,20 +215,20 @@ def overlay_images_interactive(img_1, img_2, prop_img_1, v_min=0, v_max=255):
 
     # mod_img is currently a float, but will cause errors because values are not between 0 and 1
     mod_img = mod_img.astype(np.uint8)
-    
+
     mod_img = sk.exposure.equalize_adapthist(mod_img, kernel_size=None, clip_limit=0.01, nbins=256)
-    
+
     # equalize_adapthist outputs float64 image
     # rescale image to (0,255) before changing to uint8 dtype
     mod_img = sk.exposure.rescale_intensity(mod_img, in_range="image", out_range=np.uint8)
     mod_img = mod_img.astype(np.uint8)
-    
+
     # adjust brightness settings using v_min and v_max in range of uint8
-    mod_img = sk.exposure.rescale_intensity(mod_img, in_range=(v_min, v_max))    
-    
+    mod_img = sk.exposure.rescale_intensity(mod_img, in_range=(v_min, v_max))
+
     # show modified image
     fig, ax = plt.subplots(figsize=(16, 12))
-    ax.imshow(mod_img, cmap = mpl.cm.gray)
+    ax.imshow(mod_img, cmap=mpl.cm.gray)
 
 
 def overlay_images(img_1, img_2, prop_img_1, v_min, v_max):
@@ -281,4 +279,3 @@ def choose_img_from_stack(stack, slice_idx, chan_name):
     fig, ax = plt.subplots(figsize=(16, 12))
     ax.imshow(img, cmap=mpl.cm.gray)
     return slice_idx, chan_idx
-

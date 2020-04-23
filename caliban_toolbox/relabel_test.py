@@ -65,7 +65,8 @@ def test_relabel_all_frames():
 
 # def test_predict_relationships():
 # TODO: determine what to do about testing this function. During refactoring I copied output
-# TODO from a previous version and made sure it didn't change. Hard to make fake data due to complex logic
+# TODO from a previous version and made sure it didn't change.
+# TODO Hard to make fake data due to complex logic
 #     # # create single slice with five different cells
 #     # single_slice = np.zeros((100, 100), dtype='int16')
 #     # single_slice[0:10, 0:10] = 1
@@ -77,7 +78,8 @@ def test_relabel_all_frames():
 #     # increment = 3
 #     # combined_stack = np.zeros((20, 100, 100, 1), dtype='int16')
 #     #
-#     # # move single slice slowly out of view by "increment" pixels each frame to change which cells are present
+#     # # move single slice slowly out of view by "increment" pixels each
+#       frame to change which cells are present
 #     # for i in range(1, combined_stack.shape[0]):
 #     #     combined_stack[i, :-(i * increment), :, 0] = single_slice[(i * increment):, :]
 #     #
@@ -86,7 +88,8 @@ def test_relabel_all_frames():
 #     # next_img = combined_stack[4, :, :, 0]
 #
 #     input_data = np.load('tests/caliban_toolbox/stack_j046_i003_all_channels.npz')['annotated']
-#     true_data = np.load('tests/caliban_toolbox/stack_j046_i003_all_channels_relabeled.npz')['annotated']
+#     true_data =
+#         np.load('tests/caliban_toolbox/stack_j046_i003_all_channels_relabeled.npz')['annotated']
 #     relabeled_data = relabel.predict_relationships(input_data[:, :, :, :1])
 #
 #     assert np.all(true_data == relabeled_data)
@@ -107,4 +110,3 @@ def test_relabel_data():
     relabel_modes = ["preserve", "all_frames"]
     for relabel_type in relabel_modes:
         output = relabel.relabel_data(stack, relabel_type)
-

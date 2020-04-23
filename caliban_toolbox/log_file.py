@@ -127,7 +127,10 @@ def create_next_CSV(csv_dir, job_id, next_stage):
                 optional_url += "&rgb=true"
 
         new_filepath = "https://caliban.deepcell.org/{0}__{1}__{2}__{3}__{4}".format(input_bucket,
-            output_bucket, subfolders, next_stage, filename)
+                                                                                     output_bucket,
+                                                                                     subfolders,
+                                                                                     next_stage,
+                                                                                     filename)
 
         if optional_flags:
             new_filepath += optional_url
@@ -146,94 +149,96 @@ def create_next_CSV(csv_dir, job_id, next_stage):
     # note: not suited for job reports that have a mix of identifiers
     identifier = csv_data['identifier'].values[0]
 
-    next_job_df = pd.DataFrame(data=data, index = range(len(filepath_list)))
+    next_job_df = pd.DataFrame(data=data, index=range(len(filepath_list)))
     next_csv_name = os.path.join(csv_dir, '{0}_{1}_upload.csv'.format(identifier, next_stage))
 
-    next_job_df.to_csv(next_csv_name, index = False)
+    next_job_df.to_csv(next_csv_name, index=False)
 
     return identifier
 
 
-# deprecated: this function is for figure8 PLSS output
-def save_annotations_from_csv(csv_path, annotations_folder):
-    """Uses Figure 8 job report to download image annotations and name appropriately.
+# # deprecated: this function is for figure8 PLSS output.
+# Keeping to use as a model for caliban veresion
 
-    Args:
-        csv_path: full path to job report
-        annotations_folder: full path to directory where downloaded annotations should be saved
-
-    Returns:
-        List of images that have missing annotations; list is empty if job completed successfully.
-        If job did not complete successfully, a csv file is created that contains just
-        the rows that should be re-uploaded"""
-
-    if not os.path.isdir(annotations_folder):
-        os.makedirs(annotations_folder)
-        # add folder modification permissions to deal with files from file explorer
-        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-        os.chmod(annotations_folder, mode)
-
-    csv_data = pd.read_csv(csv_path)
-    csv_dir = os.path.dirname(csv_path)
-    csv_name = os.path.basename(csv_path)
-    csv_name = os.path.splitext(csv_name)[0]
-
-    # create dfs for broken_link rows
-    broken_link_full_df = pd.DataFrame(columns=csv_data.columns)
-    broken_link_full_csv = csv_name + "_broken_links.csv"
-    broken_link_full_path = os.path.join(csv_dir, broken_link_full_csv)
-
-    csv_split_name = csv_name.split("_")
-    broken_link_reupload_df = pd.DataFrame(columns=['identifier', 'image_url'])
-    broken_link_reupload_csv = csv_split_name[0] + "_" + csv_split_name[1] + "_reupload.csv"
-    broken_link_reupload_path = os.path.join(csv_dir, broken_link_reupload_csv)
-
-    for row in csv_data.index:
-        if csv_data.loc[row, 'broken_link'] == False:
-
-            # Get image_name
-            annotation_dict = json.loads(csv_data.loc[row, 'annotation'])
-            annotation_url = annotation_dict["url"]
-
-            # generate image id
-            image_url = csv_data.loc[row, 'image_url']  # image that was uploaded
-            image_name = os.path.basename(image_url)
-            image_name = os.path.splitext(image_name)[0]  # remove .png from image_name
-            new_ann_name = image_name + "_annotation.png"
-
-            annotation_save_path = os.path.join(annotations_folder, new_ann_name)
-
-            # remove image from broken_link information, if this is a row that was re-run successfully
-            broken_link_reupload_df.drop(broken_link_reupload_df[
-                                             broken_link_reupload_df["image_url"] ==
-                                             image_url].index, inplace=True)
-            broken_link_full_df.drop(broken_link_full_df[broken_link_full_df["image_url"] ==
-                                                         image_url].index, inplace=True)
-
-            # download image from annotation
-            img_request = requests.get(annotation_url)
-            open(annotation_save_path, 'wb').write(img_request.content)
-
-        else:  # image link is broken
-            # add the information about that row to dataframes
-            if broken_link_reupload_df.last_valid_index() is None:
-                broken_link_reupload_df.loc[0] = csv_data.loc[row]
-                broken_link_full_df.loc[0] = csv_data.loc[row]
-            else:
-                broken_link_reupload_df.loc[broken_link_reupload_df.last_valid_index()+1] = \
-                    csv_data.loc[row]
-                broken_link_full_df.loc[broken_link_full_df.last_valid_index()+1] = \
-                    csv_data.loc[row]
-
-    if broken_link_full_df.last_valid_index() is not None:
-        # only save dataframes with broken_link info if there is something in them
-        broken_link_full_df.to_csv(broken_link_full_path, index = False)
-        broken_link_reupload_df.to_csv(broken_link_reupload_path, index = False)
-        print("Broken link information saved at: ", broken_link_full_path)
-        print("Reupload rows using: ", broken_link_reupload_path)
-    else:
-        print("All images in this set have corresponding annotations.")
-
-    return broken_link_reupload_df.image_url.tolist()
-
-
+# def save_annotations_from_csv(csv_path, annotations_folder):
+#     """Uses Figure 8 job report to download image annotations and name appropriately.
+#
+#     Args:
+#         csv_path: full path to job report
+#         annotations_folder: full path to directory where downloaded annotations should be saved
+#
+#     Returns:
+#         List of images that have missing annotations; list is empty i
+#            f job completed successfully.
+#         If job did not complete successfully, a csv file is created that contains just
+#         the rows that should be re-uploaded"""
+#
+#     if not os.path.isdir(annotations_folder):
+#         os.makedirs(annotations_folder)
+#         # add folder modification permissions to deal with files from file explorer
+#         mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+#         os.chmod(annotations_folder, mode)
+#
+#     csv_data = pd.read_csv(csv_path)
+#     csv_dir = os.path.dirname(csv_path)
+#     csv_name = os.path.basename(csv_path)
+#     csv_name = os.path.splitext(csv_name)[0]
+#
+#     # create dfs for broken_link rows
+#     broken_link_full_df = pd.DataFrame(columns=csv_data.columns)
+#     broken_link_full_csv = csv_name + "_broken_links.csv"
+#     broken_link_full_path = os.path.join(csv_dir, broken_link_full_csv)
+#
+#     csv_split_name = csv_name.split("_")
+#     broken_link_reupload_df = pd.DataFrame(columns=['identifier', 'image_url'])
+#     broken_link_reupload_csv = csv_split_name[0] + "_" + csv_split_name[1] + "_reupload.csv"
+#     broken_link_reupload_path = os.path.join(csv_dir, broken_link_reupload_csv)
+#
+#     for row in csv_data.index:
+#         if csv_data.loc[row, 'broken_link'] == False:
+#
+#             # Get image_name
+#             annotation_dict = json.loads(csv_data.loc[row, 'annotation'])
+#             annotation_url = annotation_dict["url"]
+#
+#             # generate image id
+#             image_url = csv_data.loc[row, 'image_url']  # image that was uploaded
+#             image_name = os.path.basename(image_url)
+#             image_name = os.path.splitext(image_name)[0]  # remove .png from image_name
+#             new_ann_name = image_name + "_annotation.png"
+#
+#             annotation_save_path = os.path.join(annotations_folder, new_ann_name)
+#
+#             # remove image from broken_link information, if this is a row
+# that was re-run successfully
+#             broken_link_reupload_df.drop(broken_link_reupload_df[
+#                                              broken_link_reupload_df["image_url"] ==
+#                                              image_url].index, inplace=True)
+#             broken_link_full_df.drop(broken_link_full_df[broken_link_full_df["image_url"] ==
+#                                                          image_url].index, inplace=True)
+#
+#             # download image from annotation
+#             img_request = requests.get(annotation_url)
+#             open(annotation_save_path, 'wb').write(img_request.content)
+#
+#         else:  # image link is broken
+#             # add the information about that row to dataframes
+#             if broken_link_reupload_df.last_valid_index() is None:
+#                 broken_link_reupload_df.loc[0] = csv_data.loc[row]
+#                 broken_link_full_df.loc[0] = csv_data.loc[row]
+#             else:
+#                 broken_link_reupload_df.loc[broken_link_reupload_df.last_valid_index()+1] = \
+#                     csv_data.loc[row]
+#                 broken_link_full_df.loc[broken_link_full_df.last_valid_index()+1] = \
+#                     csv_data.loc[row]
+#
+#     if broken_link_full_df.last_valid_index() is not None:
+#         # only save dataframes with broken_link info if there is something in them
+#         broken_link_full_df.to_csv(broken_link_full_path, index = False)
+#         broken_link_reupload_df.to_csv(broken_link_reupload_path, index = False)
+#         print("Broken link information saved at: ", broken_link_full_path)
+#         print("Reupload rows using: ", broken_link_reupload_path)
+#     else:
+#         print("All images in this set have corresponding annotations.")
+#
+#     return broken_link_reupload_df.image_url.tolist()

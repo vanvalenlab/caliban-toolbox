@@ -6,7 +6,8 @@ from skimage.segmentation import relabel_sequential
 def relabel_preserve_relationships(annotations, start_val=1):
     """Relabels annotations while preserving relationships within in each stack.
 
-    Eg, if cell 5 gets relabeled to cell 4, every instance of cell 5 in the stack will get relabeled to cell 4 as well.
+    Eg, if cell 5 gets relabeled to cell 4, every instance of cell 5
+    in the stack will get relabeled to cell 4 as well.
 
     Args:
         annotations: xarray of data to relabel [fovs, stacks, crops, slices, rows, cols, channels]
@@ -25,7 +26,7 @@ def relabel_preserve_relationships(annotations, start_val=1):
         raise ValueError('Relabeling occur before slicing or after reconstruction')
 
     # create new array to store the relabeled annotations
-    relabeled_annotations = np.zeros(annotations.shape, dtype = annotations.dtype)
+    relabeled_annotations = np.zeros(annotations.shape, dtype=annotations.dtype)
 
     # get all unique values in this stack, excluding 0 (background)
     unique_cells = np.unique(annotations)
@@ -124,7 +125,8 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
     # identify matching between each next_cell and current_cell
     for next_cell, current_cell_match in enumerate(max_indices):
 
-        # next_cell matches a non-background current_cell that hasn't already been assigned elsewhere
+        # next_cell matches a non-background current_cell
+        # that hasn't already been assigned elsewhere
         if current_cell_match != 0 and current_cell_match not in current_cells_used:
 
             num_matches = np.sum(max_indices == current_cell_match)
@@ -136,18 +138,23 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
                 max_indices_next = np.argmax(iou, axis=1)
                 best_matched_next = max_indices_next[current_cell_match]
 
-                # if the next_cell with the best match to current_cell_match is background, we skip this next_cell
+                # if the next_cell with the best match to current_cell_match is background,
+                # we skip this next_cell
                 if best_matched_next == 0:
                     continue
                 else:
-                    # if this next_cell isn't the best match for current_cell_match, we add it to unmatched list
+                    # if this next_cell isn't the best match for current_cell_match,
+                    # we add it to unmatched list
                     if next_cell != best_matched_next:
                         next_cells_unmatched = np.append(next_cells_unmatched, next_cell)
                         continue
                     else:
-                        # if it's the best match and above the IOU threshold, we add it to the relabeled image
+                        # if it's the best match and above the IOU threshold,
+                        # we add it to the relabeled image
                         if iou[current_cell_match][next_cell] > threshold:
-                            next_img_relabeled = np.where(next_img == next_cell, current_cell_match, next_img_relabeled)
+                            next_img_relabeled = np.where(next_img == next_cell,
+                                                          current_cell_match,
+                                                          next_img_relabeled)
 
                         # if it's a bad match, we add next_cell to unmatched list
                         elif iou[current_cell_match][next_cell] <= threshold:
@@ -159,7 +166,8 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
             # only a single match, check to see if IOU threshold is met
             elif num_matches == 1:
                 if iou[current_cell_match][next_cell] > threshold:
-                    next_img_relabeled = np.where(next_img == next_cell, current_cell_match, next_img_relabeled)
+                    next_img_relabeled = np.where(next_img == next_cell,
+                                                  current_cell_match, next_img_relabeled)
                 else:
                     next_cells_unmatched = np.append(next_cells_unmatched, next_cell)
 
@@ -178,13 +186,15 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
     current_max = max(np.max(current_img), np.max(next_img_relabeled))
 
     # We increment from current_max to create new values for remaining cells that weren't matched
-    vals_for_unmatched_cells = list(range(current_max + 1, current_max + 1 + len(next_cells_unmatched)))
+    vals_for_unmatched_cells = list(range(current_max + 1,
+                                          current_max + 1 + len(next_cells_unmatched)))
 
     # relabel each unmatched cell with new value
     if len(next_cells_unmatched) > 0:
         for reassigned_cell in range(len(next_cells_unmatched)):
             next_img_relabeled = np.where(next_img == next_cells_unmatched[reassigned_cell],
-                                          vals_for_unmatched_cells[reassigned_cell], next_img_relabeled)
+                                          vals_for_unmatched_cells[reassigned_cell],
+                                          next_img_relabeled)
 
     return next_img_relabeled
 
@@ -192,8 +202,8 @@ def predict_relationships_helper(current_img, next_img, threshold=0.1):
 def predict_relationships(image_stack, start_val=1, threshold=0.1):
     """Predicts relationships between cells across different frames by using an IOU cutoff.
 
-    Relabels the first frame starting from start_val. This will scramble human-annotated 3D label assignments. Use
-    relabel_npz_preserve_relationships for relabeling human-corrected 3D labels.
+    Relabels the first frame starting from start_val. This will scramble human-annotated 3D label
+    assignments. Use relabel_npz_preserve_relationships for relabeling human-corrected 3D labels.
 
     This step should be applied when:
         - launching a 3D npz that was created from unrelated 2D predictions
@@ -274,5 +284,3 @@ def relabel_data(input_data, relabel_type='preserve', start_val=1, threshold=0.1
         relabeled = predict_relationships(input_data, start_val, threshold)
 
     return relabeled
-
-

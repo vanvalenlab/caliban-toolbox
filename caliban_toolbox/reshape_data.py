@@ -113,8 +113,8 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     for i in range(len(row_starts)):
         for j in range(len(col_starts)):
             cropped_xr[:, :, crop_counter, ...] = padded_input[:, :, 0, :,
-                                                  row_starts[i]:row_ends[i],
-                                                  col_starts[j]:col_ends[j], :]
+                                                               row_starts[i]:row_ends[i],
+                                                               col_starts[j]:col_ends[j], :]
             crop_counter += 1
 
     return cropped_xr, padded_input.shape
@@ -302,7 +302,7 @@ def create_slice_data(data_xr, slice_stack_len, slice_overlap=0):
     return slice_xr, log_data
 
 
-def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_labels='include',
+def save_npzs_for_caliban(resized_xr, original_xr, log_data, save_dir, blank_labels='include',
                           save_format='npz', verbose=True):
     """Take an array of processed image data and save as NPZ for caliban
 
@@ -342,7 +342,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data,  save_dir, blank_la
                 npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
                 # subset xarray based on supplied indices
-                current_xr = resized_xr[fov, :, crop, slice,  ...]
+                current_xr = resized_xr[fov, :, crop, slice, ...]
                 labels = current_xr[..., -1:].values
                 channels = current_xr[..., :-1].values
 
@@ -547,8 +547,9 @@ def stitch_crops(annotated_data, log_data):
                         potential_overlap_cells[np.nonzero(potential_overlap_cells)]
 
                     # get values of stitched image at location where crop will be placed
-                    stitched_crop = stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row],
-                                    col_starts[col]:col_ends[col], 0]
+                    stitched_crop = stitched_labels[fov, stack, 0, 0,
+                                                    row_starts[row]:row_ends[row],
+                                                    col_starts[col]:col_ends[col], 0]
 
                     # loop through each cell in the crop to determine
                     # if it overlaps with another cell in full image
@@ -575,7 +576,7 @@ def stitch_crops(annotated_data, log_data):
 
                     # use this combined crop to update the values of stitched image
                     stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row],
-                    col_starts[col]:col_ends[col], 0] = combined_crop
+                                    col_starts[col]:col_ends[col], 0] = combined_crop
 
                     crop_counter += 1
 
@@ -700,4 +701,3 @@ def reconstruct_slice_data(save_dir, verbose=True):
     stitched_xr = stitch_slices(slice_stack, slice_log_data)
 
     return stitched_xr
-

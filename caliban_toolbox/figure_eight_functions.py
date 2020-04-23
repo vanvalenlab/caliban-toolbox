@@ -84,7 +84,6 @@ def upload_data(csv_path, job_id, key):
 def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
-    
     Args:
         base_dir: full path to directory that contains CSV files
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
