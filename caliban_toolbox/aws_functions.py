@@ -141,7 +141,7 @@ def aws_download_files(upload_log, output_dir):
 
     # get files
     files_to_download = upload_log['filename']
-    aws_folder = upload_log['subfolders'][0]
+    aws_folder = upload_log['aws_folder'][0]
     stage = upload_log['stage'][0]
 
     # download all images
