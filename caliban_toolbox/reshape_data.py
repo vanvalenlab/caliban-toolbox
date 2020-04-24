@@ -336,8 +336,7 @@ def save_npzs_for_caliban(resized_xr, original_xr, log_data, save_dir, blank_lab
         os.makedirs(os.path.join(save_dir, 'separate'))
 
     # for each fov, loop through 2D crops and 3D slices
-    for indices in product(range(fov_len), range(num_crops), range(num_slices)):
-        fov, crop, slice = indices
+    for fov, crop, slice in product(range(fov_len), range(num_crops), range(num_slices)):
         # generate identifier for crop
         npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
@@ -461,8 +460,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
     saved_files = os.listdir(crop_dir)
 
     # for each fov, loop over each 2D crop and 3D slice
-    for indices in product(range(fov_len), range(num_crops), range(num_slices)):
-        fov, crop, slice = indices
+    for fov, crop, slice in product(range(fov_len), range(num_crops), range(num_slices)):
         # load NPZs
         if save_format == 'npz':
             npz_path = os.path.join(crop_dir, get_saved_file_path(saved_files,
@@ -527,14 +525,9 @@ def stitch_crops(annotated_data, log_data):
     if annotated_data.shape[3] != 1:
         raise ValueError('Stacks must be combined before stitching can occur')
 
-    print('annotated shape: {}'.format(annotated_data.shape))
-    print('num rows, num cols {} {}'.format(len(row_starts), len(col_starts)))
     # for each fov and stack, loop through rows and columns of crop positions
-    for indices in product(range(fov_len), range(stack_len),
-                           range(len(row_starts)), range(len(col_starts))):
-
-        fov, stack, row, col = indices
-        print('row, col {} {}'.format(row, col))
+    for fov, stack, row, col in product(range(fov_len), range(stack_len),
+                                        range(len(row_starts)), range(len(col_starts))):
 
         # determine what crop # we're currently working on
         crop_counter = row * len(row_starts) + col
