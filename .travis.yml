@@ -6,7 +6,7 @@ git:
 
 language: python
 
-python:  
+python: 
  - 3.6
 
 cache: pip
