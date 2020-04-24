@@ -7,7 +7,7 @@ git:
 language: python
 
 python:
-  - 3.6
+ - 3.6
 
 cache: pip
 
@@ -17,7 +17,7 @@ install:
   - pip install pytest==5.2.0 pytest-cov==2.5.1 pytest-pep8 coveralls
 
 script:
-  - python -m pytest caliban_toolbox tests
+  - python -m pytest --pep8 --cov=caliban_toolbox caliban_toolbox
 
 after_success:
   - coveralls
