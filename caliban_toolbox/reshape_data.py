@@ -356,6 +356,8 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir, bla
         npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
         # get working batch
+        print('y_data shape is {}'.format(y_data.shape))
+        print('indices are {}'.format((fov, crop, slice)))
         labels = y_data[fov, :, crop, slice, ...].values
         channels = X_data[fov, :, crop, slice, ...].values
 
@@ -497,21 +499,22 @@ def load_npzs(crop_dir, log_data, verbose=True):
 
         # load xarray
         elif save_format == 'xr':
-            xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_names[fov],
-                                                                 crop, slice))
-            if os.path.exists(xr_path):
-                temp_xr = xr.open_dataarray(xr_path)
-
-                # last slice may be truncated, modify index
-                if slice == num_slices - 1:
-                    current_stack_len = temp_xr.shape[1]
-                else:
-                    current_stack_len = stack_len
-
-                stack[fov, :current_stack_len, crop, slice, ...] = temp_xr[..., -1:]
-            else:
-                # npz not generated, did not contain any labels, keep blank
-                print('could not find xr {}, skipping'.format(xr_path))
+            raise NotImplementedError()
+            # xr_path = os.path.join(crop_dir, get_saved_file_path(saved_files, fov_names[fov],
+            #                                                      crop, slice))
+            # if os.path.exists(xr_path):
+            #     temp_xr = xr.open_dataarray(xr_path)
+            #
+            #     # last slice may be truncated, modify index
+            #     if slice == num_slices - 1:
+            #         current_stack_len = temp_xr.shape[1]
+            #     else:
+            #         current_stack_len = stack_len
+            #
+            #     stack[fov, :current_stack_len, crop, slice, ...] = temp_xr[..., -1:]
+            # else:
+            #     # npz not generated, did not contain any labels, keep blank
+            #     print('could not find xr {}, skipping'.format(xr_path))
 
     return stack
 
