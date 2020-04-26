@@ -60,7 +60,7 @@ def test_pad_xr_dims():
 
     with pytest.raises(ValueError):
         data_utils.pad_xr_dims(test_xr, padded_duplicated_dims)
-        
+
 
 def test_create_blank_channel():
 
@@ -90,8 +90,8 @@ def test_reorder_channels():
     input_data = xr.DataArray(test_input, coords=coords, dims=dims)
 
     new_channel_order = ['chan2', 'chan1', 'chan0']
-    
-    reordered_data = data_utils.reorder_channels(new_channel_order=new_channel_order, 
+
+    reordered_data = data_utils.reorder_channels(new_channel_order=new_channel_order,
                                                  input_data=input_data)
 
     # confirm that labels are in correct order, and that values were switched as well
@@ -103,7 +103,7 @@ def test_reorder_channels():
     # test switching with blank channels
     new_channel_order = ['chan0', 'chan1', 'chan666', 'chan2']
     reordered_data = data_utils.reorder_channels(new_channel_order=new_channel_order,
-                                         input_data=input_data)
+                                                 input_data=input_data)
 
     # make sure order was switched, and that blank channel is empty
     assert np.array_equal(new_channel_order, reordered_data.channels)
@@ -134,5 +134,3 @@ def test_reorder_channels():
         new_channel_order = ['chan0', 'chan1', 'chan2', 'chan2']
         reordered_data = data_utils.reorder_channels(new_channel_order=new_channel_order,
                                                      input_data=input_data)
-
-

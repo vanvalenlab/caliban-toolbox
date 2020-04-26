@@ -71,4 +71,3 @@ def test_set_channel_colors():
     with pytest.raises(ValueError):
         colors = ['magenta', 'blue', 'red', 'yellow']
         output_data = plot_utils.set_channel_colors(channel_data=input_data, plot_colors=colors)
-

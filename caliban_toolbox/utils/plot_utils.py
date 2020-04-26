@@ -147,7 +147,7 @@ def set_channel_colors(channel_data, plot_colors):
 
     # first define which channel index is visualized as what color by caliban
     color_order = np.array(['red', 'green', 'blue', 'cyan',
-                              'magenta', 'yellow'])
+                            'magenta', 'yellow'])
 
     # create the array which will hold the final ordering of channel names
     final_channel_order = np.array(['red', 'green', 'blue', 'cyan', 'magenta',
@@ -174,6 +174,6 @@ def set_channel_colors(channel_data, plot_colors):
 
     # reorder the xarray
     reordered_xr = data_utils.reorder_channels(new_channel_order=final_channel_order,
-                                                      input_data=channel_data)
+                                               input_data=channel_data)
 
     return reordered_xr
