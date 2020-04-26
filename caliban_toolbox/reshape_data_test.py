@@ -177,18 +177,24 @@ def test_crop_multichannel_data():
     overlap_frac = 0.2
 
     # test only one crop
-    test_xr = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
-                             slice_num=slice_num, row_len=row_len, col_len=col_len,
-                             chan_len=channel_len)
+    test_X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                 chan_len=channel_len)
 
-    data_xr_cropped, log_data = reshape_data.crop_multichannel_data(data_xr=test_xr,
-                                                                    crop_size=crop_size,
-                                                                    overlap_frac=overlap_frac,
-                                                                    test_parameters=False)
+    test_y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
+                                 chan_len=channel_len)
+
+    X_data_cropped, y_data_cropped, log_data = \
+        reshape_data.crop_multichannel_data(X_data=test_X_data,
+                                            y_data=test_y_data,
+                                            crop_size=crop_size,
+                                            overlap_frac=overlap_frac,
+                                            test_parameters=False)
 
     expected_crop_num = len(reshape_data.compute_crop_indices(row_len, crop_size[0],
                                                               overlap_frac)[0]) ** 2
-    assert (data_xr_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
+    assert (X_data_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
                                       crop_size[0], crop_size[1], channel_len))
 
     assert log_data["num_crops"] == expected_crop_num
@@ -306,13 +312,17 @@ def test_create_slice_data():
     fov_len, stack_len, num_crops, num_slices, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
-                                slice_num=num_slices, row_len=row_len, col_len=col_len,
-                                chan_len=chan_len)
+    X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+                            slice_num=num_slices, row_len=row_len, col_len=col_len,
+                            chan_len=chan_len)
 
-    slice_xr, slice_indices = reshape_data.create_slice_data(input_data, slice_stack_len)
+    y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+                            slice_num=num_slices, row_len=row_len, col_len=col_len,
+                            chan_len=chan_len)
 
-    assert slice_xr.shape == (fov_len, slice_stack_len, num_crops,
+    X_slice, y_slice, slice_indices = reshape_data.create_slice_data(X_data, y_data, slice_stack_len)
+
+    assert X_slice.shape == (fov_len, slice_stack_len, num_crops,
                               int(np.ceil(stack_len / slice_stack_len)),
                               row_len, col_len, chan_len)
 
@@ -321,14 +331,19 @@ def test_save_npzs_for_caliban():
     fov_len, stack_len, num_crops, num_slices, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
-    input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+    X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
                                 slice_num=num_slices,
                                 row_len=row_len, col_len=col_len, chan_len=chan_len)
 
-    slice_xr, log_data = reshape_data.create_slice_data(input_data, slice_stack_len)
+    y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
+                            slice_num=num_slices,
+                            row_len=row_len, col_len=col_len, chan_len=1)
+
+    sliced_X, sliced_y, log_data = reshape_data.create_slice_data(X_data=X_data, y_data=y_data,
+                                                                  slice_stack_len=slice_stack_len)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+        reshape_data.save_npzs_for_caliban(X_data=sliced_X, y_data=sliced_y, original_data=X_data,
                                            log_data=copy.copy(log_data), save_dir=temp_dir,
                                            blank_labels="include",
                                            save_format="npz", verbose=False)
@@ -344,38 +359,41 @@ def test_save_npzs_for_caliban():
         with open(os.path.join(temp_dir, "log_data.json")) as json_file:
             saved_log_data = json.load(json_file)
 
-        assert saved_log_data["original_shape"] == list(input_data.shape)
+        assert saved_log_data["original_shape"] == list(X_data.shape)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # check that combined crop and slice saving works
         crop_size = (10, 10)
         overlap_frac = 0.2
-        data_xr_cropped, log_data_crop = \
-            reshape_data.crop_multichannel_data(data_xr=slice_xr,
+        X_cropped, y_cropped, log_data_crop = \
+            reshape_data.crop_multichannel_data(X_data=sliced_X,
+                                                y_data=sliced_y,
                                                 crop_size=crop_size,
                                                 overlap_frac=overlap_frac,
                                                 test_parameters=False)
 
-        reshape_data.save_npzs_for_caliban(resized_xr=data_xr_cropped, original_xr=input_data,
+        reshape_data.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped,
+                                           original_data=X_data,
                                            log_data={**log_data, **log_data_crop},
                                            save_dir=temp_dir,
                                            blank_labels="include", save_format="npz",
                                            verbose=False)
-        expected_crop_num = data_xr_cropped.shape[2] * data_xr_cropped.shape[3]
+        expected_crop_num = X_cropped.shape[2] * X_cropped.shape[3]
         files = os.listdir(temp_dir)
         files = [file for file in files if "npz" in file]
 
         assert len(files) == expected_crop_num
-    # check that arguments specifying what to do with blank crops are working
-    # set specified crops to not be blank
-    slice_xr[0, 0, 0, [1, 4, 7], 0, 0, -1] = 27
-    np.sum(np.nonzero(slice_xr.values))
 
-    expected_crop_num = slice_xr.shape[2] * slice_xr.shape[3]
+    # check that arguments specifying what to do with blank crops are working
+
+    # set specified crops to not be blank
+    sliced_y[0, 0, 0, [1, 4, 7], 0, 0, 0] = 27
+    expected_crop_num = sliced_X.shape[2] * sliced_X.shape[3]
 
     # test that function correctly includes blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
-        reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+        reshape_data.save_npzs_for_caliban(X_data=sliced_X, y_data=sliced_y,
+                                           original_data=X_data,
                                            log_data=copy.copy(log_data), save_dir=temp_dir,
                                            blank_labels="include",
                                            save_format="npz", verbose=False)
@@ -388,7 +406,8 @@ def test_save_npzs_for_caliban():
 
     # test that function correctly skips blank crops when saving
     with tempfile.TemporaryDirectory() as temp_dir:
-        reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+        reshape_data.save_npzs_for_caliban(X_data=sliced_X, y_data=sliced_y,
+                                           original_data=X_data,
                                            log_data=copy.copy(log_data), save_dir=temp_dir,
                                            save_format="npz",
                                            blank_labels="skip", verbose=False)
@@ -400,7 +419,8 @@ def test_save_npzs_for_caliban():
 
     # test that function correctly saves blank crops to separate folder
     with tempfile.TemporaryDirectory() as temp_dir:
-        reshape_data.save_npzs_for_caliban(resized_xr=slice_xr, original_xr=input_data,
+        reshape_data.save_npzs_for_caliban(X_data=sliced_X, y_data=sliced_y,
+                                           original_data=X_data,
                                            log_data=copy.copy(log_data), save_dir=temp_dir,
                                            save_format="npz",
                                            blank_labels="separate", verbose=False)
