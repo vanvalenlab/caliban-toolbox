@@ -34,8 +34,8 @@ import json
 from itertools import product
 
 
-def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir, blank_labels='include',
-                          save_format='npz', verbose=True):
+def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir,
+                          blank_labels='include', save_format='npz', verbose=True):
     """Take an array of processed image data and save as NPZ for caliban
 
     Args:

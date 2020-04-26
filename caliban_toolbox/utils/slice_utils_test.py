@@ -37,16 +37,16 @@ def test_compute_slice_indices():
     slice_len = 4
     slice_overlap = 0
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_len,
-                                                                                slice_overlap)
+                                                                               slice_len,
+                                                                               slice_overlap)
     assert np.all(np.equal(slice_start_indices, np.arange(0, stack_len, slice_len)))
 
     # test when slice_num does not divide evenly into stack_len
     stack_len = 42
     slice_len = 5
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_len,
-                                                                                slice_overlap)
+                                                                               slice_len,
+                                                                               slice_overlap)
 
     expected_start_indices = np.arange(0, stack_len, slice_len)
     assert np.all(np.equal(slice_start_indices, expected_start_indices))
@@ -56,8 +56,8 @@ def test_compute_slice_indices():
     slice_len = 4
     slice_overlap = 1
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_len,
-                                                                                slice_overlap)
+                                                                               slice_len,
+                                                                               slice_overlap)
 
     assert len(slice_start_indices) == int(np.floor(stack_len / (slice_len - slice_overlap)))
     assert slice_end_indices[-1] == stack_len
@@ -70,7 +70,7 @@ def test_slice_helper():
     slice_stack_len = 4
 
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_stack_len, 0)
+                                                                               slice_stack_len, 0)
 
     input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
@@ -87,7 +87,7 @@ def test_slice_helper():
     slice_stack_len = 6
 
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_stack_len, 0)
+                                                                               slice_stack_len, 0)
 
     input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
@@ -104,8 +104,8 @@ def test_slice_helper():
     slice_stack_len = 6
     slice_overlap = 1
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_stack_len,
-                                                                                slice_overlap)
+                                                                               slice_stack_len,
+                                                                               slice_overlap)
 
     input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
@@ -121,7 +121,7 @@ def test_slice_helper():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
     slice_start_indices, slice_end_indices = slice_utils.compute_slice_indices(stack_len,
-                                                                                slice_stack_len, 0)
+                                                                               slice_stack_len, 0)
 
     input_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
@@ -173,8 +173,8 @@ def test_stitch_slices():
     slice_stack_len = 7
 
     X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
-                                slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+                            slice_num=slice_num,
+                            row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
@@ -196,5 +196,3 @@ def test_stitch_slices():
     assert np.all(stitched_slices.shape == y_data.shape)
 
     assert np.all(np.equal(stitched_slices[0, :, 0, 0, :, :, 0], test_vals))
-
-

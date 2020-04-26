@@ -58,9 +58,9 @@ def test_crop_multichannel_data():
                                             test_parameters=False)
 
     expected_crop_num = len(crop_utils.compute_crop_indices(row_len, crop_size[0],
-                                                              overlap_frac)[0]) ** 2
+                                                            overlap_frac)[0]) ** 2
     assert (X_data_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
-                                      crop_size[0], crop_size[1], channel_len))
+                                     crop_size[0], crop_size[1], channel_len))
 
     assert log_data["num_crops"] == expected_crop_num
 
@@ -78,17 +78,19 @@ def test_create_slice_data():
                             slice_num=num_slices, row_len=row_len, col_len=col_len,
                             chan_len=chan_len)
 
-    X_slice, y_slice, slice_indices = reshape_data.create_slice_data(X_data, y_data, slice_stack_len)
+    X_slice, y_slice, slice_indices = reshape_data.create_slice_data(X_data, y_data,
+                                                                     slice_stack_len)
 
     assert X_slice.shape == (fov_len, slice_stack_len, num_crops,
-                              int(np.ceil(stack_len / slice_stack_len)),
-                              row_len, col_len, chan_len)
+                             int(np.ceil(stack_len / slice_stack_len)),
+                             row_len, col_len, chan_len)
 
 
 def test_reconstruct_image_stack():
     with tempfile.TemporaryDirectory() as temp_dir:
         # generate stack of crops from image with grid pattern
-        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
+        (fov_len, stack_len, crop_num,
+         slice_num, row_len, col_len, chan_len) = 2, 1, 1, 1, 400, 400, 4
 
         X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
@@ -105,7 +107,7 @@ def test_reconstruct_image_stack():
             for j in range(11):
                 for fov in range(y_data.shape[0]):
                     y_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10),
-                    (j * 37):(j * 37 + 8 + fov * 10), 0] = cell_idx
+                           (j * 37):(j * 37 + 8 + fov * 10), 0] = cell_idx
                 cell_idx += 1
 
         # Crop the data
@@ -117,7 +119,7 @@ def test_reconstruct_image_stack():
                                                 overlap_frac=overlap_frac)
 
         io_utils.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped, original_data=X_data,
-                                           log_data=log_data, save_dir=temp_dir)
+                                       log_data=log_data, save_dir=temp_dir)
 
         reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
@@ -156,9 +158,9 @@ def test_reconstruct_image_stack():
                                            slice_stack_len=slice_stack_len)
 
         io_utils.save_npzs_for_caliban(X_data=X_slice, y_data=y_slice, original_data=X_data,
-                                           log_data={**slice_log_data}, save_dir=temp_dir,
-                                           blank_labels="include",
-                                           save_format="npz", verbose=False)
+                                       log_data={**slice_log_data}, save_dir=temp_dir,
+                                       blank_labels="include",
+                                       save_format="npz", verbose=False)
 
         reshape_data.reconstruct_image_stack(temp_dir)
         stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
@@ -187,7 +189,7 @@ def test_reconstruct_image_stack():
             for j in range(1, 11):
                 for stack in range(stack_len):
                     y_data[:, stack, :, :, (i * 35):(i * 35 + 10 + stack * 2),
-                    (j * 37):(j * 37 + 8 + stack * 2), 0] = cell_idx
+                           (j * 37):(j * 37 + 8 + stack * 2), 0] = cell_idx
                 cell_idx += 1
 
         # tag upper left hand corner of each image with squares of increasing size
@@ -208,10 +210,10 @@ def test_reconstruct_image_stack():
                                            slice_stack_len=slice_stack_len)
 
         io_utils.save_npzs_for_caliban(X_data=X_slice, y_data=y_slice, original_data=X_data,
-                                           log_data={**slice_log_data, **log_data},
-                                           save_dir=temp_dir,
-                                           blank_labels="include",
-                                           save_format="npz", verbose=False)
+                                       log_data={**slice_log_data, **log_data},
+                                       save_dir=temp_dir,
+                                       blank_labels="include",
+                                       save_format="npz", verbose=False)
 
         reshape_data.reconstruct_image_stack(temp_dir)
         stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))

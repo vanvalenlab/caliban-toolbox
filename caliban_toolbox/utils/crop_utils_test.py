@@ -65,14 +65,14 @@ def test_compute_crop_indices():
     # test corner case of only one crop
     img_len, crop_size, overlap_frac = 100, 100, 0.2
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                              overlap_frac=overlap_frac)
+                                                            overlap_frac=overlap_frac)
     assert (len(starts) == 1)
     assert (len(ends) == 1)
 
     # test crop size that doesn't divide evenly into image size
     img_len, crop_size, overlap_frac = 105, 20, 0.2
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                              overlap_frac=overlap_frac)
+                                                            overlap_frac=overlap_frac)
     crop_num = np.ceil(img_len / (crop_size - (crop_size * overlap_frac)))
     assert (len(starts) == crop_num)
     assert (len(ends) == crop_num)
@@ -83,7 +83,7 @@ def test_compute_crop_indices():
     # test overlap of 0 between crops
     img_len, crop_size, overlap_frac = 200, 20, 0
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_size=crop_size,
-                                                              overlap_frac=overlap_frac)
+                                                            overlap_frac=overlap_frac)
     assert (np.all(starts == range(0, 200, 20)))
     assert (np.all(ends == range(20, 201, 20)))
     assert (padding == 0)
@@ -100,10 +100,10 @@ def test_crop_helper():
                              chan_len=chan_len)
 
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=row_len, crop_size=crop_size,
-                                                              overlap_frac=overlap_frac)
+                                                            overlap_frac=overlap_frac)
     cropped, padded = crop_utils.crop_helper(input_data=test_xr, row_starts=starts,
-                                               row_ends=ends, col_starts=starts, col_ends=ends,
-                                               padding=(padding, padding))
+                                             row_ends=ends, col_starts=starts, col_ends=ends,
+                                             padding=(padding, padding))
 
     assert (cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
 
@@ -111,16 +111,16 @@ def test_crop_helper():
     row_crop, col_crop = 50, 40
     row_starts, row_ends, row_padding = \
         crop_utils.compute_crop_indices(img_len=row_len, crop_size=row_crop,
-                                          overlap_frac=overlap_frac)
+                                        overlap_frac=overlap_frac)
 
     col_starts, col_ends, col_padding = \
         crop_utils.compute_crop_indices(img_len=col_len, crop_size=col_crop,
-                                          overlap_frac=overlap_frac)
+                                        overlap_frac=overlap_frac)
 
     cropped, padded = crop_utils.crop_helper(input_data=test_xr, row_starts=row_starts,
-                                               row_ends=row_ends, col_starts=col_starts,
-                                               col_ends=col_ends,
-                                               padding=(row_padding, col_padding))
+                                             row_ends=row_ends, col_starts=col_starts,
+                                             col_ends=col_ends,
+                                             padding=(row_padding, col_padding))
 
     assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
 
@@ -136,16 +136,16 @@ def test_crop_helper():
     # crop the image
     row_starts, row_ends, row_padding = \
         crop_utils.compute_crop_indices(img_len=row_len, crop_size=row_crop,
-                                          overlap_frac=overlap_frac)
+                                        overlap_frac=overlap_frac)
 
     col_starts, col_ends, col_padding = \
         crop_utils.compute_crop_indices(img_len=col_len, crop_size=col_crop,
-                                          overlap_frac=overlap_frac)
+                                        overlap_frac=overlap_frac)
 
     cropped, padded = crop_utils.crop_helper(input_data=test_xr, row_starts=row_starts,
-                                               row_ends=row_ends, col_starts=col_starts,
-                                               col_ends=col_ends,
-                                               padding=(row_padding, col_padding))
+                                             row_ends=row_ends, col_starts=col_starts,
+                                             col_ends=col_ends,
+                                             padding=(row_padding, col_padding))
 
     # check that the values of each crop match the value in uncropped image
     for img in range(test_xr.shape[0]):
@@ -166,8 +166,8 @@ def test_stitch_crops():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
 
     X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
-                                slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+                            slice_num=slice_num,
+                            row_len=row_len, col_len=col_len, chan_len=chan_len)
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
@@ -244,13 +244,13 @@ def test_stitch_crops():
     for row in range(cell_num):
         for col in range(cell_num):
             y_data[0, 0, 0, 0, row * side_len:(row + 1) * side_len,
-                       col * side_len:(col + 1) * side_len, 0] = cell_id[cell_idx]
+                   col * side_len:(col + 1) * side_len, 0] = cell_id[cell_idx]
             cell_idx += 1
 
     crop_size, overlap_frac = 100, 0.2
 
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=row_len, crop_size=crop_size,
-                                                              overlap_frac=overlap_frac)
+                                                            overlap_frac=overlap_frac)
 
     # generate a vector of random offsets to jitter the crop window,
     # simulating mismatches between frames
@@ -265,9 +265,9 @@ def test_stitch_crops():
     col_starts, col_ends = starts + col_offset, ends + col_offset
 
     y_cropped, padded = crop_utils.crop_helper(input_data=y_data, row_starts=row_starts,
-                                                 row_ends=row_ends,
-                                                 col_starts=col_starts, col_ends=col_ends,
-                                                 padding=(padding, padding))
+                                               row_ends=row_ends,
+                                               col_starts=col_starts, col_ends=col_ends,
+                                               padding=(padding, padding))
 
     # generate log data, since we had to go inside the upper level
     # function to modify crop_helper inputs

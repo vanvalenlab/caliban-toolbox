@@ -30,7 +30,6 @@ from __future__ import division
 import math
 import numpy as np
 
-
 from itertools import product
 
 import xarray as xr

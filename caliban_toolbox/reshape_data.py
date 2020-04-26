@@ -73,21 +73,23 @@ def crop_multichannel_data(X_data, y_data, crop_size, overlap_frac, test_paramet
 
     # compute the start and end coordinates for the row and column crops
     row_starts, row_ends, row_padding = crop_utils.compute_crop_indices(img_len=X_data.shape[4],
-                                                             crop_size=crop_size[0],
-                                                             overlap_frac=overlap_frac)
+                                                                        crop_size=crop_size[0],
+                                                                        overlap_frac=overlap_frac)
 
     col_starts, col_ends, col_padding = crop_utils.compute_crop_indices(img_len=X_data.shape[5],
-                                                             crop_size=crop_size[1],
-                                                             overlap_frac=overlap_frac)
+                                                                        crop_size=crop_size[1],
+                                                                        overlap_frac=overlap_frac)
 
     # crop images
-    X_data_cropped, padded_shape = crop_utils.crop_helper(X_data, row_starts=row_starts, row_ends=row_ends,
-                                               col_starts=col_starts, col_ends=col_ends,
-                                               padding=(row_padding, col_padding))
+    X_data_cropped, padded_shape = crop_utils.crop_helper(X_data, row_starts=row_starts,
+                                                          row_ends=row_ends,
+                                                          col_starts=col_starts, col_ends=col_ends,
+                                                          padding=(row_padding, col_padding))
 
-    y_data_cropped, padded_shape = crop_utils.crop_helper(y_data, row_starts=row_starts, row_ends=row_ends,
-                                               col_starts=col_starts, col_ends=col_ends,
-                                               padding=(row_padding, col_padding))
+    y_data_cropped, padded_shape = crop_utils.crop_helper(y_data, row_starts=row_starts,
+                                                          row_ends=row_ends,
+                                                          col_starts=col_starts, col_ends=col_ends,
+                                                          padding=(row_padding, col_padding))
 
     # save relevant parameters for reconstructing image
     log_data = {}
