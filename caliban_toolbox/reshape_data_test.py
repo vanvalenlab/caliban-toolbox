@@ -821,7 +821,7 @@ def test_stitch_slices():
     with tempfile.TemporaryDirectory() as temp_dir:
         # generate data
         (fov_len, stack_len, crop_num,
-         slice_num, row_len, col_len, chan_len) = 2, 1, 1, 1, 400, 400, 4
+         slice_num, row_len, col_len, chan_len) = 2, 12, 1, 1, 400, 400, 4
 
         X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num, row_len=row_len, col_len=col_len,
@@ -840,22 +840,19 @@ def test_stitch_slices():
                            (j * 37):(j * 37 + 8 + fov * 10), 0] = cell_idx
                 cell_idx += 1
 
-        crop_size, overlap_frac = 50, 0.2
+        slice_stack_len = 4
 
-        # crop data
-        X_cropped, y_cropped, log_data = \
-            reshape_data.crop_multichannel_data(X_data=X_data, y_data=y_data,
-                                                crop_size=(crop_size, crop_size),
-                                                overlap_frac=0.2)
+        # slice data
+        X_slice, y_slice, log_data = \
+            reshape_data.create_slice_data(X_data=X_data, y_data=y_data,
+                                           slice_stack_len=slice_stack_len)
 
         # stitch data
-        reshape_data.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped, original_data=X_data,
+        reshape_data.save_npzs_for_caliban(X_data=X_slice, y_data=y_slice, original_data=X_data,
                                            log_data=log_data,
                                            save_dir=temp_dir)
 
-        reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
-
-        stitched_xr = xr.open_dataarray(os.path.join(temp_dir, "stitched_images.nc"))
+        stitched_xr = reshape_data.reconstruct_slice_data(save_dir=temp_dir)
 
         # all the same pixels are marked
         assert (np.all(np.equal(stitched_xr[:, :, 0] > 0, y_data[:, :, 0] > 0)))
@@ -864,7 +861,7 @@ def test_stitch_slices():
         assert (len(np.unique(stitched_xr)) == len(np.unique(y_data)))
 
 
-def test_stitch_slices():
+def test_stitch_slices1():
     fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
     slice_stack_len = 4
 
