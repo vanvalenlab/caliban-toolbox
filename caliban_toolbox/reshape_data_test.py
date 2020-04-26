@@ -611,7 +611,7 @@ def test_stitch_crops():
     log_data["original_shape"] = X_data.shape
 
     # stitch the crops back together
-    stitched_img = reshape_data.stitch_crops(annotated_data=y_cropped, log_data=log_data)
+    stitched_img = reshape_data.stitch_crops(crop_stack=y_cropped, log_data=log_data)
 
 
     # dims are the same
@@ -636,7 +636,7 @@ def test_stitch_crops():
 
     # stitch back together
     log_data["original_shape"] = X_data.shape
-    stitched_imgs = reshape_data.stitch_crops(annotated_data=y_cropped, log_data=log_data)
+    stitched_imgs = reshape_data.stitch_crops(crop_stack=y_cropped, log_data=log_data)
 
     # dims are the same
     assert np.all(stitched_imgs.shape == y_data.shape)
@@ -706,7 +706,7 @@ def test_stitch_crops():
     log_data["fov_names"] = y_data.fovs.values.tolist()
     log_data["channel_names"] = y_data.channels.values.tolist()
 
-    stitched_img = reshape_data.stitch_crops(annotated_data=y_cropped, log_data=log_data)
+    stitched_img = reshape_data.stitch_crops(crop_stack=y_cropped, log_data=log_data)
 
     relabeled = skimage.measure.label(stitched_img[0, 0, 0, 0, :, :, 0])
 
@@ -786,9 +786,55 @@ def test_stitch_slices():
     assert np.all(np.equal(stitched_slices[0, :, 0, 0, :, :, 0], test_vals))
 
 
-def test_reconstruct_slice_data():
+def test_reconstruct_image_stack():
     with tempfile.TemporaryDirectory() as temp_dir:
-        # generate data
+        # generate stack of crops from image with grid pattern
+        fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len = 2, 1, 1, 1, 400, 400, 4
+
+        X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
+                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+
+        y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
+                                row_len=row_len, col_len=col_len, chan_len=1)
+
+        # create image with artificial objects to be segmented
+
+        cell_idx = 1
+        for i in range(12):
+            for j in range(11):
+                for fov in range(y_data.shape[0]):
+                    y_data[fov, :, :, :, (i * 35):(i * 35 + 10 + fov * 10),
+                    (j * 37):(j * 37 + 8 + fov * 10), 0] = cell_idx
+                cell_idx += 1
+
+        # Crop the data
+        crop_size, overlap_frac = 100, 0.2
+        X_cropped, y_cropped, log_data = \
+            reshape_data.crop_multichannel_data(X_data=X_data,
+                                                y_data=y_data,
+                                                crop_size=(crop_size, crop_size),
+                                                overlap_frac=overlap_frac)
+
+        reshape_data.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped, original_data=X_data,
+                                           log_data=log_data, save_dir=temp_dir)
+
+        reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
+
+        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+
+        # dims are the same
+        assert np.all(stitched_imgs.shape == y_data.shape)
+
+        # all the same pixels are marked
+        assert (np.all(np.equal(stitched_imgs[:, :, 0] > 0, y_data[:, :, 0] > 0)))
+
+        # there are the same number of cells
+        assert (len(np.unique(stitched_imgs)) == len(np.unique(y_data)))
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # generate data with the corner tagged
         fov_len, stack_len, crop_num, slice_num = 1, 40, 1, 1
         row_len, col_len, chan_len = 50, 50, 3
         slice_stack_len = 4
@@ -815,9 +861,81 @@ def test_reconstruct_slice_data():
                                            blank_labels="include",
                                            save_format="npz", verbose=False)
 
-        stitched_slices = reshape_data.reconstruct_slice_data(temp_dir)
+        reshape_data.reconstruct_image_stack(temp_dir)
+        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+
+        assert np.all(stitched_imgs.shape == y_data.shape)
+        assert np.all(np.equal(stitched_imgs[0, :, 0, 0, 0, 0, 0], tags))
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # generate data with both corners tagged and images labeled
+
+        (fov_len, stack_len, crop_num,
+         slice_num, row_len, col_len, chan_len) = 1, 8, 1, 1, 400, 400, 4
+
+        X_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
+                                row_len=row_len, col_len=col_len, chan_len=chan_len)
+
+        y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
+                                slice_num=slice_num,
+                                row_len=row_len, col_len=col_len, chan_len=1)
+
+        # create image with artificial objects to be segmented
+
+        cell_idx = 1
+        for i in range(1, 12):
+            for j in range(1, 11):
+                for stack in range(stack_len):
+                    y_data[:, stack, :, :, (i * 35):(i * 35 + 10 + stack * 2),
+                    (j * 37):(j * 37 + 8 + stack * 2), 0] = cell_idx
+                cell_idx += 1
+
+        # tag upper left hand corner of each image with squares of increasing size
+        for stack in range(stack_len):
+            y_data[0, stack, 0, 0, :stack, :stack, 0] = 1
+
+        # Crop the data
+        crop_size, overlap_frac = 100, 0.2
+        X_cropped, y_cropped, log_data = \
+            reshape_data.crop_multichannel_data(X_data=X_data,
+                                                y_data=y_data,
+                                                crop_size=(crop_size, crop_size),
+                                                overlap_frac=overlap_frac)
+
+        X_slice, y_slice, slice_log_data = \
+            reshape_data.create_slice_data(X_data=X_cropped,
+                                           y_data=y_cropped,
+                                           slice_stack_len=slice_stack_len)
+
+        reshape_data.save_npzs_for_caliban(X_data=X_slice, y_data=y_slice, original_data=X_data,
+                                           log_data={**slice_log_data, **log_data},
+                                           save_dir=temp_dir,
+                                           blank_labels="include",
+                                           save_format="npz", verbose=False)
+
+        reshape_data.reconstruct_image_stack(temp_dir)
+        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+
+        assert np.all(stitched_imgs.shape == y_data.shape)
 
         # dims are the same
-        assert np.all(stitched_slices.shape == y_data.shape)
+        assert np.all(stitched_imgs.shape == y_data.shape)
 
-        assert np.all(np.equal(stitched_slices[0, :, 0, 0, 0, 0, 0], tags))
+        # all the same pixels are marked
+        assert (np.all(np.equal(stitched_imgs[:, :, 0] > 0, y_data[:, :, 0] > 0)))
+
+        # there are the same number of cells
+        assert (len(np.unique(stitched_imgs)) == len(np.unique(y_data)))
+
+        # check mark in upper left hand corner of image
+        for stack in range(stack_len):
+            original = np.zeros((10, 10))
+            original[:stack, :stack] = 1
+            new = stitched_imgs[0, stack, 0, 0, :10, :10, 0]
+            assert np.array_equal(original > 0, new > 0)
+
+
+
+
+

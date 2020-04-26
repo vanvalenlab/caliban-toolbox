@@ -356,8 +356,6 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir, bla
         npz_id = 'fov_{}_crop_{}_slice_{}'.format(fov_names[fov], crop, slice)
 
         # get working batch
-        print('y_data shape is {}'.format(y_data.shape))
-        print('indices are {}'.format((fov, crop, slice)))
         labels = y_data[fov, :, crop, slice, ...].values
         channels = X_data[fov, :, crop, slice, ...].values
 
@@ -519,11 +517,11 @@ def load_npzs(crop_dir, log_data, verbose=True):
     return stack
 
 
-def stitch_crops(annotated_data, log_data):
+def stitch_crops(crop_stack, log_data):
     """Takes a stack of annotated labels and stitches them together into a single image
 
     Args:
-        annotated_data: 7D tensor of labels to be stitched together
+        crop_stack: 7D tensor of labels to be stitched together
         log_data: dictionary of parameters for reconstructing original image data
 
     Returns:
@@ -539,7 +537,7 @@ def stitch_crops(annotated_data, log_data):
     row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
     col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
 
-    if annotated_data.shape[3] != 1:
+    if crop_stack.shape[3] != 1:
         raise ValueError('Stacks must be combined before stitching can occur')
 
     # for each fov and stack, loop through rows and columns of crop positions
@@ -550,7 +548,7 @@ def stitch_crops(annotated_data, log_data):
         crop_counter = row * len(row_starts) + col
 
         # get current crop
-        crop = annotated_data[fov, stack, crop_counter, 0, :, :, 0]
+        crop = crop_stack[fov, stack, crop_counter, 0, :, :, 0]
 
         # increment values to ensure unique labels across final image
         lowest_allowed_val = np.amax(stitched_labels[fov, stack, ...])
@@ -602,48 +600,6 @@ def stitch_crops(annotated_data, log_data):
     return stitched_labels
 
 
-def reconstruct_crops(crop_stack, log_data):
-    """High level function to combine crops together into a single stitched image
-
-    Args:
-        crop_stack: stack of cropped images
-        log_data: dict generated during crop creation process
-    """
-
-    # # sanitize inputs
-    # if not os.path.isdir(crop_dir):
-    #     raise ValueError('crop_dir not a valid directory: {}'.format(crop_dir))
-    #
-    # # unpack JSON data
-    # with open(os.path.join(crop_dir, 'log_data.json')) as json_file:
-    #     log_data = json.load(json_file)
-
-
-    # # combine all npz crops into a single stack
-    # crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
-
-    # stitch crops together into single contiguous image
-    stitched_images = stitch_crops(annotated_data=crop_stack, log_data=log_data)
-
-    # crop image down to original size
-
-
-    _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
-
-    # # labels for each index within a dimension
-    # coordinate_labels = [fov_names, range(stack_len), range(1),
-    #                      range(1), range(row_len), range(col_len), ['segmentation_label']]
-    #
-    # # labels for each dimension
-    # dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
-    #
-    # stitched_xr = xr.DataArray(data=stitched_images, coords=coordinate_labels,
-    #                            dims=dimension_labels)
-    return stitched_images
-
-    #stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.nc'))
-
-
 def stitch_slices(slice_stack, log_data):
     """Helper function to stitch slices together back into original sized array
 
@@ -678,41 +634,45 @@ def stitch_slices(slice_stack, log_data):
     stitched_slices[:, slice_start_indices[last_idx]:slice_end_indices[last_idx], :, 0, ...] = \
         slice_stack[:, :slice_len, :, last_idx, ...]
 
+    return stitched_slices
+
+
+def reconstruct_image_stack(crop_dir, verbose=True):
+    """High level function to recombine data into a single stitched image
+
+        Args:
+            crop_dir: full path to directory with cropped images
+            verbose: flag to control print statements
+        """
+
+    # sanitize inputs
+    if not os.path.isdir(crop_dir):
+        raise ValueError('crop_dir not a valid directory: {}'.format(crop_dir))
+
+    # unpack JSON data
+    with open(os.path.join(crop_dir, 'log_data.json')) as json_file:
+        log_data = json.load(json_file)
+
+    # combine all npzs into a single stack
+    image_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
+
+    # stitch slices if data was sliced
+    if 'num_slices' in log_data:
+        image_stack = stitch_slices(slice_stack=image_stack, log_data=log_data)
+
+    # stitch crops if data was cropped
+    if 'num_crops' in log_data:
+        image_stack = stitch_crops(crop_stack=image_stack, log_data=log_data)
+
     # labels for each index within a dimension
-    coordinate_labels = [fov_names, range(stack_len), range(crop_num), range(1), range(row_len),
-                         range(col_len), ['segmentation_label']]
+    _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
+    coordinate_labels = [log_data['fov_names'], range(stack_len), range(1),
+                         range(1), range(row_len), range(col_len), ['segmentation_label']]
 
     # labels for each dimension
     dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
 
-    stitched_xr = xr.DataArray(stitched_slices, coords=coordinate_labels, dims=dimension_labels)
+    stitched_xr = xr.DataArray(data=image_stack, coords=coordinate_labels,
+                               dims=dimension_labels)
 
-    return stitched_xr
-
-
-def reconstruct_slices(slice_stack, log_data):
-    """High level function to put pieces of a slice back together
-
-    Args:
-        slice_stack: stack of sliced images
-        log_data: dict generated during slice creation process
-
-    Returns:
-        xarray.DataArray: 7D tensor of stitched labeled slices
-    """
-
-    # if not os.path.isdir(save_dir):
-    #     raise FileNotFoundError('slice directory does not exist')
-    #
-    # json_file_path = os.path.join(save_dir, 'log_data.json')
-    # if not os.path.exists(json_file_path):
-    #     raise FileNotFoundError('json file does not exist')
-    #
-    # with open(json_file_path) as json_file:
-    #     slice_log_data = json.load(json_file)
-
-    slice_stack = load_npzs(save_dir, slice_log_data, verbose=verbose)
-
-    stitched_xr = stitch_slices(slice_stack, slice_log_data)
-
-    return stitched_xr
+    stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.xr'))
