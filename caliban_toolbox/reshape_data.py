@@ -593,53 +593,55 @@ def stitch_crops(annotated_data, log_data):
         stitched_labels[fov, stack, 0, 0, row_starts[row]:row_ends[row],
                         col_starts[col]:col_ends[col], 0] = combined_crop
 
-    # relabel images to remove skipped cell_ids
+    # trim padding to put image back to original size
+    if row_padding > 0:
+        stitched_labels = stitched_labels[:, :, :, :, :-row_padding, :, :]
+    if col_padding > 0:
+        stitched_labels = stitched_labels[:, :, :, :, :, :-col_padding, :]
+
     return stitched_labels
 
 
-def reconstruct_image_stack(crop_dir, verbose=True):
+def reconstruct_crops(crop_stack, log_data):
     """High level function to combine crops together into a single stitched image
 
     Args:
-        crop_dir: directory where cropped files are stored
-        verbose: flag to control print statements
+        crop_stack: stack of cropped images
+        log_data: dict generated during crop creation process
     """
 
-    # sanitize inputs
-    if not os.path.isdir(crop_dir):
-        raise ValueError('crop_dir not a valid directory: {}'.format(crop_dir))
+    # # sanitize inputs
+    # if not os.path.isdir(crop_dir):
+    #     raise ValueError('crop_dir not a valid directory: {}'.format(crop_dir))
+    #
+    # # unpack JSON data
+    # with open(os.path.join(crop_dir, 'log_data.json')) as json_file:
+    #     log_data = json.load(json_file)
 
-    # unpack JSON data
-    with open(os.path.join(crop_dir, 'log_data.json')) as json_file:
-        log_data = json.load(json_file)
 
-    row_padding, col_padding = log_data['row_padding'], log_data['col_padding']
-    fov_names = log_data['fov_names']
-    # combine all npz crops into a single stack
-    crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
+    # # combine all npz crops into a single stack
+    # crop_stack = load_npzs(crop_dir=crop_dir, log_data=log_data, verbose=verbose)
 
     # stitch crops together into single contiguous image
     stitched_images = stitch_crops(annotated_data=crop_stack, log_data=log_data)
 
     # crop image down to original size
-    if row_padding > 0:
-        stitched_images = stitched_images[:, :, :, :, :-row_padding, :, :]
-    if col_padding > 0:
-        stitched_images = stitched_images[:, :, :, :, :, :-col_padding, :]
+
 
     _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
 
-    # labels for each index within a dimension
-    coordinate_labels = [fov_names, range(stack_len), range(1),
-                         range(1), range(row_len), range(col_len), ['segmentation_label']]
+    # # labels for each index within a dimension
+    # coordinate_labels = [fov_names, range(stack_len), range(1),
+    #                      range(1), range(row_len), range(col_len), ['segmentation_label']]
+    #
+    # # labels for each dimension
+    # dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+    #
+    # stitched_xr = xr.DataArray(data=stitched_images, coords=coordinate_labels,
+    #                            dims=dimension_labels)
+    return stitched_images
 
-    # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
-
-    stitched_xr = xr.DataArray(data=stitched_images, coords=coordinate_labels,
-                               dims=dimension_labels)
-
-    stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.nc'))
+    #stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.nc'))
 
 
 def stitch_slices(slice_stack, log_data):
@@ -688,26 +690,26 @@ def stitch_slices(slice_stack, log_data):
     return stitched_xr
 
 
-def reconstruct_slice_data(save_dir, verbose=True):
+def reconstruct_slices(slice_stack, log_data):
     """High level function to put pieces of a slice back together
 
     Args:
-        save_dir: full path to directory where slice pieces are stored
-        verbose: flag to control print statements
+        slice_stack: stack of sliced images
+        log_data: dict generated during slice creation process
 
     Returns:
         xarray.DataArray: 7D tensor of stitched labeled slices
     """
 
-    if not os.path.isdir(save_dir):
-        raise FileNotFoundError('slice directory does not exist')
-
-    json_file_path = os.path.join(save_dir, 'log_data.json')
-    if not os.path.exists(json_file_path):
-        raise FileNotFoundError('json file does not exist')
-
-    with open(json_file_path) as json_file:
-        slice_log_data = json.load(json_file)
+    # if not os.path.isdir(save_dir):
+    #     raise FileNotFoundError('slice directory does not exist')
+    #
+    # json_file_path = os.path.join(save_dir, 'log_data.json')
+    # if not os.path.exists(json_file_path):
+    #     raise FileNotFoundError('json file does not exist')
+    #
+    # with open(json_file_path) as json_file:
+    #     slice_log_data = json.load(json_file)
 
     slice_stack = load_npzs(save_dir, slice_log_data, verbose=verbose)
 
