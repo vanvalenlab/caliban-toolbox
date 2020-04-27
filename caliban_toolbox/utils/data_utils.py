@@ -33,12 +33,13 @@ import numpy as np
 import xarray as xr
 
 
-def pad_xr_dims(input_xr, padded_dims):
+def pad_xr_dims(input_xr, padded_dims=None):
     """Takes an xarray and pads it with dimensions of size 1 according to the supplied dims list
 
     Inputs
         input_xr: xarray to pad
-        padded_dims: ordered list of final dims; new dims will be added with size 1
+        padded_dims: ordered list of final dims; new dims will be added with size 1. If None,
+            defaults to standard naming scheme for pipeline
 
     Outputs
         padded_xr: xarray that has had additional dims added of size 1
@@ -48,6 +49,8 @@ def pad_xr_dims(input_xr, padded_dims):
         ValueError: If padded dims includes duplicate names
     """
 
+    if padded_dims is None:
+        padded_dims = ["fovs", "stacks", "crops", "slices", "rows", "cols", "channels"]
     # make sure that dimensions which are present in both lists are in same order
     old_dims = [dim for dim in padded_dims if dim in input_xr.dims]
 
@@ -153,3 +156,21 @@ def reorder_channels(new_channel_order, input_data, full_blank=True):
     channel_xr_blanked = xr.DataArray(full_array, coords=coords, dims=dims)
 
     return channel_xr_blanked
+
+
+def make_blank_labels(image_data):
+    """Creates an xarray of blank y_labels which matches the image_data passed in
+
+    Args:
+        image_data: xarray of image channels used to get label names
+
+    Returns:
+        xarray.DataArray: blank xarray of labeled data
+    """
+
+    blank_data = np.zeros(image_data.shape[:-1] + (1,), dtype='int16')
+
+    coords = [image_data.fovs, image_data.rows, image_data.cols, ['segmentation_label']]
+    blank_xr = xr.DataArray(blank_data, coords=coords, dims=image_data.dims)
+
+    return blank_xr

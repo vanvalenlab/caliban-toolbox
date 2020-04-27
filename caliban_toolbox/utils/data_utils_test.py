@@ -134,3 +134,7 @@ def test_reorder_channels():
         new_channel_order = ['chan0', 'chan1', 'chan2', 'chan2']
         reordered_data = data_utils.reorder_channels(new_channel_order=new_channel_order,
                                                      input_data=input_data)
+
+
+def test_make_blank_labels():
+    assert True
