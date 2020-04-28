@@ -42,7 +42,7 @@ def make_experiment_metadata_file(raw_metadata):
 
     # add new blank fields
     blank_fields = ['job_ids', 'included_fovs', 'excluded_fovs', 'in_progress_fovs']
-    experiment_metadata.update({k: '' for k in blank_fields})
+    experiment_metadata.update({k: None for k in blank_fields})
 
     return experiment_metadata
 
@@ -64,7 +64,7 @@ def make_job_metadata_file(experiment_metadata, job_data):
 
     # add new blank fields
     blank_fields = ['job_id', 'included_fovs', 'excluded_fovs']
-    job_metadata.update({k: '' for k in blank_fields})
+    job_metadata.update({k: None for k in blank_fields})
 
     job_metadata['in_progress_fovs'] = job_data.fovs
 
@@ -72,7 +72,7 @@ def make_job_metadata_file(experiment_metadata, job_data):
 
 
 def update_job_metadata_file(job_metadata, update_dict):
-    """Updates a job metadata file with the status of individual images
+    """Updates a job metadata file with the status of individual fovs
 
     Args:
         job_metadata: the metadata file to be updated
@@ -99,6 +99,7 @@ def update_job_metadata_file(job_metadata, update_dict):
             raise ValueError('FOV {} was not in progress for this job'.format(fov))
 
     # remaining jobs that are not included or excluded are still in progress
+    # TODO: figure out workflow for remaining in progress jobs
     job_metadata['in_progress_fovs'] = in_progress
     job_metadata['included_fovs'] = included
     job_metadata['excluded_fovs'] = excluded
