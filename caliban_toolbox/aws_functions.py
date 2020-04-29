@@ -91,9 +91,7 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
     subfolders = re.split('/', aws_folder)
     subfolders = '__'.join(subfolders)
 
-    # TODO: add back label_only once logic is working correctly in caliban
-    # url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
-    url_dict = {'pixel_only': pixel_only, 'rgb': rgb_mode}
+    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
     url_encoded_dict = urlencode(url_dict)
 
     # upload images
