@@ -39,7 +39,7 @@ from caliban_toolbox import relabel
 from caliban_toolbox import reshape_data
 
 from caliban_toolbox.pre_annotation import *
-from caliban_toolbox.tracking import *
+#from caliban_toolbox.tracking import *
 from caliban_toolbox.utils import *
 
 del absolute_import
