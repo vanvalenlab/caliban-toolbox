@@ -29,6 +29,8 @@ from __future__ import division
 
 import numpy as np
 
+from caliban_toolbox.utils import data_utils
+
 
 def overlay_grid_lines(overlay_img, row_starts, row_ends, col_starts, col_ends):
     """Visualize the location of image crops on the original uncropped image to assess crop size
@@ -132,51 +134,46 @@ def overlay_crop_overlap(img_crop, row_starts, row_ends, col_starts, col_ends):
     return img_crop
 
 
-def set_channel_colors(combined_xr, plot_colors):
+def set_channel_colors(channel_data, plot_colors):
     """Modifies the order of image channels so they're displayed with appropriate color in caliban
 
     Args:
-        combined_xr: xarray containing channels and labels
-        plot_colors: array containing the color of each channel, in order of the current channels
+        channel_data: xarray containing channels
+        plot_colors: array containing the desired color for each channel
 
     Returns:
         xarray.DataArray: reordered image data to enable visualization in caliban
     """
 
-    # first define the order that channels are visualize
-    channel_order = np.array(['red', 'green', 'blue', 'cyan',
-                              'magenta', 'yellow', 'segmentation_label'])
+    # first define which channel index is visualized as what color by caliban
+    color_order = np.array(['red', 'green', 'blue', 'cyan',
+                            'magenta', 'yellow'])
 
-    # create the array holding the final ordering of channel names
-    final_channel_names = np.array(['red', 'green', 'blue', 'cyan', 'magenta',
-                                    'yellow', 'segmentation_label'], dtype='<U20')
+    # create the array which will hold the final ordering of channel names
+    final_channel_order = np.array(['red', 'green', 'blue', 'cyan', 'magenta',
+                                    'yellow'], dtype='<U100')
 
     # make sure supplied plot_colors exist as available channels
-    if not np.all(np.isin(plot_colors, channel_order)):
+    if not np.all(np.isin(plot_colors, color_order)):
         raise ValueError('supplied plot_colors not valid, must be one of: '
-                         '{}'.format(channel_order[:-1]))
+                         '{}'.format(color_order))
 
     # make sure all imaging channels have a plot_color
-    if len(plot_colors) != combined_xr.shape[-1] - 1:
+    if len(plot_colors) != channel_data.shape[-1]:
         raise ValueError('Mismatch between number of imaging channels and supplied plot colors')
 
-    channel_names = combined_xr.channels.values
+    channel_names = channel_data.channels.values
 
     # loop through each of the supplied plot colors
     for idx in range(len(plot_colors)):
-        # get the position of that plot color in the channel order
-        final_idx = np.isin(channel_order, plot_colors[idx])
+        # get the position of that color
+        final_idx = np.isin(color_order, plot_colors[idx])
 
         # assign the channel corresponding to that color to that position in the final ordering
-        final_channel_names[final_idx] = channel_names[idx]
-
-    # figure out which channels contain real data, don't substitute these with a blank tif
-    non_blank_channels = final_channel_names[np.isin(final_channel_names,
-                                                     combined_xr.channels.values)]
+        final_channel_order[final_idx] = channel_names[idx]
 
     # reorder the xarray
-    reordered_xr = data_utils.reorder_xarray_channels(channel_order=final_channel_names,
-                                                      channel_xr=combined_xr,
-                                                      non_blank_channels=non_blank_channels)
+    reordered_xr = data_utils.reorder_channels(new_channel_order=final_channel_order,
+                                               input_data=channel_data)
 
     return reordered_xr
