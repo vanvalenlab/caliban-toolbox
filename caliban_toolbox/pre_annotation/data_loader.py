@@ -31,13 +31,13 @@ import os
 import json
 import logging
 import fnmatch
-import tarfile
-
-import numpy as np
-#import tifffile as tiff
-#import panda as pd
 
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from skimage.external import tifffile as tiff
 
 from caliban_toolbox.utils.misc_utils import sorted_nicely
 
@@ -102,6 +102,8 @@ class UniversalDataLoader(object):
         self.image_type = image_type
         self.onto_levels = np.full(7, False)
 
+        self._vocab_check()
+
         self.base_path = '/data/raw_data'
         for item in self.data_type:
             self.base_path = os.path.join(self.base_path, item)
@@ -160,7 +162,7 @@ class UniversalDataLoader(object):
 
             #TODO: Raise a warning that 'all's or 'None's are in use
 
-    def path_builder(self, root_path, list_of_dirs):
+    def _path_builder(self, root_path, list_of_dirs):
 
         new_paths = []
         for item in list_of_dirs:
@@ -180,13 +182,13 @@ class UniversalDataLoader(object):
 
         if self.onto_levels[0]:
             self.imaging_type = os.listdir(self.base_path)
-        imaging_paths = self.path_builder(self.base_path, self.imaging_type)
+        imaging_paths = self._path_builder(self.base_path, self.imaging_type)
 
         specimen_paths = []
         for thing in imaging_paths:
             if self.onto_levels[1]:
                 self.specimen_type = os.listdir(thing)
-            specimen_paths.extend(self.path_builder(thing, self.specimen_type))
+            specimen_paths.extend(self._path_builder(thing, self.specimen_type))
 
         # The following conditional doesn't work for phase (phase has no compartment or marker)
         # So we need a different branch to handle that here
@@ -204,7 +206,7 @@ class UniversalDataLoader(object):
             # All compartments and all markers
             # We grab every directory
             for thing in specimen_paths:
-                compartment_marker_paths.extend(self.path_builder(thing, os.listdir(thing)))
+                compartment_marker_paths.extend(self._path_builder(thing, os.listdir(thing)))
 
         elif self.onto_levels[2]:
             # All compartments but not all markers
@@ -214,7 +216,7 @@ class UniversalDataLoader(object):
                 for item in self.markers:
                     pattern = base_pattern+item
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                    compartment_marker_paths.extend(self.path_builder(thing, dirs_to_keep))
+                    compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
         elif self.onto_levels[3]:
             # Not all compartments but all markers (all markers for a given compartment)
@@ -225,7 +227,7 @@ class UniversalDataLoader(object):
                     for item in self.compartment:
                         pattern = item + base_pattern
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                        compartment_marker_paths.extend(self.path_builder(thing, dirs_to_keep))
+                        compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
         else:
             # Specific compartments with specific markers
@@ -236,7 +238,7 @@ class UniversalDataLoader(object):
                     for item2 in self.markers:
                         pattern = item1 + '_' + item2
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                        compartment_marker_paths.extend(self.path_builder(thing, dirs_to_keep))
+                        compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
         # UID/DOI
         # for each path in compartment_marker_paths we need to select the correct experiment id
@@ -244,7 +246,7 @@ class UniversalDataLoader(object):
         for thing in compartment_marker_paths:
             if self.onto_levels[4]:
                 uid = os.listdir(thing)
-            uid_paths.extend(self.path_builder(thing, uid))
+            uid_paths.extend(self._path_builder(thing, uid))
 
         # The uid_path is the directory that holds the images and metadata file
 
@@ -261,7 +263,7 @@ class UniversalDataLoader(object):
                 for file in os.listdir(thing):
                     if file.endswith(self.image_type):
                         images.append(file)
-                image_paths.append(self.path_builder(thing, images))
+                image_paths.append(self._path_builder(thing, images))
 
         elif self.onto_levels[5]:
             # All sessions but not all positions
@@ -270,7 +272,7 @@ class UniversalDataLoader(object):
                 for item in self.position:
                     pattern = '*_s*_p' + item.zfill(2) + self.image_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                    image_paths.append(self.path_builder(thing, dirs_to_keep))
+                    image_paths.append(self._path_builder(thing, dirs_to_keep))
 
         elif self.onto_levels[6]:
             # Not all sessions but all positions (all positions for a given session)
@@ -279,7 +281,7 @@ class UniversalDataLoader(object):
                 for item in self.session:
                     pattern = '*_s' + item.zfill(2) + '*' + self.image_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                    image_paths.append(self.path_builder(thing, dirs_to_keep))
+                    image_paths.append(self._path_builder(thing, dirs_to_keep))
 
         else:
             # Specific compartments with specific markers
@@ -290,8 +292,7 @@ class UniversalDataLoader(object):
                     for item2 in self.position:
                         pattern = '*_s' + item1.zfill(2) + '_p' + item2.zfill(2) + image_type
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                        image_paths.append(self.path_builder(thing, dirs_to_keep))
-
+                        image_paths.append(self._path_builder(thing, dirs_to_keep))
 
         return (uid_paths, image_paths)
 
@@ -317,15 +318,25 @@ class UniversalDataLoader(object):
         return None
 
 
-    def _load(self, dataset_path):
+    def load(self):
 
-        if not os.path.isdir(self.dataset_dir):
-            raise ValueError("Directory does not exist")
+        (metadata_dirs, image_paths) = self._assemble_paths()
 
-        self.img = tiff.imread(dataset_path)
+        # Check that paths are good by verifying metadata files
+        # If so, then load and organize metadata information
+        for metadata_dir in metadata_dirs:
+            mdf_path = os.path.join(metadata_dir, 'metadata')
+            if not os.path.isfile(mdf_path):
+                raise ValueError("Metadata file does not exist")
 
-        with open(mdf_path, 'r') as raw_mdf:
-            raw_data = json.load(raw_mdf)
+            with open(mdf_path, 'r') as raw_mdf:
+                raw_data = json.load(raw_mdf)
+
+        # Now load the image data
+        for image_path in image_paths:
+            img_set = tiff.imread(image_path)
 
 
-        return npz_of_tifs
+
+
+        return (img_set, raw_data)
