@@ -32,10 +32,8 @@ import pandas as pd
 import numpy as np
 import requests
 
-from caliban_toolbox.aws_functions import connect_aws, aws_transfer_file
 
-
-def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
+def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id, log_name,
                       pixel_only=False, label_only=False, rgb_mode=False):
     """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
 
@@ -46,6 +44,7 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
         filenames: list of all files to be uploaded
         filepaths: list of complete urls to images in Amazon S3 bucket
         job_id: internal Figure Eight id for job
+        log_name: name for log file
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
@@ -71,88 +70,8 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
         os.chmod(log_dir, mode)
 
     # save csv file
-    dataframe.to_csv(os.path.join(log_dir, 'stage_0_upload_log.csv'), index=False)
+    dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
 
-
-# TODO: update for caliban jobs
-# def create_next_CSV(csv_dir, job_id, next_stage):
-#     """Downloads job report from a Caliban job and uses provided info to create the CSV for
-#     the next job in the sequence.
-#
-#     Returns:
-#         string: identifier used for previous job in sequence. Returned to make it easy
-#             to move the next job along without having to look somewhere to find identifier"""
-#
-#     # job_report_csv creates CSV dir if does not already exist, so we use parent directory here
-#     base_dir = os.path.dirname(csv_dir)
-#     job_report_csv = download_and_unzip(job_id, base_dir, "full")
-#
-#     s3 = connect_aws()
-#
-#     csv_data = pd.read_csv(job_report_csv)
-#
-#     filepath_list = []
-#
-#     for row in csv_data.itertuples():
-#         # get info needed to construct new project_url
-#         input_bucket = row.input_bucket
-#         output_bucket = row.output_bucket
-#         subfolders = row.subfolders
-#         stage = row.stage
-#         filename = row.filename
-#         pixel_only = row.pixel_only
-#         label_only = row.label_only
-#         rgb_mode = row.rgb_mode
-#
-#         key_src = "{0}/{1}/{2}".format(subfolders, stage, filename)
-#         key_dst = "{0}/{1}/{2}".format(subfolders, next_stage, filename)
-#
-#         # transfer output file to new key in input bucket
-#         print("Moving {0} to {1}/{2} in {3}.".format(filename, subfolders,
-#                                                      next_stage, input_bucket))
-#         aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst)
-#
-#         subfolders = re.split('/', subfolders)
-#         subfolders = '__'.join(subfolders)
-#
-#         optional_flags = np.any(pixel_only, label_only, rgb_mode)
-#
-#         if optional_flags:
-#             optional_url = "?"
-#             if pixel_only:
-#                 optional_url += "&pixel_only=true"
-#             if label_only:
-#                 optional_url += "&label_only=true"
-#             if rgb_mode:
-#                 optional_url += "&rgb=true"
-#
-#         new_filepath = "https://caliban.deepcell.org/
-#                         {0}__{1}__{2}__{3}__{4}".format(input_bucket, output_bucket, subfolders,
-#                          next_stage, filename)
-#
-#         if optional_flags:
-#             new_filepath += optional_url
-#
-#         filepath_list.append(new_filepath)
-#
-#     data = {'project_url': filepath_list,
-#             'filename': csv_data['filename'].values,
-#             'identifier': csv_data['identifier'].values,
-#             'stage': next_stage,
-#             'input_bucket': input_bucket,
-#             'output_bucket': output_bucket,
-#             'subfolders': csv_data['subfolders'].values}
-#
-#     # pull identifier info from csv_data, this will be used in filename saving
-#     # note: not suited for job reports that have a mix of identifiers
-#     identifier = csv_data['identifier'].values[0]
-#
-#     next_job_df = pd.DataFrame(data=data, index=range(len(filepath_list)))
-#     next_csv_name = os.path.join(csv_dir, '{0}_{1}_upload.csv'.format(identifier, next_stage))
-#
-#     next_job_df.to_csv(next_csv_name, index=False)
-#
-#     return identifier
 
 
 # deprecated: this function is for figure8 PLSS output.

@@ -32,7 +32,7 @@ import urllib
 
 from getpass import getpass
 from caliban_toolbox.log_file import create_upload_log
-from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
+from caliban_toolbox.aws_functions import aws_upload_files, aws_transfer_files, aws_download_files
 
 
 def copy_job(job_id, key):
@@ -88,7 +88,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
     Args:
-        base_dir: full path to directory that contains CSV files
+        base_dir: full path to job directory
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
         aws_folder: folder in aws bucket where files be stored
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
@@ -114,10 +114,55 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=filenames, filepaths=filepaths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                      log_name='stage_0_upload_log.csv')
 
-    # upload NPZs using log file
+    # upload log file
     upload_data(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), new_job_id, key)
+
+
+def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
+                              rgb_mode=False, label_only=False, pixel_only=False):
+    """Create a Figure 8 job based on the output of a previous Figure8 job
+
+    Args:
+        base_dir: full path to job directory
+        job_id_to_copy: ID number of Figure 8 job to use as template for new job
+        new_stage: specifies new_stage for subsequent job
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
+    """
+
+    key = str(getpass("Figure eight api key? "))
+
+    # copy job without data
+    new_job_id = copy_job(job_id_to_copy, key)
+    if new_job_id == -1:
+        return
+    print('New job ID is: ' + str(new_job_id))
+
+    # get info from previous stage
+    log_dir = os.path.join(base_dir, 'logs')
+    previous_log = pd.read_csv(os.path.join(log_dir, 'stage_0_upload_log.csv'))
+    filenames = previous_log['filename']
+    previous_stage = previous_log['stage'][0]
+    aws_folder = previous_log['aws_folder'][0]
+
+    # transfer files to new stage
+    filepaths = aws_transfer_files(aws_folder=aws_folder, completed_stage=previous_stage,
+                                   new_stage=new_stage, files_to_transfer=filenames,
+                                   pixel_only=pixel_only,
+                                   rgb_mode=rgb_mode, label_only=label_only)
+
+    # Generate log file for current job
+    create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
+                      filenames=filenames, filepaths=filepaths, job_id=new_job_id,
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                      log_name='stage_1_upload_log.csv')
+
+    # upload log file
+    upload_data(os.path.join(base_dir, 'logs/stage_1_upload_log.csv'), new_job_id, key)
 
 
 def download_report(job_id, log_dir):

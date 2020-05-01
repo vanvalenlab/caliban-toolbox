@@ -118,15 +118,56 @@ def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, r
     return files_to_upload, filename_list
 
 
-def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
+def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer,
+                       pixel_only, label_only, rgb_mode):
     """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
+    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages
 
-    copy_source = {'Bucket': output_bucket,
-                   'Key': key_src}
+    Args:
+        aws_folder: folder where uploaded files will be stored
+        completed_stage: stage of completed jobs
+        new_stage: stage for new job
+        files_to_transfer: list containing the names of files to be transferred
+        pixel_only: boolean flag to set pixel_only mode
+        label_only: boolean flag to set label_only mode
+        rgb_mode: boolean flag to set rgb_mode
+    """
 
-    s3.copy(copy_source, input_bucket, key_dst,
-            ExtraArgs={'ACL': 'public-read'})
+    s3 = connect_aws()
+
+    filename_list = []
+
+    # change slashes separating nested folders to underscores for URL generation
+    subfolders = re.split('/', aws_folder)
+    subfolders = '__'.join(subfolders)
+
+    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
+    url_encoded_dict = urlencode(url_dict)
+
+    # upload images
+    for img in files_to_transfer:
+
+        # source path
+        key_src = os.path.join(aws_folder, completed_stage, img)
+
+        # destination path
+        key_dst = os.path.join(aws_folder, new_stage, img)
+
+        # parameters for copy function
+        copy_source = {'Bucket': 'caliban-output',
+                       'Key': key_src}
+
+        s3.copy(copy_source, 'caliban-input', key_dst,
+                ExtraArgs={'ACL': 'public-read'})
+
+        url = 'https://caliban.deepcell.org/{}__{}__{}__' \
+              '{}__{}?{}'.format('caliban-input', 'caliban-output', subfolders, new_stage, img,
+                                 url_encoded_dict)
+
+        # add caliban url to list
+        filename_list.append(url)
+
+    return filename_list
 
 
 def aws_download_files(upload_log, output_dir):
