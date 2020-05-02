@@ -29,10 +29,46 @@ import stat
 import zipfile
 import pandas as pd
 import urllib
+import re
+
 
 from getpass import getpass
+from urllib.parse import urlencode
+
 from caliban_toolbox.log_file import create_upload_log
 from caliban_toolbox.aws_functions import aws_upload_files, aws_transfer_files, aws_download_files
+from caliban_toolbox.utils.utils import list_npzs_folder
+
+
+def _format_url(subfolders, stage, npz, url_encoded_dict):
+    base_url = 'https://caliban.deepcell.org/caliban-input__caliban-output__{}__{}__{}?{}'
+    formatted_url = base_url.format(subfolders, stage, npz, url_encoded_dict)
+
+    return formatted_url
+
+
+def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mode):
+    """Helper function to create relevant URLs for caliban log and AWS upload
+
+    """
+    # TODO: validate URLs
+    # load the images from specified folder but not the json log file
+    npzs_to_upload = list_npzs_folder(crop_dir)
+
+    # change slashes separating nested folders to underscores for URL generation
+    subfolders = re.split('/', aws_folder)
+    subfolders = '__'.join(subfolders)
+
+    # create dictionary to hold boolean flags
+    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
+    url_encoded_dict = urlencode(url_dict)
+
+    # create path to npz, key to upload npz, and url path for figure8
+    npz_paths = [os.path.join(crop_dir, npz) for npz in npzs_to_upload]
+    npz_keys = [os.path.join(aws_folder, stage, npz) for npz in npzs_to_upload]
+    url_paths = [_format_url(subfolders, stage, npz, url_encoded_dict) for npz in npzs_to_upload]
+
+    return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
 def copy_job(job_id, key):
@@ -97,6 +133,8 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
         rgb_mode: flag specifying whether annotators will view images in RGB mode
     """
 
+    # TODO: input validation
+    # TODO: smart AWS folder creation logic
     key = str(getpass("Figure eight api key? "))
 
     # copy job without data
@@ -105,15 +143,19 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
         return
     print('New job ID is: ' + str(new_job_id))
 
-    # upload files to AWS bucket
     upload_folder = os.path.join(base_dir, 'crop_dir')
-    filenames, filepaths = aws_upload_files(aws_folder=aws_folder, stage=stage,
-                                            upload_folder=upload_folder, pixel_only=pixel_only,
-                                            rgb_mode=rgb_mode, label_only=label_only)
+
+    # get relevant paths
+    npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
+                                                           aws_folder=aws_folder,
+                                                           stage=stage, pixel_only=pixel_only,
+                                                           label_only=label_only, rgb_mode=rgb_mode)
+    # upload files to AWS bucket
+    aws_upload_files(npz_paths=npz_paths, npz_keys=npz_keys)
 
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
-                      filenames=filenames, filepaths=filepaths, job_id=new_job_id,
+                      filenames=npzs, filepaths=url_paths, job_id=new_job_id,
                       pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
                       log_name='stage_0_upload_log.csv')
 
