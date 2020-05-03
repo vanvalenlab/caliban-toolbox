@@ -73,7 +73,6 @@ def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id,
     dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
 
 
-
 # deprecated: this function is for figure8 PLSS output.
 # Keeping to use as a model for caliban veresion
 

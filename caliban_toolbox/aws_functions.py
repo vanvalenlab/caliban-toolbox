@@ -82,7 +82,8 @@ def aws_upload_files(local_paths, aws_paths):
     for i in range(len(local_paths)):
         s3.upload_file(local_paths[i], 'caliban-input', aws_paths[i],
                        Callback=ProgressPercentage(local_paths[i]),
-                       ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': local_paths[i]}})
+                       ExtraArgs={'ACL': 'public-read',
+                                  'Metadata': {'source_path': local_paths[i]}})
         print('\n')
 
 
@@ -123,7 +124,7 @@ def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer
 
         # parameters for copy function
         current_path_args = {'Bucket': 'caliban-output',
-                       'Key': current_path}
+                             'Key': current_path}
 
         s3.copy(current_path_args, 'caliban-input', next_path,
                 ExtraArgs={'ACL': 'public-read'})

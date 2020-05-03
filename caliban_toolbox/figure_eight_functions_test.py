@@ -86,4 +86,3 @@ def test_create_job_urls():
                                                                   pixel_only=pixel_only,
                                                                   label_only=label_only,
                                                                   rgb_mode=rgb_mode)
-

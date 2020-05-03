@@ -204,7 +204,8 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
     npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
                                                            aws_folder=aws_folder,
                                                            stage=stage, pixel_only=pixel_only,
-                                                           label_only=label_only, rgb_mode=rgb_mode)
+                                                           label_only=label_only,
+                                                           rgb_mode=rgb_mode)
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
