@@ -25,6 +25,7 @@
 # ==============================================================================
 import tempfile
 import os
+import pytest
 
 from pathlib import Path
 
@@ -65,4 +66,24 @@ def test_create_job_urls():
         npz_paths, npz_keys, url_paths, npzs_to_upload = output_lists
 
         assert len(npz_paths) == len(npz_keys) == len(url_paths) == len(npzs_to_upload) == 3
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # NPZ name with spaces leads to bad url
+        npz_files = ['bad file name.npz']
+
+        for npz in npz_files:
+            Path(os.path.join(temp_dir, npz)).touch()
+
+        aws_folder = 'aws_main_folder/aws_sub_folder'
+        stage = 'test_stage'
+        pixel_only, label_only, rgb_mode = True, False, True
+
+        with pytest.raises(ValueError):
+
+            output_lists = figure_eight_functions.create_job_urls(crop_dir=temp_dir,
+                                                                  aws_folder=aws_folder,
+                                                                  stage=stage,
+                                                                  pixel_only=pixel_only,
+                                                                  label_only=label_only,
+                                                                  rgb_mode=rgb_mode)
 

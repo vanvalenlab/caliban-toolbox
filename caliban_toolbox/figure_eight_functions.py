@@ -30,6 +30,7 @@ import zipfile
 import pandas as pd
 import urllib
 import re
+import validators
 
 
 from getpass import getpass
@@ -86,6 +87,9 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
         list: list of paths to desintation for NPZs
         list: list of URLs to supply to figure8 to to display crops
         list: list of NPZs that will be uploaded
+
+    Raises:
+        ValueError: If URLs are not valid
     """
     # TODO: check that URLS don't contain invalid character
     # load the images from specified folder but not the json log file
@@ -103,6 +107,12 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
     npz_paths = [os.path.join(crop_dir, npz) for npz in npzs_to_upload]
     npz_keys = [os.path.join(aws_folder, stage, npz) for npz in npzs_to_upload]
     url_paths = [_format_url(subfolders, stage, npz, url_encoded_dict) for npz in npzs_to_upload]
+
+    # validate urls
+    for url in url_paths:
+        valid = validators.url(url)
+        if not valid:
+            raise ValueError('Invalid URL: {}'.format(url))
 
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
