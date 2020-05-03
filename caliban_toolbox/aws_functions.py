@@ -68,7 +68,7 @@ def connect_aws():
     return s3
 
 
-def aws_upload_files(npz_paths, npz_keys):
+def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
 
     Args:
@@ -79,10 +79,10 @@ def aws_upload_files(npz_paths, npz_keys):
     s3 = connect_aws()
 
     # upload images
-    for i in range(len(npz_paths)):
-        s3.upload_file(npz_paths[i], 'caliban-input', npz_keys[i],
-                       Callback=ProgressPercentage(npz_paths[i]),
-                       ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': npz_paths[i]}})
+    for i in range(len(local_paths)):
+        s3.upload_file(local_paths[i], 'caliban-input', aws_paths[i],
+                       Callback=ProgressPercentage(local_paths[i]),
+                       ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': local_paths[i]}})
         print('\n')
 
 
@@ -106,30 +106,30 @@ def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer
     filename_list = []
 
     # change slashes separating nested folders to underscores for URL generation
-    subfolders = re.split('/', aws_folder)
-    subfolders = '__'.join(subfolders)
+    aws_folder = re.split('/', aws_folder)
+    aws_folder = '__'.join(aws_folder)
 
     url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
     url_encoded_dict = urlencode(url_dict)
 
     # upload images
-    for img in files_to_transfer:
+    for file in files_to_transfer:
 
-        # source path
-        key_src = os.path.join(aws_folder, completed_stage, img)
+        # current location of image
+        current_path = os.path.join(aws_folder, completed_stage, file)
 
-        # destination path
-        key_dst = os.path.join(aws_folder, new_stage, img)
+        # where to transfer image
+        next_path = os.path.join(aws_folder, new_stage, file)
 
         # parameters for copy function
-        copy_source = {'Bucket': 'caliban-output',
-                       'Key': key_src}
+        current_path_args = {'Bucket': 'caliban-output',
+                       'Key': current_path}
 
-        s3.copy(copy_source, 'caliban-input', key_dst,
+        s3.copy(current_path_args, 'caliban-input', next_path,
                 ExtraArgs={'ACL': 'public-read'})
 
         url = 'https://caliban.deepcell.org/{}__{}__{}__' \
-              '{}__{}?{}'.format('caliban-input', 'caliban-output', subfolders, new_stage, img,
+              '{}__{}?{}'.format('caliban-input', 'caliban-output', aws_folder, new_stage, file,
                                  url_encoded_dict)
 
         # add caliban url to list
@@ -138,6 +138,7 @@ def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer
     return filename_list
 
 
+# TODO: catch missing files
 def aws_download_files(upload_log, output_dir):
     """Download files following Figure 8 annotation.
 
@@ -154,12 +155,12 @@ def aws_download_files(upload_log, output_dir):
     stage = upload_log['stage'][0]
 
     # download all images
-    for img in files_to_download:
+    for file in files_to_download:
 
         # full path to save image
-        save_path = os.path.join(output_dir, img)
+        local_path = os.path.join(output_dir, file)
 
         # path to file in aws
-        img_path = os.path.join(aws_folder, stage, img)
+        aws_path = os.path.join(aws_folder, stage, file)
 
-        s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+        s3.download_file(Bucket='caliban-output', Key=aws_path, Filename=local_path)

@@ -40,9 +40,9 @@ from caliban_toolbox.aws_functions import aws_upload_files, aws_transfer_files, 
 from caliban_toolbox.utils.utils import list_npzs_folder
 
 
-def _format_url(subfolders, stage, npz, url_encoded_dict):
+def _format_url(aws_folder, stage, npz, url_encoded_dict):
     base_url = 'https://caliban.deepcell.org/caliban-input__caliban-output__{}__{}__{}?{}'
-    formatted_url = base_url.format(subfolders, stage, npz, url_encoded_dict)
+    formatted_url = base_url.format(aws_folder, stage, npz, url_encoded_dict)
 
     return formatted_url
 
