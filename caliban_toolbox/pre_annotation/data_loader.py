@@ -318,13 +318,15 @@ class UniversalDataLoader(object):
         return None
 
 
-    def load(self):
+    def load_metadata(self):
+        # Build a database that includes all the the metadata information
+        # as well as the paths to the individual image files
 
         (metadata_dirs, image_paths) = self._assemble_paths()
 
         # Check that paths are good by verifying metadata files
         # If so, then load and organize metadata information
-        for metadata_dir in metadata_dirs:
+        for (metadata_dir, image_path) in (metadata_dirs, image_paths):
             mdf_path = os.path.join(metadata_dir, 'metadata')
             if not os.path.isfile(mdf_path):
                 raise ValueError("Metadata file does not exist")
@@ -332,6 +334,13 @@ class UniversalDataLoader(object):
             with open(mdf_path, 'r') as raw_mdf:
                 raw_data = json.load(raw_mdf)
 
+            # translate the information to a data frame here
+            # store image path directly (one for madrox and one for aws)
+            for image_stack in image_path:
+                # Add all the individual paths to the files in image_path to the record
+                stuff = image_stack
+
+    def load_imagedata(self):
         # Now load the image data
         for image_path in image_paths:
             img_set = tiff.imread(image_path)
@@ -339,4 +348,9 @@ class UniversalDataLoader(object):
 
 
 
-        return (img_set, raw_data)
+        return img_set
+
+
+        #predict on data
+        #need to have a dictionary of models to run
+        #curate-seg-track job
