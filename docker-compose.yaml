@@ -17,12 +17,9 @@ services:
     image: mongo
     restart: always
     environment:
-      MONGO_INITDB_DATABASE: dcdatasets
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
-      - ./db:/docker-entrypoint-initdb.d/:rw
       - ./mongo-data:/data/db
     ports:
-      - 8081:8081
-    command: mongod --auth
+      - 27017:27017
