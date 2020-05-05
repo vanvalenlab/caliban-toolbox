@@ -35,13 +35,15 @@ import xarray as xr
 from caliban_toolbox.utils import crop_utils, slice_utils, io_utils
 
 
-def crop_multichannel_data(X_data, y_data, crop_size, overlap_frac, test_parameters=False):
+def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overlap_frac=0.1,
+                           test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Args:
         X_data: xarray containing raw images to be cropped
         y_data: xarray containing labeled images to be chopped
         crop_size: (row_crop, col_crop) tuple specifying shape of the crop
+        crop_num: (row_num, col_num) tuple specifying
         overlap_frac: fraction that crops will overlap each other on each edge
         test_parameters: boolean to determine whether to run all fovs, or only the first
 
@@ -51,12 +53,33 @@ def crop_multichannel_data(X_data, y_data, crop_size, overlap_frac, test_paramet
     """
 
     # sanitize inputs
-    if len(crop_size) != 2:
-        raise ValueError('crop_size must be a tuple of (row_crop, col_crop), '
-                         'got {}'.format(crop_size))
+    if crop_size is None and crop_num is None:
+        raise ValueError('Either crop_size or crop_num must be specified')
 
-    if not crop_size[0] > 0 and crop_size[1] > 0:
-        raise ValueError('crop_size entries must be positive numbers')
+    if crop_size is not None and crop_num is not None:
+        raise ValueError('Only one of crop_size and crop_num should be provided')
+
+    if crop_size is not None:
+        if not isinstance(crop_size, tuple):
+            raise ValueError('crop_size must be a tuple')
+
+        if len(crop_size) != 2:
+            raise ValueError('crop_size must be a tuple of (row_crop, col_crop), '
+                             'got {}'.format(crop_size))
+
+        if not crop_size[0] > 0 and crop_size[1] > 0:
+            raise ValueError('crop_size entries must be positive numbers')
+
+    if crop_num is not None:
+        if not isinstance(crop_num, tuple):
+            raise ValueError('crop_num must be a tuple')
+
+        if len(crop_num) != 2:
+            raise ValueError('crop_num must be a tuple of (num_row, num_col), '
+                             'got {}'.format(crop_size))
+
+        if not crop_num[0] > 0 and crop_num[1] > 0:
+            raise ValueError('crop_num entries must be positive numbers')
 
     if overlap_frac < 0 or overlap_frac > 1:
         raise ValueError('overlap_frac must be between 0 and 1')

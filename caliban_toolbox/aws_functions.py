@@ -72,8 +72,8 @@ def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
 
     Args:
-        npz_paths: path to npz file
-        npz_keys: key for saving npz file in AWS
+        local_paths: list of paths to npz files
+        aws_paths: list of paths for saving npz files in AWS
     """
 
     s3 = connect_aws()
@@ -89,8 +89,7 @@ def aws_upload_files(local_paths, aws_paths):
 
 def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer,
                        pixel_only, label_only, rgb_mode):
-    """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages
+    """Helper function to transfer files from one bucket/key to another
 
     Args:
         aws_folder: folder where uploaded files will be stored
