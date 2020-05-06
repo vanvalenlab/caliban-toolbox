@@ -78,16 +78,13 @@ class UniversalDataLoader(object):
     def __init__(self,
                  data_type,
                  imaging_type,
-                 specimen_type=None,
+                 specimen_type,
                  compartment=None,
-                 markers=['all'],
+                 markers=['all'], # these and the following should be sets to prevent double 'all's etc
                  uid=['all'],
                  session=['all'],
                  position=['all'],
                  image_type='.tif'):
-
-        if specimen_type is None:
-            raise ValueError('Specimen type is not specified')
 
         if compartment is None and imaging_type != ['phase']:
             raise ValueError('Compartment is not specified')
@@ -112,10 +109,11 @@ class UniversalDataLoader(object):
         self._datasets_available() # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
 
-        self.mng_db = __setup_mongo()
+        self.mng_db = _setup_mongo()
 
     def _vocab_check(self):
         # Check each user input for common mistakes and correct as neccesary
+        # TODO: improve this for generality and scale
 
         # imaging_type - check for fluo misspellings
         new_imaging_type = []
@@ -163,9 +161,10 @@ class UniversalDataLoader(object):
                 # spec value is None and level should be left as False
                 continue
 
-            #TODO: Raise a warning that 'all's or 'None's are in use
+            # TODO: Raise a warning that 'all's or 'None's are in use
 
     def _setup_mongo(self):
+        # TODO: Move to environment variables
         mongo_un = 'root'
         mongo_pw = 'password'
         mongo_host = 'mongo'
@@ -174,7 +173,7 @@ class UniversalDataLoader(object):
         mongo_uri = 'mongodb://%s:%s@%s:%s' % (mongo_un, mongo_pw, mongo_host, mongo_port)
         client = MongoClient(mongo_uri)
 
-        return client.dcdatasets
+        return client['dcdatasets']
 
     def _path_builder(self, root_path, list_of_dirs):
 
@@ -184,7 +183,7 @@ class UniversalDataLoader(object):
             if Path.exists(Path(candidate_path)):
                 new_paths.append(candidate_path)
             else:
-                #TODO: Switch this to a logger statement
+                # TODO: Switch this to a logger statement
                 print('Warning! Path:', candidate_path, 'Does Not Exist!')
 
         return new_paths
@@ -193,6 +192,8 @@ class UniversalDataLoader(object):
     def _assemble_paths(self):
 
         # maybe a dictionary would be better here? need to map multiple tiff files to a data dir
+        # probably should be a class per dataset
+        # TODO: polish the logic
 
         if self.onto_levels[0]:
             self.imaging_type = os.listdir(self.base_path)
