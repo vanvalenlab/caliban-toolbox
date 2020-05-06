@@ -31,13 +31,14 @@ import os
 import json
 import logging
 import fnmatch
+import pymongo
 
+from pymongo import MongoClient
 from pathlib import Path
+from skimage.external import tifffile as tiff
 
 import numpy as np
 import pandas as pd
-
-from skimage.external import tifffile as tiff
 
 from caliban_toolbox.utils.misc_utils import sorted_nicely
 
@@ -111,6 +112,8 @@ class UniversalDataLoader(object):
         self._datasets_available() # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
 
+        self.mng_db = __setup_mongo()
+
     def _vocab_check(self):
         # Check each user input for common mistakes and correct as neccesary
 
@@ -161,6 +164,17 @@ class UniversalDataLoader(object):
                 continue
 
             #TODO: Raise a warning that 'all's or 'None's are in use
+
+    def _setup_mongo(self):
+        mongo_un = 'root'
+        mongo_pw = 'password'
+        mongo_host = 'mongo'
+        mongo_port = '27017'
+
+        mongo_uri = 'mongodb://%s:%s@%s:%s' % (mongo_un, mongo_pw, mongo_host, mongo_port)
+        client = MongoClient(mongo_uri)
+
+        return client.dcdatasets
 
     def _path_builder(self, root_path, list_of_dirs):
 
