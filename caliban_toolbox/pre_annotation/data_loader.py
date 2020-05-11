@@ -29,15 +29,13 @@ from __future__ import absolute_import
 
 import os
 import json
-import logging
 import fnmatch
-import pymongo
 
-from pymongo import MongoClient
 from pathlib import Path
-from skimage.external import tifffile as tiff
-
 import numpy as np
+
+from skimage.external import tifffile as tiff
+from pymongo import MongoClient
 import pandas as pd
 
 from caliban_toolbox.utils.misc_utils import sorted_nicely
@@ -109,7 +107,7 @@ class UniversalDataLoader(object):
         self._datasets_available() # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
 
-        self.mng_db = _setup_mongo()
+        self.mng_db = self._setup_mongo()
 
     def _vocab_check(self):
         # Check each user input for common mistakes and correct as neccesary
@@ -196,13 +194,15 @@ class UniversalDataLoader(object):
         # TODO: polish the logic
 
         if self.onto_levels[0]:
-            self.imaging_type = os.listdir(self.base_path)
+            presort = os.listdir(self.base_path)
+            self.imaging_type = sorted_nicely(presort)
         imaging_paths = self._path_builder(self.base_path, self.imaging_type)
 
         specimen_paths = []
         for thing in imaging_paths:
             if self.onto_levels[1]:
-                self.specimen_type = os.listdir(thing)
+                presort = os.listdir(thing)
+                self.specimen_type = sorted_nicely(presort)
             specimen_paths.extend(self._path_builder(thing, self.specimen_type))
 
         # The following conditional doesn't work for phase (phase has no compartment or marker)
@@ -221,12 +221,14 @@ class UniversalDataLoader(object):
             # All compartments and all markers
             # We grab every directory
             for thing in specimen_paths:
-                compartment_marker_paths.extend(self._path_builder(thing, os.listdir(thing)))
+                presort = os.listdir(thing)
+                thing_sorted = sorted_nicely(presort)
+                compartment_marker_paths.extend(self._path_builder(thing, thing_sorted))
 
         elif self.onto_levels[2]:
             # All compartments but not all markers
             for thing in specimen_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 base_pattern = '*_'
                 for item in self.markers:
                     pattern = base_pattern+item
@@ -236,7 +238,7 @@ class UniversalDataLoader(object):
         elif self.onto_levels[3]:
             # Not all compartments but all markers (all markers for a given compartment)
             for thing in specimen_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 base_pattern = '_*'
                 if self.compartment is not None:
                     for item in self.compartment:
@@ -248,7 +250,7 @@ class UniversalDataLoader(object):
             # Specific compartments with specific markers
             # This is a tricky one because we have to check on marker compatibility
             for thing in specimen_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 for item1 in self.compartment:
                     for item2 in self.markers:
                         pattern = item1 + '_' + item2
@@ -260,7 +262,7 @@ class UniversalDataLoader(object):
         uid_paths = []
         for thing in compartment_marker_paths:
             if self.onto_levels[4]:
-                uid = os.listdir(thing)
+                uid = sorted_nicely(os.listdir(thing))
             uid_paths.extend(self._path_builder(thing, uid))
 
         # The uid_path is the directory that holds the images and metadata file
@@ -275,7 +277,8 @@ class UniversalDataLoader(object):
             # We grab every directory
             for thing in uid_paths:
                 images = []
-                for file in os.listdir(thing):
+                thing_sorted = sorted_nicely(os.listdir(thing))
+                for file in thing_sorted:
                     if file.endswith(self.image_type):
                         images.append(file)
                 image_paths.append(self._path_builder(thing, images))
@@ -283,7 +286,7 @@ class UniversalDataLoader(object):
         elif self.onto_levels[5]:
             # All sessions but not all positions
             for thing in uid_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 for item in self.position:
                     pattern = '*_s*_p' + item.zfill(2) + self.image_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
@@ -292,7 +295,7 @@ class UniversalDataLoader(object):
         elif self.onto_levels[6]:
             # Not all sessions but all positions (all positions for a given session)
             for thing in uid_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 for item in self.session:
                     pattern = '*_s' + item.zfill(2) + '*' + self.image_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
@@ -302,10 +305,10 @@ class UniversalDataLoader(object):
             # Specific compartments with specific markers
             # This is a tricky one because we have to check on marker compatibility
             for thing in uid_paths:
-                to_filter = os.listdir(thing)
+                to_filter = sorted_nicely(os.listdir(thing))
                 for item1 in self.session:
                     for item2 in self.position:
-                        pattern = '*_s' + item1.zfill(2) + '_p' + item2.zfill(2) + image_type
+                        pattern = '*_s' + item1.zfill(2) + '_p' + item2.zfill(2) + self.image_type
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
                         image_paths.append(self._path_builder(thing, dirs_to_keep))
 
@@ -327,21 +330,47 @@ class UniversalDataLoader(object):
 
 
     def _check_compatibility(self):
+        # Verify that the image data has the same resolution/size/etc
+        compatible = True
 
-        # are all the files the same resolution/size/etc
+        # Check Image Dimensions
+        dims = pd.DataFrame(list(self.metadata_all['DIMENSIONS']))
+        unique_entries_x = dims['X'].unique()
+        unique_entries_y = dims['Y'].unique()
+        if len(unique_entries_x) != 1 or len(unique_entries_y) != 1:
+            print('Padding required') # TODO: Switch this to a logging statement
+            compatible = False
 
-        return None
+        # Check Resolution (using pixel size)
+        res_mag = pd.DataFrame(list(self.metadata_all['IMAGING_PARAMETERS']))
+        unique_entries = res_mag['PIXEL_SIZE'].unique()
+        if len(unique_entries) != 1:
+            print('Pixel size mismatch') # TODO: Switch this to a logging statement
+            compatible = False
+
+        # Magnificaiton
+        unique_entries = res_mag['MAGNIFICATION'].unique()
+        if len(unique_entries) != 1:
+            print('Magnification mismatch') # TODO: Switch this to a logging statement
+            compatible = False
+
+        # TODO: Add field to metaadata to check for number of frames
+
+        return compatible
 
 
     def load_metadata(self):
         # Build a database that includes all the the metadata information
         # as well as the paths to the individual image files
+        # TODO: Replace with query when DB is persistent
 
         (metadata_dirs, image_paths) = self._assemble_paths()
 
         # Check that paths are good by verifying metadata files
         # If so, then load and organize metadata information
-        for (metadata_dir, image_path) in (metadata_dirs, image_paths):
+        metadata_all = []
+        for (metadata_dir, image_path) in zip(metadata_dirs, image_paths):
+
             mdf_path = os.path.join(metadata_dir, 'metadata')
             if not os.path.isfile(mdf_path):
                 raise ValueError("Metadata file does not exist")
@@ -349,21 +378,68 @@ class UniversalDataLoader(object):
             with open(mdf_path, 'r') as raw_mdf:
                 raw_data = json.load(raw_mdf)
 
-            # translate the information to a data frame here
-            # store image path directly (one for madrox and one for aws)
-            for image_stack in image_path:
-                # Add all the individual paths to the files in image_path to the record
-                stuff = image_stack
+            # Manipulate the information in raw to a useful pandas dataframe
+            metadata_f = pd.DataFrame.from_dict(raw_data, orient='index').transpose()
+            metadata_f['TYPE'] = metadata_f['TYPE'].str.cat(sep=' ')
+            metadata_f['ONTOLOGY'] = metadata_f['ONTOLOGY'].str.cat(sep=' ')
+            metadata_f = metadata_f.dropna()
+            # Add a field to keep track of all the images assoicated with this metadata
+            metadata_f['PATHS'] = [image_path]
+            # Add this frame to the master list
+            metadata_all.append(metadata_f)
+
+        # Change the list into a dataframe
+        self.metadata_all = pd.concat(metadata_all)
 
     def load_imagedata(self):
-        # Now load the image data
-        for image_path in image_paths:
-            img_set = tiff.imread(image_path)
+        # Load the image data
 
+        # TODO: The metadata should include num_frames, but does not currently
+        # So, for now, we will load these images in a list
 
+        # The dimensions of these images will vary in size and meaning depending on where
+        # the files exist in the ontology (eg: [time, y, x] for 2d dynamic data but
+        # [z, y, x] for 3d static data)
+        # Channels are handeled by the ontology (stored in other images) but will need to be
+        # correctly associated based on metadata
 
+        # Check for compatibility
+        try:
+            self.metadata_all
+        except NameError:
+            print("Metadata not found!")
 
-        return img_set
+        compatibility = self._check_compatibility()
+
+        if compatibility:
+            # Instantiate somthing to hold all the images
+            raw_images = [] # should be np.zeroes(shape)
+            dims = pd.DataFrame(list(self.metadata_all['DIMENSIONS']))
+            dims_x = int(dims['X'].unique()[0])
+            dims_y = int(dims['Y'].unique()[0])
+            max_frames = 0 # TODO: Remove when metadata corrected
+            for index, row in self.metadata_all.iterrows():
+                # Each row contains several paths that have the same metadata
+                # Perform some logic on the metadata to determine the size of the array
+                for path in row['PATHS']:
+                    # Read in the image
+                    img_set = tiff.imread(path)
+                    raw_images.append(img_set)
+                    if img_set.shape[0] > max_frames:
+                        max_frames = img_set.shape[0]
+
+        # TODO: the following wont be neccesary when num_frames exist
+        # TODO: the len(raw_images) could also be replaced by a column in dataframe
+        raw_image_array = np.zeros([len(raw_images),
+                                    max_frames,
+                                    dims_y, dims_x])
+        for index, item in enumerate(raw_images):
+            raw_image_array[index, :, :, :] = item
+
+        raw_images = raw_image_array
+
+        # Current pipeline expects xarray of shape [fov/stack, tiffs, y, x]
+        return raw_images
 
 
         #predict on data
