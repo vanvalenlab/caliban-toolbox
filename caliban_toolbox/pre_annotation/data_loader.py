@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 
 from skimage.external import tifffile as tiff
-from pymongo import MongoClient
+# from pymongo import MongoClient
 import pandas as pd
 
 from caliban_toolbox.utils.misc_utils import sorted_nicely
@@ -55,18 +55,18 @@ class UniversalDataLoader(object):
 
     Args:
         data type (list): CellNet data type ('dynamic/static', '2d/3d')
-        imaging type (list): imaging modality of interest ('fluo', 'phase', etc)
-        specimen type (list): specimen of interest (HEK293, HeLa, etc)
-        compartment(list): compartment of interest (nuclear, whole_cell)
+        imaging types (list): imaging modality of interest ('fluo', 'phase', etc)
+        specimen types (list): specimen of interest (HEK293, HeLa, etc)
+        compartments (list): compartments of interest (nuclear, whole_cell)
         marker (list): marker of interest
-        DOI/user_ID (list): DOI of the dataset or the user who generated it
-        session (list): which sessions to include
-        position/FOV (list): which positions/FOVs to include
+        exp_ids/DOIs (list): Experiment ID or DOI of the dataset
+        sessions (list): which sessionss to include
+        positions/FOVs (list): which positionss/FOVs to include
 
             - list should be strings and match CellNet ontology
               (e.g. data type = ['dynamic', '2d'])
             - 'all' selects all data from a given catagory
-              (e.g. session=['all'])
+              (e.g. sessions=['all'])
 
     Returns:
         Numpy array with the shape [fovs, tifs, y_dim, x_dim]
@@ -75,27 +75,27 @@ class UniversalDataLoader(object):
 
     def __init__(self,
                  data_type,
-                 imaging_type,
-                 specimen_type,
-                 compartment=None,
+                 imaging_types,
+                 specimen_types,
+                 compartments=None,
                  markers=['all'], # these and the following should be sets to prevent double 'all's etc
-                 uid=['all'],
-                 session=['all'],
-                 position=['all'],
-                 image_type='.tif'):
+                 exp_ids=['all'],
+                 sessions=['all'],
+                 positions=['all'],
+                 file_type='.tif'):
 
-        if compartment is None and imaging_type != ['phase']:
-            raise ValueError('Compartment is not specified')
+        if compartments is None and imaging_types != ['phase']:
+            raise ValueError('compartments is not specified')
 
-        self.data_type = data_type
-        self.imaging_type = imaging_type
-        self.specimen_type = specimen_type
-        self.compartment = compartment
-        self.markers = markers
-        self.uid = uid
-        self.session = session
-        self.position = position
-        self.image_type = image_type
+        self.data_type = set(data_type)
+        self.imaging_types = set(imaging_types)
+        self.specimen_types = set(specimen_types)
+        self.compartments = set(compartments)
+        self.markers = set(markers)
+        self.exp_ids = set(exp_ids)
+        self.sessions = set(sessions)
+        self.positions = set(positions)
+        self.file_type = file_type
         self.onto_levels = np.full(7, False)
 
         self._vocab_check()
@@ -107,50 +107,50 @@ class UniversalDataLoader(object):
         self._datasets_available() # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
 
-        self.mng_db = self._setup_mongo()
+        # self.mng_db = self._setup_mongo()
 
     def _vocab_check(self):
         # Check each user input for common mistakes and correct as neccesary
         # TODO: improve this for generality and scale
 
-        # imaging_type - check for fluo misspellings
-        new_imaging_type = []
-        for item in self.imaging_type:
+        # imaging_types - check for fluo misspellings
+        new_imaging_types = []
+        for item in self.imaging_types:
             if any([item.lower() == 'flourescent',
                     item.lower() == 'fluorescence',
                     item.lower() == 'fluorescent',
                     item.lower() == 'fluo']):
-                new_imaging_type.append('fluo')
+                new_imaging_types.append('fluo')
             elif item.lower() == 'phase':
-                new_imaging_type.append('phase')
+                new_imaging_types.append('phase')
             else:
-                new_imaging_type.append(item)
+                new_imaging_types.append(item)
 
-        self.imaging_type = new_imaging_type
+        self.imaging_types = new_imaging_types
 
-        # compartment - check for nuc or capitalization
-        new_compartment = []
-        for item in self.compartment:
+        # compartments - check for nuc or capitalization
+        new_compartments = []
+        for item in self.compartments:
             if any([item.lower() == 'nuc',
                     item.lower() == 'nuclear']):
-                new_compartment.append('Nuclear')
+                new_compartments.append('Nuclear')
             elif any([item.lower() == 'wholecell',
                       item.lower() == 'whole_cell']):
-                new_compartment.append('WholeCell')
+                new_compartments.append('WholeCell')
             else:
-                new_compartment.append(item)
+                new_compartments.append(item)
 
-        self.compartment = new_compartment
+        self.compartments = new_compartments
 
     def _calc_upper_bound(self):
         # how many 'alls' do we have and at what level?
-        for level, spec in enumerate([self.imaging_type,
-                                      self.specimen_type,
-                                      self.compartment,
+        for level, spec in enumerate([self.imaging_types,
+                                      self.specimen_types,
+                                      self.compartments,
                                       self.markers,
-                                      self.uid,
-                                      self.session,
-                                      self.position]):
+                                      self.exp_ids,
+                                      self.sessions,
+                                      self.positions]):
 
             try:
                 if len(spec) == 1 and spec[0].lower() == 'all':
@@ -195,124 +195,124 @@ class UniversalDataLoader(object):
 
         if self.onto_levels[0]:
             presort = os.listdir(self.base_path)
-            self.imaging_type = sorted_nicely(presort)
-        imaging_paths = self._path_builder(self.base_path, self.imaging_type)
+            self.imaging_types = sorted_nicely(presort)
+        imaging_paths = self._path_builder(self.base_path, self.imaging_types)
 
         specimen_paths = []
         for thing in imaging_paths:
             if self.onto_levels[1]:
                 presort = os.listdir(thing)
-                self.specimen_type = sorted_nicely(presort)
-            specimen_paths.extend(self._path_builder(thing, self.specimen_type))
+                self.specimen_types = sorted_nicely(presort)
+            specimen_paths.extend(self._path_builder(thing, self.specimen_types))
 
-        # The following conditional doesn't work for phase (phase has no compartment or marker)
+        # The following conditional doesn't work for phase (phase has no compartments or marker)
         # So we need a different branch to handle that here
-        compartment_marker_paths = []
-        if 'phase' in self.imaging_type:
+        compartments_marker_paths = []
+        if 'phase' in self.imaging_types:
             for thing in specimen_paths:
                 thing_path = Path(thing)
                 thing_parts = os.path.split(thing_path.parent)
                 if thing_parts[1] == 'phase':
-                    compartment_marker_paths.append(thing)
+                    compartments_marker_paths.append(thing)
 
         # Until now each spec has been standalone
         # Now we need to start combining specs
         if self.onto_levels[2] and self.onto_levels[3]:
-            # All compartments and all markers
+            # All compartmentss and all markers
             # We grab every directory
             for thing in specimen_paths:
                 presort = os.listdir(thing)
                 thing_sorted = sorted_nicely(presort)
-                compartment_marker_paths.extend(self._path_builder(thing, thing_sorted))
+                compartments_marker_paths.extend(self._path_builder(thing, thing_sorted))
 
         elif self.onto_levels[2]:
-            # All compartments but not all markers
+            # All compartmentss but not all markers
             for thing in specimen_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
                 base_pattern = '*_'
                 for item in self.markers:
                     pattern = base_pattern+item
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                    compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
+                    compartments_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
         elif self.onto_levels[3]:
-            # Not all compartments but all markers (all markers for a given compartment)
+            # Not all compartmentss but all markers (all markers for a given compartments)
             for thing in specimen_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
                 base_pattern = '_*'
-                if self.compartment is not None:
-                    for item in self.compartment:
+                if self.compartments is not None:
+                    for item in self.compartments:
                         pattern = item + base_pattern
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                        compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
+                        compartments_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
         else:
-            # Specific compartments with specific markers
+            # Specific compartmentss with specific markers
             # This is a tricky one because we have to check on marker compatibility
             for thing in specimen_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
-                for item1 in self.compartment:
+                for item1 in self.compartments:
                     for item2 in self.markers:
                         pattern = item1 + '_' + item2
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
-                        compartment_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
+                        compartments_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
-        # UID/DOI
-        # for each path in compartment_marker_paths we need to select the correct experiment id
-        uid_paths = []
-        for thing in compartment_marker_paths:
+        # Exp_ids/DOI
+        # for each path in compartments_marker_paths we need to select the correct experiment id
+        exp_ids_paths = []
+        for thing in compartments_marker_paths:
             if self.onto_levels[4]:
-                uid = sorted_nicely(os.listdir(thing))
-            uid_paths.extend(self._path_builder(thing, uid))
+                exp_ids = sorted_nicely(os.listdir(thing))
+            exp_ids_paths.extend(self._path_builder(thing, exp_ids))
 
-        # The uid_path is the directory that holds the images and metadata file
+        # The exp_ids_path is the directory that holds the images and metadata file
 
-        # Session and position
+        # sessions and positions
         # Again:
         # Now we need to start combining specs
 
         image_paths = []
         if self.onto_levels[5] and self.onto_levels[6]:
-            # All sessions and all positions
+            # All sessionss and all positionss
             # We grab every directory
-            for thing in uid_paths:
+            for thing in exp_ids_paths:
                 images = []
                 thing_sorted = sorted_nicely(os.listdir(thing))
                 for file in thing_sorted:
-                    if file.endswith(self.image_type):
+                    if file.endswith(self.file_type):
                         images.append(file)
                 image_paths.append(self._path_builder(thing, images))
 
         elif self.onto_levels[5]:
-            # All sessions but not all positions
-            for thing in uid_paths:
+            # All sessionss but not all positionss
+            for thing in exp_ids_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
-                for item in self.position:
-                    pattern = '*_s*_p' + item.zfill(2) + self.image_type
+                for item in self.positions:
+                    pattern = '*_s*_p' + item.zfill(2) + self.file_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
                     image_paths.append(self._path_builder(thing, dirs_to_keep))
 
         elif self.onto_levels[6]:
-            # Not all sessions but all positions (all positions for a given session)
-            for thing in uid_paths:
+            # Not all sessionss but all positionss (all positionss for a given sessions)
+            for thing in exp_ids_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
-                for item in self.session:
-                    pattern = '*_s' + item.zfill(2) + '*' + self.image_type
+                for item in self.sessions:
+                    pattern = '*_s' + item.zfill(2) + '*' + self.file_type
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
                     image_paths.append(self._path_builder(thing, dirs_to_keep))
 
         else:
-            # Specific compartments with specific markers
+            # Specific compartmentss with specific markers
             # This is a tricky one because we have to check on marker compatibility
-            for thing in uid_paths:
+            for thing in exp_ids_paths:
                 to_filter = sorted_nicely(os.listdir(thing))
-                for item1 in self.session:
-                    for item2 in self.position:
-                        pattern = '*_s' + item1.zfill(2) + '_p' + item2.zfill(2) + self.image_type
+                for item1 in self.sessions:
+                    for item2 in self.positions:
+                        pattern = '*_s' + item1.zfill(2) + '_p' + item2.zfill(2) + self.file_type
                         dirs_to_keep = fnmatch.filter(to_filter, pattern)
                         image_paths.append(self._path_builder(thing, dirs_to_keep))
 
-        return (uid_paths, image_paths)
+        return (exp_ids_paths, image_paths)
 
 
     def _datasets_available(self):
