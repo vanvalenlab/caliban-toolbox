@@ -151,6 +151,7 @@ class UniversalDataLoader(object):
                                       self.exp_ids,
                                       self.sessions,
                                       self.positions]):
+            spec = list(spec)
 
             try:
                 if len(spec) == 1 and spec[0].lower() == 'all':
