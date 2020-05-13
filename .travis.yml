@@ -1,4 +1,4 @@
-sudo: ture
+sudo: true
 dist: xenial
 
 git:
