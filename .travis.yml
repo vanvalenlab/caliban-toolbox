@@ -7,17 +7,17 @@ git:
 language: python
 
 python:
- - 3.6
+ - 3.7
 
 cache: pip
 
 install:
-  - pip install -r requirements.txt
+  - pip install -r requirements.txt --progress-bar off
   # install testing requirements
-  - pip install pytest==5.2.0 pytest-cov==2.5.1 pytest-pep8 coveralls
+  - pip install -r requirements-test.txt --progress-bar off
 
 script:
-  - python -m pytest --pep8 --cov=caliban_toolbox caliban_toolbox
+  - python -m pytest --cov=caliban_toolbox --pep8
 
 after_success:
   - coveralls
