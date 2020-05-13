@@ -78,7 +78,7 @@ class UniversalDataLoader(object):
                  imaging_types,
                  specimen_types,
                  compartments=None,
-                 markers=['all'],  # these and the following should be sets to prevent double 'all's etc
+                 markers=['all'],  # the following should be sets to prevent double 'alls etc
                  exp_ids=['all'],
                  sessions=['all'],
                  positions=['all'],
@@ -184,11 +184,11 @@ class UniversalDataLoader(object):
            and verify that these new paths exist.
 
         Args:
-            root_path (path):
-            list_of_dirs (list):
+            root_path (path): base path to add to
+            list_of_dirs (list): directory names to add to the base path
 
         Returns:
-            list:
+            list: combined path of length equal to number of dirs in list_of_dirs
         """
         new_paths = []
         for item in list_of_dirs:
@@ -202,7 +202,8 @@ class UniversalDataLoader(object):
         return new_paths
 
     def _assemble_paths(self):
-        """
+        """Go through permuations of parameters and assemble paths that lead to the
+           directories of interest (containing a metadata json file) as well as img stacks
         """
         # maybe a dictionary would be better here? need to map multiple tiff files to a data dir
         # probably should be a class per dataset

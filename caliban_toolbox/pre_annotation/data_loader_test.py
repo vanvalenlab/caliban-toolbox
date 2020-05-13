@@ -29,52 +29,52 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
-
-import numpy as np
-import pandas as pd
-import skimage as sk
+import random
 
 import pytest
 
 from caliban_toolbox.pre_annotation import data_loader
 
+
 def _get_dummy_inputs(object):
-    possible_data_type = [['2d', 'static'], ['2d', 'dynamic'], ['3d', 'static'], ['3d', 'dynamic']]
-    possible_imaging_types = [[]]
-    possible_specimen_types
-    possible_compartments=None
-    possible_markers=['all']
-    possible_exp_ids=['all']
-    possible_sessions=['all']
-    possible_positions=['all']
-    possible_file_type='.tif'
+    possible_data_type = random.choice([['2d', 'static'],
+                                        ['2d', 'dynamic'],
+                                        ['3d', 'static'],
+                                        ['3d', 'dynamic']])
+    possible_imaging_types = random.choice([['fluo'], ['phase'], ['fluo', 'phase'], ['all']])
+    possible_specimen_types = random.choice([['HEK293'], ['HeLa'], ['HEK293', 'HeLa'], ['all']])
+    possible_compartments = random.choice([[None], ['nuclear'], ['nuclear', 'wholecell'], ['all']])
+    possible_markers = ['all']
+    possible_exp_ids = ['all']
+    possible_sessions = ['all']
+    possible_positions = ['all']
+    possible_file_type = '.tif'
+
+    loader_inputs = [possible_data_type,
+                     possible_imaging_types,
+                     possible_specimen_types,
+                     possible_compartments,
+                     possible_markers,
+                     possible_exp_ids,
+                     possible_sessions,
+                     possible_positions,
+                     possible_file_type]
+
+    return loader_inputs
 
 
 class TestUniversalDataLoader(object):  # pylint: disable=useless-object-inheritance
 
     def test_simple(self):
         loader_inputs = _get_dummy_inputs(self)
-        _ = data_loader.UniversalDataLoader(loader_inputs)
 
-        # test data with bad rank
-        with pytest.raises(ValueError):
-            data_loader.UniversalDataLoader(
-                np.random.random((32, 32, 1)),
-                np.random.randint(num_objects, size=(32, 32, 1)),
-                model=model)
-
-        # test mismatched x and y shape
-        with pytest.raises(ValueError):
-            data_loader.UniversalDataLoader(
-                np.random.random((3, 32, 32, 1)),
-                np.random.randint(num_objects, size=(2, 32, 32, 1)),
-                model=model)
-
-        # test bad features
-        with pytest.raises(ValueError):
-            data_loader.UniversalDataLoader(x, y, model=model, features=None)
-
-        # test bad data_format
-        with pytest.raises(ValueError):
-            data_loader.UniversalDataLoader(x, y, model=model, data_format='invalid')
+        # test with standard inputs
+        _ = data_loader.UniversalDataLoader(data_type=loader_inputs[0],
+                                            imaging_types=loader_inputs[1],
+                                            specimen_types=loader_inputs[2],
+                                            compartments=loader_inputs[3],
+                                            markers=loader_inputs[4],
+                                            exp_ids=loader_inputs[5],
+                                            sessions=loader_inputs[6],
+                                            positions=loader_inputs[7],
+                                            file_type=loader_inputs[8])
