@@ -130,18 +130,19 @@ class UniversalDataLoader(object):
         self.imaging_types = new_imaging_types
 
         # compartments - check for nuc or capitalization
-        new_compartments = []
-        for item in self.compartments:
-            if any([item.lower() == 'nuc',
-                    item.lower() == 'nuclear']):
-                new_compartments.append('Nuclear')
-            elif any([item.lower() == 'wholecell',
-                      item.lower() == 'whole_cell']):
-                new_compartments.append('WholeCell')
-            else:
-                new_compartments.append(item)
+        if compartments is not None:
+            new_compartments = []
+            for item in self.compartments:
+                if any([item.lower() == 'nuc',
+                        item.lower() == 'nuclear']):
+                    new_compartments.append('Nuclear')
+                elif any([item.lower() == 'wholecell',
+                          item.lower() == 'whole_cell']):
+                    new_compartments.append('WholeCell')
+                else:
+                    new_compartments.append(item)
 
-        self.compartments = new_compartments
+            self.compartments = new_compartments
 
     def _calc_upper_bound(self):
         """Calculate how many 'alls' do we have and at what levels
