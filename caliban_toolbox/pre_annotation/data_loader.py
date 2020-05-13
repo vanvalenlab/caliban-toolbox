@@ -78,7 +78,7 @@ class UniversalDataLoader(object):
                  imaging_types,
                  specimen_types,
                  compartments=None,
-                 markers=['all'], # these and the following should be sets to prevent double 'all's etc
+                 markers=['all'],  # these and the following should be sets to prevent double 'all's etc
                  exp_ids=['all'],
                  sessions=['all'],
                  positions=['all'],
@@ -104,13 +104,14 @@ class UniversalDataLoader(object):
         for item in self.data_type:
             self.base_path = os.path.join(self.base_path, item)
 
-        self._datasets_available() # TODO: keep list of datasets for comparison
+        self._datasets_available()  # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
 
         # self.mng_db = self._setup_mongo()
 
     def _vocab_check(self):
-        # Check each user input for common mistakes and correct as neccesary
+        """Check each user input for common mistakes and correct as neccesary
+        """
         # TODO: improve this for generality and scale
 
         # imaging_types - check for fluo misspellings
@@ -143,7 +144,8 @@ class UniversalDataLoader(object):
         self.compartments = new_compartments
 
     def _calc_upper_bound(self):
-        # how many 'alls' do we have and at what level?
+        """Calculate how many 'alls' do we have and at what levels
+        """
         for level, spec in enumerate([self.imaging_types,
                                       self.specimen_types,
                                       self.compartments,
@@ -163,6 +165,9 @@ class UniversalDataLoader(object):
             # TODO: Raise a warning that 'all's or 'None's are in use
 
     def _setup_mongo(self):
+        """Setup access to the database
+        """
+
         # TODO: Move to environment variables
         mongo_un = 'root'
         mongo_pw = 'password'
@@ -175,7 +180,16 @@ class UniversalDataLoader(object):
         return client['dcdatasets']
 
     def _path_builder(self, root_path, list_of_dirs):
+        """Add several folders to a single path making several new paths.
+           and verify that these new paths exist.
 
+        Args:
+            root_path (path):
+            list_of_dirs (list):
+
+        Returns:
+            list:
+        """
         new_paths = []
         for item in list_of_dirs:
             candidate_path = os.path.join(root_path, item)
@@ -187,9 +201,9 @@ class UniversalDataLoader(object):
 
         return new_paths
 
-
     def _assemble_paths(self):
-
+        """
+        """
         # maybe a dictionary would be better here? need to map multiple tiff files to a data dir
         # probably should be a class per dataset
         # TODO: polish the logic
@@ -232,7 +246,7 @@ class UniversalDataLoader(object):
                 to_filter = sorted_nicely(os.listdir(thing))
                 base_pattern = '*_'
                 for item in self.markers:
-                    pattern = base_pattern+item
+                    pattern = base_pattern + item
                     dirs_to_keep = fnmatch.filter(to_filter, pattern)
                     compartments_marker_paths.extend(self._path_builder(thing, dirs_to_keep))
 
@@ -315,7 +329,6 @@ class UniversalDataLoader(object):
 
         return (exp_ids_paths, image_paths)
 
-
     def _datasets_available(self):
         # This function should be part of a different system and constantly maintained
         # This is a placeholder for a database that tells us what data is available
@@ -329,9 +342,9 @@ class UniversalDataLoader(object):
                 print('only 1 file')
                 print('--------------------------------')
 
-
     def _check_compatibility(self):
-        # Verify that the image data has the same resolution/size/etc
+        """Verify that the image data has the same resolution/size/etc
+        """
         compatible = True
 
         # Check Image Dimensions
@@ -339,30 +352,30 @@ class UniversalDataLoader(object):
         unique_entries_x = dims['X'].unique()
         unique_entries_y = dims['Y'].unique()
         if len(unique_entries_x) != 1 or len(unique_entries_y) != 1:
-            print('Padding required') # TODO: Switch this to a logging statement
+            print('Padding required')  # TODO: Switch this to a logging statement
             compatible = False
 
         # Check Resolution (using pixel size)
         res_mag = pd.DataFrame(list(self.metadata_all['IMAGING_PARAMETERS']))
         unique_entries = res_mag['PIXEL_SIZE'].unique()
         if len(unique_entries) != 1:
-            print('Pixel size mismatch') # TODO: Switch this to a logging statement
+            print('Pixel size mismatch')  # TODO: Switch this to a logging statement
             compatible = False
 
         # Magnificaiton
         unique_entries = res_mag['MAGNIFICATION'].unique()
         if len(unique_entries) != 1:
-            print('Magnification mismatch') # TODO: Switch this to a logging statement
+            print('Magnification mismatch')  # TODO: Switch this to a logging statement
             compatible = False
 
         # TODO: Add field to metaadata to check for number of frames
 
         return compatible
 
-
     def load_metadata(self):
-        # Build a database that includes all the the metadata information
-        # as well as the paths to the individual image files
+        """Build a database that includes all the the metadata information
+           as well as the paths to the individual image files
+        """
         # TODO: Replace with query when DB is persistent
 
         (metadata_dirs, image_paths) = self._assemble_paths()
@@ -393,7 +406,8 @@ class UniversalDataLoader(object):
         self.metadata_all = pd.concat(metadata_all)
 
     def load_imagedata(self):
-        # Load the image data
+        """Load the image data
+        """
 
         # TODO: The metadata should include num_frames, but does not currently
         # So, for now, we will load these images in a list
@@ -414,11 +428,11 @@ class UniversalDataLoader(object):
 
         if compatibility:
             # Instantiate somthing to hold all the images
-            raw_images = [] # should be np.zeroes(shape)
+            raw_images = []  # should be np.zeroes(shape)
             dims = pd.DataFrame(list(self.metadata_all['DIMENSIONS']))
             dims_x = int(dims['X'].unique()[0])
             dims_y = int(dims['Y'].unique()[0])
-            max_frames = 0 # TODO: Remove when metadata corrected
+            max_frames = 0  # TODO: Remove when metadata corrected
             for index, row in self.metadata_all.iterrows():
                 # Each row contains several paths that have the same metadata
                 # Perform some logic on the metadata to determine the size of the array
@@ -442,7 +456,6 @@ class UniversalDataLoader(object):
         # Current pipeline expects xarray of shape [fov/stack, tiffs, y, x]
         return raw_images
 
-
-        #predict on data
-        #need to have a dictionary of models to run
-        #curate-seg-track job
+        # predict on data
+        # need to have a dictionary of models to run
+        # curate-seg-track job

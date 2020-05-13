@@ -29,10 +29,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import errno
 import os
-import shutil
-import tempfile
 
 import numpy as np
 import pandas as pd
@@ -40,38 +37,44 @@ import skimage as sk
 
 import pytest
 
-from deepcell_tracking import tracking
-from deepcell_tracking import utils
+from caliban_toolbox.pre_annotation import data_loader
 
-class TestTracking(object):  # pylint: disable=useless-object-inheritance
+def _get_dummy_inputs(object):
+    possible_data_type = [['2d', 'static'], ['2d', 'dynamic'], ['3d', 'static'], ['3d', 'dynamic']]
+    possible_imaging_types = [[]]
+    possible_specimen_types
+    possible_compartments=None
+    possible_markers=['all']
+    possible_exp_ids=['all']
+    possible_sessions=['all']
+    possible_positions=['all']
+    possible_file_type='.tif'
+
+
+class TestUniversalDataLoader(object):  # pylint: disable=useless-object-inheritance
 
     def test_simple(self):
-        length = 128
-        frames = 3
-        x, y = _get_dummy_tracking_data(length, frames=frames)
-        num_objects = len(np.unique(y)) - 1
-        model = DummyModel()
-
-        _ = tracking.CellTracker(x, y, model=model)
+        loader_inputs = _get_dummy_inputs(self)
+        _ = data_loader.UniversalDataLoader(loader_inputs)
 
         # test data with bad rank
         with pytest.raises(ValueError):
-            tracking.CellTracker(
+            data_loader.UniversalDataLoader(
                 np.random.random((32, 32, 1)),
                 np.random.randint(num_objects, size=(32, 32, 1)),
                 model=model)
 
         # test mismatched x and y shape
         with pytest.raises(ValueError):
-            tracking.CellTracker(
+            data_loader.UniversalDataLoader(
                 np.random.random((3, 32, 32, 1)),
                 np.random.randint(num_objects, size=(2, 32, 32, 1)),
                 model=model)
 
         # test bad features
         with pytest.raises(ValueError):
-            tracking.CellTracker(x, y, model=model, features=None)
+            data_loader.UniversalDataLoader(x, y, model=model, features=None)
 
         # test bad data_format
         with pytest.raises(ValueError):
-            tracking.CellTracker(x, y, model=model, data_format='invalid')
+            data_loader.UniversalDataLoader(x, y, model=model, data_format='invalid')

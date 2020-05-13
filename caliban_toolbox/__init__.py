@@ -30,7 +30,7 @@ from __future__ import division
 from __future__ import print_function
 
 from caliban_toolbox import pre_annotation
-#from caliban_toolbox import tracking
+# from caliban_toolbox import tracking
 from caliban_toolbox import utils
 from caliban_toolbox import aws_functions
 from caliban_toolbox import figure_eight_functions
@@ -39,7 +39,7 @@ from caliban_toolbox import relabel
 from caliban_toolbox import reshape_data
 
 from caliban_toolbox.pre_annotation import *
-#from caliban_toolbox.tracking import *
+# from caliban_toolbox.tracking import *
 from caliban_toolbox.utils import *
 
 del absolute_import
