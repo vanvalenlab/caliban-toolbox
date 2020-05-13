@@ -23,8 +23,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import json
 import pandas as pd
+import numpy as np
 
 
 def make_experiment_metadata_file(raw_metadata, image_names):
@@ -63,7 +63,7 @@ def update_job_metadata(metadata, update_dict):
     # TODO: check that these images belong to specific job
     # TODO: figure out workflow for remaining in progress jobs
 
-    in_progress = metadata[metadata.status == 'in_progress', 'fov_name']
+    in_progress = metadata.loc[metadata.status == 'in_progress', 'image_name']
     included, excluded = update_dict['included'], update_dict['excluded']
 
     # make sure supplied excluded and included images are in progress for this job
@@ -73,8 +73,8 @@ def update_job_metadata(metadata, update_dict):
     if not np.all(np.isin(excluded, in_progress)):
         raise ValueError('Invalid fovs supplied')
 
-    metadata[np.isin(metadata.image_name, included), 'status'] = 'included'
-    metadata[np.isin(metadata.image_name, excluded), 'status'] = 'excluded'
+    metadata.loc[np.isin(metadata.image_name, included), 'status'] = 'included'
+    metadata.loc[np.isin(metadata.image_name, excluded), 'status'] = 'excluded'
 
     return metadata
 

@@ -26,22 +26,15 @@
 import numpy as np
 
 from caliban_toolbox import metadata
+import importlib
+importlib.reload(metadata)
 
 
 def _make_raw_metadata():
     metadata_file = {'PROJECT_ID': np.random.randint(1, 100),
-                     'EXPERIMENT_ID': np.random.randint(1, 100),
-                     'TYPE': 'Cell Line'}
+                     'EXPERIMENT_ID': np.random.randint(1, 100)}
 
     return metadata_file
-
-
-def _make_blank_experiment_metadata():
-    blank_keys = ['PROJECT_ID', 'EXPERIMENT_ID', 'job_ids', 'included_fovs',
-                  'excluded_fovs', 'in_progress_fovs']
-    experiment_metadata = {k: None for k in blank_keys}
-
-    return experiment_metadata
 
 
 def _make_fov_ids(num_fovs):
@@ -53,69 +46,33 @@ def _make_fov_ids(num_fovs):
 
 def test_make_experiment_metadata_file():
     raw_metadata = _make_raw_metadata()
-    experiment_metadata = metadata.make_experiment_metadata_file(raw_metadata)
+    image_names = _make_fov_ids(10)
+    experiment_metadata = metadata.make_experiment_metadata_file(raw_metadata, image_names)
 
-    duplicate_keys = ['PROJECT_ID', 'EXPERIMENT_ID']
-
-    _check_duplicate_keys(original_metadata=raw_metadata, new_metadata=experiment_metadata,
-                          duplicate_keys=duplicate_keys)
-
-    blank_fields = ['job_ids', 'included_fovs', 'excluded_fovs', 'in_progress_fovs']
-
-    _check_blank_keys(metadata_file=experiment_metadata, blank_keys=blank_fields)
+    assert experiment_metadata.loc[0, 'PROJECT_ID'] == raw_metadata['PROJECT_ID']
+    assert experiment_metadata.loc[0, 'EXPERIMENT_ID'] == raw_metadata['EXPERIMENT_ID']
+    assert np.all(np.isin(image_names, experiment_metadata['image_name']))
 
 
-def test_make_job_metadata_file():
-    experiment_metadata = _make_raw_metadata()
-    fovs = _make_fov_ids(30)
+def test_update_job_metadata():
+    raw_metadata = _make_raw_metadata()
+    image_names = _make_fov_ids(10)
+    experiment_metadata = metadata.make_experiment_metadata_file(raw_metadata, image_names)
+    experiment_metadata['status'] = 'in_progress'
 
-    job_metadata = metadata.make_job_metadata_file(experiment_metadata=experiment_metadata,
-                                                   job_data={'in_progress_fovs': fovs})
+    included_images = image_names[:6]
+    excluded_images = image_names[6:8]
+    in_process = image_names[8:]
 
-    duplicate_keys = ['PROJECT_ID', 'EXPERIMENT_ID']
+    updated_metadata = metadata.update_job_metadata(metadata=experiment_metadata,
+                                                   update_dict={'included': included_images,
+                                                                'excluded': excluded_images})
 
-    _check_duplicate_keys(original_metadata=experiment_metadata, new_metadata=job_metadata,
-                          duplicate_keys=duplicate_keys)
+    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'included', 'image_name'],
+                          included_images))
 
-    blank_fields = ['job_id', 'included_fovs', 'excluded_fovs']
+    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'excluded', 'image_name'],
+                          excluded_images))
 
-    _check_blank_keys(metadata_file=experiment_metadata, blank_keys=blank_fields)
-
-    assert np.all(fovs == job_metadata['in_progress_fovs'])
-
-
-def test_update_job_metadata_file():
-    job_metadata = _make_blank_job_metadata()
-    fovs = _make_fov_ids(100)
-    job_metadata['in_progress_fovs'] = fovs
-
-    #
-    included_fovs = list(np.random.choice(fovs, 80, replace=False))
-    excluded_fovs = [fov for fov in fovs if fov not in included_fovs]
-
-    updated_metadata = metadata.update_job_metadata_file(job_metadata=job_metadata,
-                                                         update_dict={'included': included_fovs,
-                                                                      'excluded': excluded_fovs})
-
-    assert np.all(updated_metadata['included_fovs'] == included_fovs)
-    assert np.all(updated_metadata['excluded_fovs'] == excluded_fovs)
-
-
-def test_update_experiment_metadata_file():
-    exp_metadata = _make_blank_experiment_metadata()
-    fovs = _make_fov_ids(100)
-    exp_metadata['in_progress_fovs'] = fovs
-
-    #
-    included_fovs = list(np.random.choice(fovs, 80, replace=False))
-    excluded_fovs = [fov for fov in fovs if fov not in included_fovs]
-
-    updated_metadata = metadata.update_job_metadata_file(job_metadata=job_metadata,
-                                                         update_dict={'included': included_fovs,
-                                                                      'excluded': excluded_fovs})
-
-    assert np.all(updated_metadata['included_fovs'] == included_fovs)
-    assert np.all(updated_metadata['excluded_fovs'] == excluded_fovs)
-
-
-
+    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'awaiting_prediction', 'image_name'],
+                          in_process))
