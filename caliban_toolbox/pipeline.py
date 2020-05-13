@@ -25,18 +25,19 @@
 # ==============================================================================
 
 import os
-import json
 
 import numpy as np
+import pandas as pd
 
 from caliban_toolbox import metadata
+from caliban_toolbox.pipeline_utils import get_job_folder_name
 
 
-def create_experiment_folder(data_loader_output, raw_metadata, base_dir):
+def create_experiment_folder(image_names, raw_metadata, base_dir):
     """Takes the output of the data loader and creates an experiment folder
 
     Args:
-        data_loader_output: files from an experiment to be processed
+        image_names: names of images from current experiment
         raw_metadata: metadata file from raw ontology
         base_dir: directory where experiment folder will be created
     """
@@ -46,15 +47,13 @@ def create_experiment_folder(data_loader_output, raw_metadata, base_dir):
     os.makedirs(experiment_folder)
 
     # create metadata file
-    exp_metadata = metadata.make_experiment_metadata_file(raw_metadata)
-    exp_metadata['in_progress_fovs'] = data_loader_output.fovs
+    exp_metadata = metadata.make_experiment_metadata_file(raw_metadata, image_names)
 
     # save metadata file
-    with open(experiment_folder, 'w') as write_file:
-        json.dump(exp_metadata, write_file)
+    exp_metadata.to_csv(os.path.join(experiment_folder, 'metadata.csv'))
 
 
-def create_job_folder(experiment_dir, fov_num):
+def create_job_folder(experiment_dir, fov_data, fov_names, fov_num):
     """Creates a folder to hold a single caliban job
 
     Args:
@@ -62,16 +61,44 @@ def create_job_folder(experiment_dir, fov_num):
         fov_num: number of FOVs to include in job
     """
 
-    # Check if job folders already exist
-    folder_name = get_next_folder_name(experiment_dir)
-    os.makedirs(folder_name)
+    # Create sequentially named job folder
+    job_folder_path, job_name = get_job_folder_name(experiment_dir)
+    os.makedirs(job_folder_path)
 
-    with open(os.path.join(experiment_dir, 'metadata.json')) as json_file:
-        exp_metadata = json.load(json_file)
+    exp_metadata = pd.read_csv(os.path.join(experiment_dir, 'metadata.csv'))
 
-    new_fovs = get_fovs_from_metadata(exp_metadata)
+    available_fovs = exp_metadata[exp_metadata['status'] == 'awaiting_prediction']
+    new_fov_names = available_fovs['image_name'][:fov_num].values
 
-    job_metadata = metadata.make_job_metadata_file(exp_metadata, new_fovs)
+    exp_metadata[exp_metadata['image_name'].isin(new_fov_names), ['status', 'job_name']] = 'in_progress', job_name
+    exp_metadata.to_csv(os.path.join(experiment_dir, 'metadata.csv'))
+
+    fov_idx = np.isin(fov_names, new_fov_names)
+
+    new_fov_data = fov_data[fov_idx]
+
+    np.savez(os.path.join(job_folder_path, 'raw_data.npz'), X=new_fov_data)
+
+
+def find_sparse_images(labeled_data, cutoff=100):
+    """Gets coordinates of images that have very few cells
+
+    Args:
+        labeled_data: predictions used for counting number of cells
+        cutoff: minimum number of cells per image
+
+    Returns:
+        numpy.array: index used to remove sparse images
+    """
+
+    unique_counts = []
+    for img in labeled_data.shape[0]:
+        unique_counts.append(len(np.unique(labeled_data[img])) - 1)
+
+    unique_counts = np.array(unique_counts)
+    idx = unique_counts > cutoff
+
+    return idx
 
 
 def save_stitched_npzs(stitched_channels, stitched_labels, save_dir):

@@ -44,30 +44,11 @@ def _make_blank_experiment_metadata():
     return experiment_metadata
 
 
-def _make_blank_job_metadata():
-    blank_keys = ['PROJECT_ID', 'EXPERIMENT_ID', 'job_id', 'included_fovs', 'excluded_fovs']
-    job_metadata = {k: None for k in blank_keys}
-
-    return job_metadata
-
-
 def _make_fov_ids(num_fovs):
     all_fovs = np.random.randint(low=1, high=num_fovs*10, size=num_fovs)
     fovs = ['fov_{}'.format(i) for i in all_fovs]
 
     return fovs
-
-
-def _check_duplicate_keys(original_metadata, new_metadata, duplicate_keys):
-    for k in new_metadata.keys():
-        if k in duplicate_keys:
-            assert original_metadata[k] == new_metadata[k]
-
-
-def _check_blank_keys(metadata_file, blank_keys):
-    for k in metadata_file.keys():
-        if k in blank_keys:
-            assert metadata_file[k] is None
 
 
 def test_make_experiment_metadata_file():

@@ -24,127 +24,59 @@
 # limitations under the License.
 # ==============================================================================
 import json
+import pandas as pd
 
 
-def make_experiment_metadata_file(raw_metadata):
+def make_experiment_metadata_file(raw_metadata, image_names):
     """Creates a metadata file for a specific experiment
 
     Args:
         raw_metadata: metadata file from the raw ontology
+        image_names: names of images that are being processed
 
     Returns:
-        dict: pre-populated metadata file
+        pd.DataFrame: metadata file
     """
 
-    # copy fields from raw metadata
-    keys_to_copy = ['PROJECT_ID', 'EXPERIMENT_ID']
-    experiment_metadata = {k: v for k, v in raw_metadata.items() if k in keys_to_copy}
-
-    # add new blank fields
-    blank_fields = ['job_ids', 'included_fovs', 'excluded_fovs', 'in_progress_fovs']
-    experiment_metadata.update({k: None for k in blank_fields})
+    experiment_metadata = pd.DataFrame({'PROJECT_ID': raw_metadata['PROJECT_ID'],
+                                        'EXPERIMENT_ID': raw_metadata['EXPERIMENT_ID'],
+                                        'image_name': image_names,
+                                        'job_folder': 'NA',
+                                        'job_id': 'NA',
+                                        'status': 'awaiting_prediction'
+                                        })
 
     return experiment_metadata
 
 
-def make_job_metadata_file(experiment_metadata, job_data):
-    """Creates a metadata file for a job within an experiment
+def update_job_metadata(metadata, update_dict):
+    """Updates a metadata for a specific job
 
     Args:
-        experiment_metadata: metadata file related to overall experiment
-        job_data: data to be included in this job
-
-    Returns:
-        dict: metadata file for a job
-    """
-
-    # copy fields from experiment metadata
-    keys_to_copy = ['PROJECT_ID', 'EXPERIMENT_ID']
-    job_metadata = {k: v for k, v in experiment_metadata.items() if k in keys_to_copy}
-
-    # add new blank fields
-    blank_fields = ['job_id', 'included_fovs', 'excluded_fovs']
-    job_metadata.update({k: None for k in blank_fields})
-
-    job_metadata['in_progress_fovs'] = job_data.fovs
-
-    return job_metadata
-
-
-def update_job_metadata_file(job_metadata, update_dict):
-    """Updates a job metadata file with the status of individual fovs
-
-    Args:
-        job_metadata: the metadata file to be updated
+        metadata: the metadata file to be updated
         update_dict: the dictionary containing the update stats for the job
 
     Returns:
-        dict: updated metadata file
+        pd.DataFrame: updated metadata file
     """
 
-    in_progress = job_metadata['in_progress_fovs']
+    # TODO: check that these images belong to specific job
+    # TODO: figure out workflow for remaining in progress jobs
+
+    in_progress = metadata[metadata.status == 'in_progress', 'fov_name']
     included, excluded = update_dict['included'], update_dict['excluded']
 
     # make sure supplied excluded and included images are in progress for this job
-    for fov in included:
-        if fov in in_progress:
-            in_progress.remove(fov)
-        else:
-            raise ValueError('FOV {} was not in progress for this job'.format(fov))
+    if not np.all(np.isin(included, in_progress)):
+        raise ValueError('Invalid fovs supplied')
 
-    for fov in excluded:
-        if fov in in_progress:
-            in_progress.remove(fov)
-        else:
-            raise ValueError('FOV {} was not in progress for this job'.format(fov))
+    if not np.all(np.isin(excluded, in_progress)):
+        raise ValueError('Invalid fovs supplied')
 
-    # remaining jobs that are not included or excluded are still in progress
-    # TODO: figure out workflow for remaining in progress jobs
-    job_metadata['in_progress_fovs'] = in_progress
-    job_metadata['included_fovs'] = included
-    job_metadata['excluded_fovs'] = excluded
+    metadata[np.isin(metadata.image_name, included), 'status'] = 'included'
+    metadata[np.isin(metadata.image_name, excluded), 'status'] = 'excluded'
 
-    return job_metadata
+    return metadata
 
-
-def update_experiment_metadata(experiment_metadata, job_metadata):
-    """Updates an experiment metadata file with information from an individual job
-
-        Args:
-            experiment_metadata: metadata from an experiment
-            job_metadata: metadata from a job
-
-        Returns:
-            dict: updated experiment metadata file
-    """
-
-    exp_in_progress = experiment_metadata['in_progress_fovs']
-    exp_included = experiment_metadata['included_fovs']
-    exp_excluded = experiment_metadata['excluded_fovs']
-
-    in_progress = job_metadata['in_progress_fovs']
-    included = job_metadata['included_fovs']
-    excluded = job_metadata['excluded_fovs']
-
-    # first add any new in progress fovs from current job to experiment tracking
-    exp_in_progress = list(set(exp_in_progress + in_progress))
-
-    # move FOVs from in progress to included
-    for fov in included:
-        if fov in exp_in_progress:
-            exp_in_progress.remove(fov)
-            exp_included + [fov]
-
-    # move FOVs from in progress to excluded
-    for fov in excluded:
-        if fov in exp_in_progress:
-            exp_in_progress.remove(fov)
-            exp_included + [fov]
-
-    experiment_metadata['in_progress_fovs'] = exp_in_progress
-    experiment_metadata['included_fovs'] = exp_included
-    experiment_metadata['excluded_fovs'] = exp_excluded
-
-    return experiment_metadata
 
 
