@@ -23,38 +23,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 import os
-import json
+import tempfile
 
 import numpy as np
 
-from caliban_toolbox import metadata
+from caliban_toolbox import pipeline_utils
+import importlib
+
+importlib.reload(pipeline_utils)
 
 
-def get_job_folder_name(experiment_dir):
-    """Identify the name for next sequentially named job folder
+def _make_raw_metadata():
+    metadata_file = {'PROJECT_ID': np.random.randint(1, 100),
+                     'EXPERIMENT_ID': np.random.randint(1, 100)}
 
-    Args:
-        experiment_dir: full path to directory of current experiment
+    return metadata_file
 
-    Returns:
-        string: full path to newly created job folder
-        string: name of the job folder
-    """
 
-    files = os.listdir(experiment_dir)
-    folders = [file for file in files if os.path.isdir(os.path.join(experiment_dir, file))]
-    folders = [folder for folder in folders if 'caliban_job_' in folder]
-    folders.sort()
+def _make_fov_ids(num_fovs):
+    all_fovs = np.random.randint(low=1, high=num_fovs*10, size=num_fovs)
+    fovs = ['fov_{}'.format(i) for i in all_fovs]
 
-    if len(folders) == 0:
-        new_folder = 'caliban_job_0'
-    else:
-        latest_folder_num = folders[-1].split('caliban_job_')[1]
-        new_folder = 'caliban_job_{}'.format(int(latest_folder_num) + 1)
+    return fovs
 
-    new_folder_path = os.path.join(experiment_dir, new_folder)
 
-    return new_folder_path, new_folder
+def test_get_job_folder_name():
+    # folder already exists
+    with tempfile.TemporaryDirectory() as temp_dir:
+        folder_name = 'caliban_job_0'
+        os.makedirs(os.path.join(temp_dir, folder_name))
+
+        _, folder_name = pipeline_utils.get_job_folder_name(temp_dir)
+        assert folder_name == 'caliban_job_1'
+
+    # first folder
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _, folder_name = pipeline_utils.get_job_folder_name(temp_dir)
+        assert folder_name == 'caliban_job_0'
 
