@@ -43,7 +43,7 @@ def _make_raw_metadata():
 
 
 def _make_fov_ids(num_fovs):
-    all_fovs = np.random.randint(low=1, high=num_fovs*10, size=num_fovs)
+    all_fovs = np.random.randint(low=1, high=num_fovs * 10, size=num_fovs)
     fovs = ['fov_{}'.format(i) for i in all_fovs]
 
     return fovs
@@ -84,7 +84,8 @@ def test_create_job_folder():
         pipeline.create_job_folder(temp_dir, metadata, fov_data, fov_names, fov_num)
 
         saved_metadata = pd.read_csv(os.path.join(temp_dir, 'metadata.csv'))
-        new_status = saved_metadata.loc[np.isin(saved_metadata.image_name, fov_names[:fov_num]), 'status']
+        new_status = saved_metadata.loc[np.isin(saved_metadata.image_name, fov_names[:fov_num]),
+                                        'status']
 
         assert np.all(np.isin(new_status, 'in_progress'))
 

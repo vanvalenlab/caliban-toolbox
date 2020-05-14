@@ -42,7 +42,7 @@ def _make_raw_metadata():
 
 
 def _make_fov_ids(num_fovs):
-    all_fovs = np.random.randint(low=1, high=num_fovs*10, size=num_fovs)
+    all_fovs = np.random.randint(low=1, high=num_fovs * 10, size=num_fovs)
     fovs = ['fov_{}'.format(i) for i in all_fovs]
 
     return fovs
@@ -61,4 +61,3 @@ def test_get_job_folder_name():
     with tempfile.TemporaryDirectory() as temp_dir:
         _, folder_name = pipeline_utils.get_job_folder_name(temp_dir)
         assert folder_name == 'caliban_job_0'
-

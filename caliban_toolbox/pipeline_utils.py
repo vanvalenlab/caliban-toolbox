@@ -57,4 +57,3 @@ def get_job_folder_name(experiment_dir):
     new_folder_path = os.path.join(experiment_dir, new_folder)
 
     return new_folder_path, new_folder
-

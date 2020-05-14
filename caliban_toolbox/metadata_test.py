@@ -38,7 +38,7 @@ def _make_raw_metadata():
 
 
 def _make_fov_ids(num_fovs):
-    all_fovs = np.random.randint(low=1, high=num_fovs*10, size=num_fovs)
+    all_fovs = np.random.randint(low=1, high=num_fovs * 10, size=num_fovs)
     fovs = ['fov_{}'.format(i) for i in all_fovs]
 
     return fovs
@@ -65,14 +65,15 @@ def test_update_job_metadata():
     in_process = image_names[8:]
 
     updated_metadata = metadata.update_job_metadata(metadata=experiment_metadata,
-                                                   update_dict={'included': included_images,
-                                                                'excluded': excluded_images})
+                                                    update_dict={'included': included_images,
+                                                                 'excluded': excluded_images})
+    pred_included = updated_metadata.loc[updated_metadata.status == 'included', 'image_name']
+    assert np.all(np.isin(pred_included, included_images))
 
-    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'included', 'image_name'],
-                          included_images))
+    pred_excluded = updated_metadata.loc[updated_metadata.status == 'excluded', 'image_name']
+    assert np.all(np.isin(pred_excluded, excluded_images))
 
-    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'excluded', 'image_name'],
-                          excluded_images))
+    pred_in_progress = updated_metadata.loc[updated_metadata.status == 'awaiting_prediction',
+                                            'image_name']
 
-    assert np.all(np.isin(updated_metadata.loc[updated_metadata.status == 'awaiting_prediction', 'image_name'],
-                          in_process))
+    assert np.all(np.isin(pred_in_progress, in_process))

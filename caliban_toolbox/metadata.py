@@ -77,6 +77,3 @@ def update_job_metadata(metadata, update_dict):
     metadata.loc[np.isin(metadata.image_name, excluded), 'status'] = 'excluded'
 
     return metadata
-
-
-
