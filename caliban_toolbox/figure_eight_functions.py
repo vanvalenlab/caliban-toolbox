@@ -39,7 +39,7 @@ from urllib.parse import urlencode
 
 from caliban_toolbox.log_file import create_upload_log
 from caliban_toolbox.aws_functions import aws_upload_files, aws_transfer_files, aws_download_files
-from caliban_toolbox.utils.utils import list_npzs_folder
+from caliban_toolbox.utils.misc_utils import list_npzs_folder
 
 
 def _format_url(aws_folder, stage, npz, url_encoded_dict):
