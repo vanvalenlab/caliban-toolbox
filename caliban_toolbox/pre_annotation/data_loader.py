@@ -85,7 +85,7 @@ class UniversalDataLoader(object):
                  file_type='.tif'):
 
         if compartments is None and imaging_types != ['phase']:
-            raise ValueError('compartments is not specified')
+            raise ValueError('Compartments is not specified')
 
         self.data_type = set(data_type)
         self.imaging_types = set(imaging_types)
@@ -115,15 +115,15 @@ class UniversalDataLoader(object):
         # TODO: improve this for generality and scale
 
         # Dictionaries of common spellings
-        imaging_fluo_dict = {'flourescent', 'fluorescence', 'fluorescent', 'fluo'}
-        comp_nuc_dict = {'nuc', 'nuclear'}
-        comp_wc_dict = {'wholecell', 'whole_cell', }
+        img_fluo_misspell = {'flourescent', 'fluorescence', 'fluorescent', 'fluo'}
+        comp_nuc_misspell = {'nuc', 'nuclear'}
+        comp_wc_misspell = {'wholecell', 'whole_cell', }
 
         # imaging_types - check for fluo misspellings
         new_imaging_types = []
         for item in self.imaging_types:
             item = item.lower()
-            if item in imaging_fluo_dict:
+            if item in img_fluo_misspell:
                 new_imaging_types.append('fluo')
             elif item == 'phase':
                 new_imaging_types.append('phase')
@@ -133,13 +133,14 @@ class UniversalDataLoader(object):
         self.imaging_types = new_imaging_types
 
         # compartments - check for nuc or capitalization
-        if self.compartments is not None:
+        # None type only allowed if its the only entry (img type must be phase only)
+        if None not in self.compartments:
             new_compartments = []
             for item in self.compartments:
                 item = item.lower()
-                if item in comp_nuc_dict:
+                if item in comp_nuc_misspell:
                     new_compartments.append('Nuclear')
-                elif item in comp_wc_dict:
+                elif item in comp_wc_misspell:
                     new_compartments.append('WholeCell')
                 else:
                     new_compartments.append(item)
