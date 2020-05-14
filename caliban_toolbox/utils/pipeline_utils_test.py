@@ -28,7 +28,7 @@ import tempfile
 
 import numpy as np
 
-from caliban_toolbox import pipeline_utils
+from caliban_toolbox.utils import pipeline_utils
 import importlib
 
 importlib.reload(pipeline_utils)

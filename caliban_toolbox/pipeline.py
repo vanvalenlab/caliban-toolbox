@@ -31,7 +31,7 @@ import pandas as pd
 import xarray as xr
 
 from caliban_toolbox import metadata
-from caliban_toolbox.pipeline_utils import get_job_folder_name
+from caliban_toolbox.utils.pipeline_utils import get_job_folder_name
 
 
 def create_experiment_folder(image_names, raw_metadata, base_dir):

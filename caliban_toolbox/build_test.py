@@ -95,4 +95,3 @@ def test_combine_npz_files():
     num_zeros = np.sum(combined_x[:, 0, 0, 0] == 0)
     assert num_zeros == 3 * len(npz_list) + 1
 
-
