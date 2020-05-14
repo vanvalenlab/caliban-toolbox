@@ -28,6 +28,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from caliban_toolbox import metadata
 from caliban_toolbox.pipeline_utils import get_job_folder_name
@@ -40,10 +41,13 @@ def create_experiment_folder(image_names, raw_metadata, base_dir):
         image_names: names of images from current experiment
         raw_metadata: metadata file from raw ontology
         base_dir: directory where experiment folder will be created
+
+    Returns:
+        string: full path to newly created experiment folder
     """
 
     experiment_id = raw_metadata['EXPERIMENT_ID']
-    experiment_folder = os.path.join(base_dir, experiment_id)
+    experiment_folder = os.path.join(base_dir, 'experiment_{}'.format(experiment_id))
     os.makedirs(experiment_folder)
 
     # create metadata file
@@ -52,8 +56,10 @@ def create_experiment_folder(image_names, raw_metadata, base_dir):
     # save metadata file
     exp_metadata.to_csv(os.path.join(experiment_folder, 'metadata.csv'))
 
+    return experiment_folder
 
-def create_job_folder(experiment_dir, fov_data, fov_names, fov_num):
+
+def create_job_folder(experiment_dir, metadata, fov_data, fov_names, fov_num):
     """Creates a folder to hold a single caliban job
 
     Args:
@@ -65,19 +71,18 @@ def create_job_folder(experiment_dir, fov_data, fov_names, fov_num):
     job_folder_path, job_name = get_job_folder_name(experiment_dir)
     os.makedirs(job_folder_path)
 
-    exp_metadata = pd.read_csv(os.path.join(experiment_dir, 'metadata.csv'))
-
-    available_fovs = exp_metadata[exp_metadata['status'] == 'awaiting_prediction']
+    available_fovs = metadata[metadata['status'] == 'awaiting_prediction']
     new_fov_names = available_fovs['image_name'][:fov_num].values
 
-    exp_metadata[exp_metadata['image_name'].isin(new_fov_names), ['status', 'job_name']] = 'in_progress', job_name
-    exp_metadata.to_csv(os.path.join(experiment_dir, 'metadata.csv'))
+    metadata.loc[metadata['image_name'].isin(new_fov_names),
+             ['status', 'job_name']] = 'in_progress', job_name
 
     fov_idx = np.isin(fov_names, new_fov_names)
 
     new_fov_data = fov_data[fov_idx]
 
     np.savez(os.path.join(job_folder_path, 'raw_data.npz'), X=new_fov_data)
+    metadata.to_csv(os.path.join(experiment_dir, 'metadata.csv'))
 
 
 def find_sparse_images(labeled_data, cutoff=100):
@@ -92,7 +97,7 @@ def find_sparse_images(labeled_data, cutoff=100):
     """
 
     unique_counts = []
-    for img in labeled_data.shape[0]:
+    for img in range(labeled_data.shape[0]):
         unique_counts.append(len(np.unique(labeled_data[img])) - 1)
 
     unique_counts = np.array(unique_counts)
@@ -110,7 +115,7 @@ def save_stitched_npzs(stitched_channels, stitched_labels, save_dir):
     """
 
     for i in range(stitched_channels.shape[0]):
-        X = stitched_labels[i:(i + 1), ...]
+        X = stitched_channels[i:(i + 1), ...]
         y = stitched_labels[i:(i + 1), ...]
         save_path = os.path.join(save_dir, stitched_labels.fovs.values[i] + '.npz')
 
