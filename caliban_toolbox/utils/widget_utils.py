@@ -25,14 +25,16 @@
 # ==============================================================================
 from __future__ import absolute_import
 
-from skimage import filters, img_as_uint
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+import os
 import numpy as np
 import skimage as sk
-import os
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 from imageio import imread
-from caliban_toolbox.utils.utils import get_img_names
+from skimage import filters
+
+from caliban_toolbox.utils.misc_utils import get_img_names
 
 
 def choose_img(name, dirpath):
