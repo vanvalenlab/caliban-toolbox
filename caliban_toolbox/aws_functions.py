@@ -23,18 +23,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import sys
-import boto3
 import os
+import sys
 import threading
 import re
 
-from urllib.parse import urlencode
+import boto3
 
-import numpy as np
+from urllib.parse import urlencode
 from getpass import getpass
 
-from caliban_toolbox.utils.utils import get_img_names, list_npzs_folder
+from caliban_toolbox.utils.misc_utils import list_npzs_folder
 
 
 # Taken from AWS Documentation
