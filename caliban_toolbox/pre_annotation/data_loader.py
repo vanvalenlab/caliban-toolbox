@@ -54,7 +54,7 @@ class UniversalDataLoader(object):
     (random picks one file at random - best used for testing).
 
     Args:
-        data type (list): CellNet data type ('dynamic/static', '2d/3d')
+        data type (tuple): CellNet data type ('dynamic/static', '2d/3d')
         imaging types (list): imaging modality of interest ('fluo', 'phase', etc)
         specimen types (list): specimen of interest (HEK293, HeLa, etc)
         compartments (list): compartments of interest (nuclear, whole_cell)
@@ -69,7 +69,7 @@ class UniversalDataLoader(object):
               (e.g. sessions=['all'])
 
     Returns:
-        Numpy array with the shape [fovs, tifs, y_dim, x_dim]
+        Numpy array with the shape [fovs, z_dim(time or space), y_dim, x_dim]
         Python dictionary containing metadata
     """
 
@@ -87,7 +87,7 @@ class UniversalDataLoader(object):
         if compartments is None and imaging_types != ['phase']:
             raise ValueError('Compartments is not specified')
 
-        self.data_type = set(data_type)
+        self.data_type = data_type
         self.imaging_types = set(imaging_types)
         self.specimen_types = set(specimen_types)
         self.compartments = set(compartments)
@@ -115,7 +115,7 @@ class UniversalDataLoader(object):
         # Dictionaries of common spellings
         img_fluo_misspell = {'flourescent', 'fluorescence', 'fluorescent', 'fluo'}
         comp_nuc_misspell = {'nuc', 'nuclear'}
-        comp_wc_misspell = {'wholecell', 'whole_cell', }
+        comp_wc_misspell = {'wholecell', 'whole_cell', 'whole cell'}
 
         # imaging_types - check for fluo misspellings
         new_imaging_types = []
