@@ -94,4 +94,3 @@ def test_combine_npz_files():
     # check that upper right hand corner of cropped images are 0
     num_zeros = np.sum(combined_x[:, 0, 0, 0] == 0)
     assert num_zeros == 3 * len(npz_list) + 1
-
