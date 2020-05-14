@@ -114,15 +114,18 @@ class UniversalDataLoader(object):
         """
         # TODO: improve this for generality and scale
 
+        # Dictionaries of common spellings
+        imaging_fluo_dict = {'flourescent', 'fluorescence', 'fluorescent', 'fluo'}
+        comp_nuc_dict = {'nuc', 'nuclear'}
+        comp_wc_dict = {'wholecell', 'whole_cell', }
+
         # imaging_types - check for fluo misspellings
         new_imaging_types = []
         for item in self.imaging_types:
-            if any([item.lower() == 'flourescent',
-                    item.lower() == 'fluorescence',
-                    item.lower() == 'fluorescent',
-                    item.lower() == 'fluo']):
+            item = item.lower()
+            if item in imaging_fluo_dict:
                 new_imaging_types.append('fluo')
-            elif item.lower() == 'phase':
+            elif item == 'phase':
                 new_imaging_types.append('phase')
             else:
                 new_imaging_types.append(item)
@@ -130,14 +133,13 @@ class UniversalDataLoader(object):
         self.imaging_types = new_imaging_types
 
         # compartments - check for nuc or capitalization
-        if compartments is not None:
+        if self.compartments is not None:
             new_compartments = []
             for item in self.compartments:
-                if any([item.lower() == 'nuc',
-                        item.lower() == 'nuclear']):
+                item = item.lower()
+                if item in comp_nuc_dict:
                     new_compartments.append('Nuclear')
-                elif any([item.lower() == 'wholecell',
-                          item.lower() == 'whole_cell']):
+                elif item in comp_wc_dict:
                     new_compartments.append('WholeCell')
                 else:
                     new_compartments.append(item)
