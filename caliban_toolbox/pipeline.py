@@ -75,7 +75,7 @@ def create_job_folder(experiment_dir, metadata, fov_data, fov_names, fov_num):
     new_fov_names = available_fovs['image_name'][:fov_num].values
 
     metadata.loc[metadata['image_name'].isin(new_fov_names),
-                 ['status', 'job_name']] = 'in_progress', job_name
+                 ['status', 'job_folder']] = 'in_progress', job_name
 
     fov_idx = np.isin(fov_names, new_fov_names)
 

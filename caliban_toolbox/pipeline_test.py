@@ -54,7 +54,7 @@ def _make_exp_metadata(num_fovs):
     raw_metadata = _make_raw_metadata()
 
     metadata = pd.DataFrame({'image_name': fovs, 'EXPERIMENT_ID': raw_metadata['EXPERIMENT_ID'],
-                             'status': 'awaiting_prediction', 'job_name': 'NA'})
+                             'status': 'awaiting_prediction', 'job_folder': 'NA'})
 
     return metadata
 
