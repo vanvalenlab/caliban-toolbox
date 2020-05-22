@@ -1,34 +1,34 @@
 {
-	"TYPE" : ["cell", "HEK293"],
+	"TYPE" : ["cell", "A549"],
 	"CHANNEL_MARKER" : [{
-		"0" : "H2B-mClover"
+		"0" : "Hoescht33342"
 		}
 	],
-	"EXP_ID" : ["journal_pcbi_1005177"],
+	"EXP_ID" : ["20190514_EP01"],
 	"RAW_DATA_ORIGIN" : [{
-		"FACILITY" : "stanford",
-		"COLLECTED_BY" : "Takamasa Kudo",
-		"DATE_COLLECTED" : "11_13_2017",
-		"DOI" : " https://doi.org/10.1371/journal.pcbi.1005177"
+		"FACILITY" : "Caltech",
+		"COLLECTED_BY" : "Edward Pao",
+		"DATE_COLLECTED" : "05_14_2019",
+		"DOI" : ""
 		}
 	],
 	"IMAGING_PARAMETERS" : [{
-		"MICROSCOPE" : "Nikon Ti-E",
-		"CAMERA" : "Andor Neo 5.5",
+		"MICROSCOPE" : "Nikon Eclipse Ti-2",
+		"CAMERA" : "Prime 95B",
 		"MAGNIFICATION" : "20x",
-		"NA": "",
-		"BINNING" : "2x2",
-		"PIXEL_SIZE" : "0.65um",
-		"EXPOSURE_TIME" : "",
-		"TIME_STEP" : ""
+		"NA": "0.45",
+		"BINNING" : "1x1",
+		"PIXEL_SIZE" : "0.55um",
+		"EXPOSURE_TIME" : "25ms"
 		}
 	],
+	
 		"DIMENSIONS" : [{
 		"X" : "1608",
 		"Y" : "1608"
 		}
 	],
-	"ONTOLOGY" : ["dynamic","2d","fluorescence","nuclear"],
+	"ONTOLOGY" : ["static","2d","fluorescence", "nuclear"],
 	"METHODS" : [{
 		"SUBTYPE" : "",
 		"CULTURE" : "",
