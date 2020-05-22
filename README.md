@@ -1,18 +1,35 @@
-# Caliban Toolbox: Data Engineering Tools for Single Cell Analysis
+# Caliban Toolbox: Label Creation and Processing for Single Cell Analysis
 
 [![Build Status](https://travis-ci.com/vanvalenlab/caliban-toolbox.svg?branch=master)](https://travis-ci.com/vanvalenlab/caliban-toolbox)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/caliban-toolbox/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/caliban-toolbox?branch=master)
 
-DeepCell Toolbox is a collection of data engineering tools for processing, annotating, and packaging optical microscopy images. The framework enables crowdsourced annotations and creates training data for [DeepCell](https://github.com/vanvalenlab/deepcell-tf).
+Caliban Toolbox is a collection of data engineering tools for pre- and post-processing data for [Caliban](https://github.com/vanvalenlab/caliban), our data annotation tool. The Toolbox and Caliban itself work together to curate annotations for training [DeepCell](https://github.com/vanvalenlab/deepcell-tf).
 
 The process is as follows:
-![flow](./docs/flowchart.png)
 
-Read the documentation at
+1. Raw data is imported using the data loader, which allows the user to select data based on imaging platform, cell type, and marker of interest. 
+
+2. The raw data is then run through deepcell-tf to produce predicted labels
+
+3. After making predictions with deepcell, the raw data is processed to make it easier for annotators to view. This includes adding filters, adjusting the contrast, etc. In addition, multiple channels can be summed together. Following these modifications, the user selects which of these channels will be included for the annotators to see.
+
+4. The size of the images is then modified to make annotation easier. In order to get high quality annotations, it is important that the images are not so large that the annotators miss errors. Therefore, the images can be cropped into overlapping 2D regions to break up large FOVs. For stacks of images, the stack can be sliced into smaller more manageable pieces. 
+
+5. Once the image dimensions have been set, each unique crop or slice is saved as an NPZ file.
+
+6. During this process, a JSON file is created which stores the necessary data to reconstruct the original image after the fact.
+
+7. The NPZ files are then uploaded to Figure8. During the upload process, the user specifies an existing job to use a template, which populates the instructions for the annotators. 
+
+8. During the upload process, a log file is created with important information for downloading the annotations once the job is completed
+
+9. Once the job is completed, the corrected annotations are downloaded from Figure 8.
+
+10. These annotations are then stitched back together, and saved as full-size NPZ files to be manually inspected for errors.
+
+11. Following correction, the individual caliban NPZ files are combined together into a single training data NPZ, and saved in the appropriate location in the training data ontology. 
 
 ## Getting Started
-
-DeepCell Data Engineering uses `nvidia-docker` and `tensorflow` to enable GPU processing.  
 
 ### Build a local docker container
 
@@ -23,21 +40,10 @@ docker build -t $USER/caliban_toolbox .
 
 ```
 
-The tensorflow version can be overridden with the build-arg `TF_VERSION`.
-
-```bash
-docker build --build-arg TF_VERSION=1.9.0-gpu -t $USER/caliban_toolbox .
-```
-
 ### Run the new docker image
 
 ```bash
-# NV_GPU refers to the specific GPU to run DeepCell Toolbox on, and is not required
-
-# Mounting the codebase, scripts and data to the container is also optional
-# but can be handy for local development
-
-NV_GPU='0' nvidia-docker run -it \
+nvidia-docker run -it \
   -p 8888:8888 \
   $USER/caliban_toolbox:latest
 ```
