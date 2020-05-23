@@ -123,11 +123,11 @@ def copy_job(job_id, key):
     return new_job_id
 
 
-def upload_data(csv_path, job_id, key):
-    """Add data to an existing Figure 8 job by uploading a CSV file
+def upload_log_file(log_file, job_id, key):
+    """Upload log file to populate a job for Figure8
 
     Args:
-        csv_path: full path to csv
+        log_file: file specifying paths to NPZs included in this job
         job_id: ID number of job to upload data to
         key: API key to access Figure 8 account
     """
@@ -142,8 +142,8 @@ def upload_data(csv_path, job_id, key):
     csv_data = csv_file.read()
 
     headers = {"Content-Type": "text/csv"}
+    add_data = requests.put(url, data=log_file, headers=headers)
 
-    add_data = requests.put(url, data=csv_data, headers=headers)
     if add_data.status_code != 200:
         print("Upload_data not successful. Status code: ", add_data.status_code)
     else:
