@@ -29,8 +29,11 @@ import stat
 import zipfile
 import pandas as pd
 import urllib
+import re
 
 from getpass import getpass
+from urllib.parse import urlencode
+
 from caliban_toolbox.log_file import create_upload_log
 from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
 from caliban_toolbox.utils.misc_utils import list_npzs_folder
