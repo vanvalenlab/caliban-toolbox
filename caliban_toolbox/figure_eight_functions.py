@@ -29,6 +29,7 @@ import stat
 import zipfile
 import pandas as pd
 import urllib
+import json
 
 from getpass import getpass
 from caliban_toolbox.log_file import create_upload_log
@@ -55,6 +56,25 @@ def copy_job(job_id, key):
     new_job_id = new_job.json()['id']
 
     return new_job_id
+
+
+def rename_job(job_id, key, name):
+    """Helper function to create a Figure 8 job based on existing job.
+        Args:
+            job_id: ID number of job to rename
+            key: API key to access Figure 8 account
+            name: new name for job
+        """
+
+    headers = {'content-type': 'application/json'}
+    payload = {
+        'key': key,
+        'job': {
+            'title': name
+        }}
+    response = requests.put(
+        'https://api.figure-eight.com/v1/jobs/{}.json'.format(job_id), data=json.dumps(payload),
+        headers=headers)
 
 
 def upload_data(csv_path, job_id, key):
