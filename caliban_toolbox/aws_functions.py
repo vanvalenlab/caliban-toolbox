@@ -29,6 +29,7 @@ import threading
 import re
 
 import boto3
+import botocore
 
 from urllib.parse import urlencode
 from getpass import getpass
@@ -143,6 +144,9 @@ def aws_download_files(upload_log, output_dir):
     aws_folder = upload_log['aws_folder'][0]
     stage = upload_log['stage'][0]
 
+    # track missing files
+    missing = []
+
     # download all images
     for img in files_to_download:
 
@@ -152,4 +156,14 @@ def aws_download_files(upload_log, output_dir):
         # path to file in aws
         img_path = os.path.join(aws_folder, stage, img)
 
-        s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+        try:
+            s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+        except botocore.exceptions.ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                print('The file {} does not exist'.format(img))
+                missing.append(img)
+            else:
+                raise e
+
+    return missing
