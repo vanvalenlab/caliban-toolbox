@@ -9,15 +9,15 @@ The process is as follows:
 
 1. Raw data is imported using the data loader, which allows the user to select data based on imaging platform, cell type, and marker of interest. 
 
-2. The raw data can then be run through deepcell-tf to produce predicted labels
+2. The raw data can then be run through deepcell-tf to produce predicted labels.
 
-3. After making predictions with deepcell, the raw data is processed to make it easier for annotators to view. This includes adding filters, adjusting the contrast, etc. In addition, multiple channels can be summed together. Following these modifications, the user selects which of these channels will be included for the annotators to see.
+3. After making predictions with deepcell, the raw data is processed to make it easier for annotators to view. This includes applying filters, adjusting the contrast, etc. Multiple channels can be combined together, including the user-generated modified channels, to create summed channels. Following these modifications, the user selects which of these channels will be included for the annotators to see.
 
-4. The size of the images is then modified to make annotation easier. In order to get high quality annotations, it is important that the images are not so large that the annotators miss errors. Therefore, the images can be cropped into overlapping 2D regions to break up large FOVs. For stacks of images, the stack can be sliced into smaller more manageable pieces. 
+4. The size of the images is then modified to make annotation easier. In order to get high quality annotations, it is important that the images are not so large that the annotators miss errors. Therefore, the images can be cropped into overlapping 2D regions to break up large FOVs. Stacks of images can be further sliced into smaller, more manageable pieces. 
 
 5. Once the image dimensions have been set, each unique crop or slice is saved as an NPZ file. During this process, a JSON file is created which stores the necessary data to reconstruct the original image after annotation.
 
-6. The NPZ files are then uploaded to a cloud bucket, where they can be accesssed by Figure8. During the upload process, the user specifies an existing job to use a template, which populates the instructions for the annotators and the job settings. During the upload process, a log file is created with the necessary information to download the annotations once the job is completed
+6. The NPZ files are then uploaded to a cloud bucket, where they can be accesssed by the crowdsource platform. During the upload process, the user specifies an existing job to use a template, which populates the instructions for the annotators and the job settings. A log file is also created with the necessary information to download the annotations once the job is completed.
 
 7. Once the job is completed, the corrected annotations are downloaded from the AWS bucket, where they are stored as the job progresses.
 
