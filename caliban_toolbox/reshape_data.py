@@ -43,7 +43,7 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
     Args:
         X_data: xarray containing raw images to be cropped
         y_data: xarray containing labeled images to be chopped
-        crop_size: (row_crop, col_crop) tuple specifying shape of the crop
+        crop_size: (row_crop, col_crop) tuple specifying the length of the crop, including overlap
         crop_num: (row_num, col_num) tuple specifying number of crops
         overlap_frac: fraction that crops will overlap each other on each edge
         test_parameters: boolean to determine whether to run all fovs, or only the first
