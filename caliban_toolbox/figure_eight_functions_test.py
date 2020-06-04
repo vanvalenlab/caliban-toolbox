@@ -29,7 +29,6 @@ import pytest
 
 from pathlib import Path
 
-
 from caliban_toolbox import figure_eight_functions
 
 

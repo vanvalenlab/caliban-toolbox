@@ -97,9 +97,11 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
     url_encoded_dict = urlencode(url_dict)
 
     # create path to npz, key to upload npz, and url path for figure8
-    npz_paths = [os.path.join(crop_dir, npz) for npz in npzs_to_upload]
-    npz_keys = [os.path.join(aws_folder, stage, npz) for npz in npzs_to_upload]
-    url_paths = [_format_url(subfolders, stage, npz, url_encoded_dict) for npz in npzs_to_upload]
+    npz_paths, npz_keys, url_paths = [], [], []
+    for npz in npzs_to_upload:
+        npz_paths.append(os.path.join(crop_dir, npz))
+        npz_keys.append(os.path.join(aws_folder, stage, npz))
+        url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
 
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
