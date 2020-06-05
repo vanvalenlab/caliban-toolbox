@@ -103,6 +103,7 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
         npz_keys.append(os.path.join(aws_folder, stage, npz))
         url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
 
+    # TODO: think about better way to structure than than many lists
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
