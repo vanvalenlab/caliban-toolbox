@@ -91,22 +91,22 @@ def test_compute_crop_indices_crop_size():
 
 def test_compute_crop_indices_num_crops():
     # test corner case of only one crop
-    img_len, num_crops, overlap_frac = 100, 1, 0.2
-    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, num_crops=num_crops,
+    img_len, crop_num, overlap_frac = 100, 1, 0.2
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
                                                             overlap_frac=overlap_frac)
     assert (len(starts) == 1)
     assert (len(ends) == 1)
 
     # test num crops that don't divide evenly into image size
-    img_len, num_crops, overlap_frac = 105, 3, 0.2
-    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, num_crops=num_crops,
+    img_len, crop_num, overlap_frac = 105, 3, 0.2
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
                                                             overlap_frac=overlap_frac)
-    assert len(starts) == num_crops
+    assert len(starts) == crop_num
     assert ends[-1] == img_len + padding
 
     # test overlap of 0 between crops
-    img_len, num_crops, overlap_frac = 200, 10, 0
-    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, num_crops=num_crops,
+    img_len, crop_num, overlap_frac = 200, 10, 0
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
                                                             overlap_frac=overlap_frac)
     assert (np.all(starts == range(0, 200, 20)))
     assert (np.all(ends == range(20, 201, 20)))

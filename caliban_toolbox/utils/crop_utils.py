@@ -35,14 +35,15 @@ from itertools import product
 import xarray as xr
 
 
-def compute_crop_indices(img_len, crop_size=None, num_crops=None, overlap_frac=0):
+
+def compute_crop_indices(img_len, crop_size=None, crop_num=None, overlap_frac=0):
     """Determine how to crop the image across one dimension.
 
     Args:
         img_len: length of the image for given dimension
         crop_size: size in pixels of the crop in given dimension; must be specified if
-            num_crops not provided
-        num_crops: number of crops in the given dimension; must be specified if
+            crop_num not provided
+        crop_num: number of crops in the given dimension; must be specified if
             crop_size not provided
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
@@ -59,9 +60,9 @@ def compute_crop_indices(img_len, crop_size=None, num_crops=None, overlap_frac=0
         overlap_pix = math.floor(crop_size * overlap_frac)
 
     # compute indices based on fixed number of crops
-    elif num_crops is not None:
+    elif crop_num is not None:
         # number of pixels in non-overlapping portion of crop
-        non_overlap_crop_size = np.ceil(img_len / num_crops)
+        non_overlap_crop_size = np.ceil(img_len / crop_num)
 
         # Technically this is the fraction the non-overlap, rather than fraction of the whole,
         # but we're going to visually crop overlays anyway to make sure value is appropriate
