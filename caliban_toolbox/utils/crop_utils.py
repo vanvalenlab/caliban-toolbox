@@ -35,7 +35,6 @@ from itertools import product
 import xarray as xr
 
 
-
 def compute_crop_indices(img_len, crop_size=None, crop_num=None, overlap_frac=0):
     """Determine how to crop the image across one dimension.
 

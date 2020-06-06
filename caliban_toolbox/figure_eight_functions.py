@@ -214,8 +214,6 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
-    if new_job_id == -1:
-        return
     print('New job ID is: ' + str(new_job_id))
 
     # set name of new job
@@ -263,8 +261,6 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
-    if new_job_id == -1:
-        return
     print('New job ID is: ' + str(new_job_id))
 
     # get info from previous stage

@@ -69,9 +69,10 @@ def connect_aws():
 
 def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
-        Args:
-            local_paths: list of paths to npz files
-            aws_paths: list of paths for saving npz files in AWS
+
+    Args:
+        local_paths: list of paths to npz files
+        aws_paths: list of paths for saving npz files in AWS
     """
 
     s3 = connect_aws()
@@ -85,16 +86,22 @@ def aws_upload_files(local_paths, aws_paths):
         print('\n')
 
 
-def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
-    """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
+def aws_copy_files(input_bucket, output_bucket, key_src, key_dst):
+    """Copy files from one AWS bucket to another.
+
+    Args:
+        source_paths: list of paths for current locations of files
+        dest_paths: list of paths for locations to be copied to
+    """
+
+    s3 = connect_aws()
 
     copy_source = {'Bucket': output_bucket,
                    'Key': key_src}
 
     s3.copy(copy_source, input_bucket, key_dst,
             ExtraArgs={'ACL': 'public-read'})
-   
+
 
 # TODO: catch missing files
 def aws_download_files(upload_log, output_dir):

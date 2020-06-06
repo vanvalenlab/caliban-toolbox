@@ -32,7 +32,6 @@ import numpy as np
 from caliban_toolbox.utils import data_utils
 
 
-# TODO: figure out why this breaks for images with different sizes
 def overlay_grid_lines(overlay_img, row_starts, row_ends, col_starts, col_ends):
     """Visualize the location of image crops on the original uncropped image to assess crop size
 
