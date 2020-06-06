@@ -31,8 +31,6 @@ import zipfile
 import pandas as pd
 import urllib
 import re
-import validators
-
 
 from getpass import getpass
 from urllib.parse import urlencode
@@ -105,16 +103,13 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
     url_encoded_dict = urlencode(url_dict)
 
     # create path to npz, key to upload npz, and url path for figure8
-    npz_paths = [os.path.join(crop_dir, npz) for npz in npzs_to_upload]
-    npz_keys = [os.path.join(aws_folder, stage, npz) for npz in npzs_to_upload]
-    url_paths = [_format_url(subfolders, stage, npz, url_encoded_dict) for npz in npzs_to_upload]
+    npz_paths, npz_keys, url_paths = [], [], []
+    for npz in npzs_to_upload:
+        npz_paths.append(os.path.join(crop_dir, npz))
+        npz_keys.append(os.path.join(aws_folder, stage, npz))
+        url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
 
-    # validate urls
-    for url in url_paths:
-        valid = validators.url(url)
-        if not valid:
-            raise ValueError('Invalid URL: {}'.format(url))
-
+    # TODO: think about better way to structure than than many lists
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
@@ -187,6 +182,7 @@ def upload_log_file(log_file, job_id, key):
 def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stage,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
+
     Args:
         base_dir: full path to job directory
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
@@ -224,13 +220,14 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
 
     # set name of new job
     rename_job(new_job_id, key, job_name)
-
+    
     # get relevant paths
     npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
                                                            aws_folder=aws_folder,
                                                            stage=stage, pixel_only=pixel_only,
                                                            label_only=label_only,
                                                            rgb_mode=rgb_mode)
+
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 

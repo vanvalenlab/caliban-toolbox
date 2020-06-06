@@ -200,8 +200,8 @@ def load_npzs(crop_dir, log_data, verbose=True):
             if os.path.exists(npz_path):
                 temp_npz = np.load(npz_path)
 
-                # figure out how npz keys were named
-                labels_key = 'y' if 'y' in list(temp_npz.keys()) else 'annotated'
+                # determine how labels were named
+                labels_key = 'y' if 'y' in temp_npz else 'annotated'
 
                 # last slice may be truncated, modify index
                 if slice == num_slices - 1:

@@ -69,10 +69,9 @@ def connect_aws():
 
 def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
-
-    Args:
-        local_paths: list of paths to npz files
-        aws_paths: list of paths for saving npz files in AWS
+        Args:
+            local_paths: list of paths to npz files
+            aws_paths: list of paths for saving npz files in AWS
     """
 
     s3 = connect_aws()
@@ -86,56 +85,16 @@ def aws_upload_files(local_paths, aws_paths):
         print('\n')
 
 
-def aws_transfer_files(aws_folder, completed_stage, new_stage, files_to_transfer,
-                       pixel_only, label_only, rgb_mode):
-    """Helper function to transfer files from one bucket/key to another
+def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
+    """Helper function to transfer files from one bucket/key to another. Used
+    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
 
-    Args:
-        aws_folder: folder where uploaded files will be stored
-        completed_stage: stage of completed jobs
-        new_stage: stage for new job
-        files_to_transfer: list containing the names of files to be transferred
-        pixel_only: boolean flag to set pixel_only mode
-        label_only: boolean flag to set label_only mode
-        rgb_mode: boolean flag to set rgb_mode
-    """
+    copy_source = {'Bucket': output_bucket,
+                   'Key': key_src}
 
-    s3 = connect_aws()
-
-    filename_list = []
-
-    # change slashes separating nested folders to underscores for URL generation
-    aws_folder = re.split('/', aws_folder)
-    aws_folder = '__'.join(aws_folder)
-
-    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
-    url_encoded_dict = urlencode(url_dict)
-
-    # upload images
-    for file in files_to_transfer:
-
-        # current location of image
-        current_path = os.path.join(aws_folder, completed_stage, file)
-
-        # where to transfer image
-        next_path = os.path.join(aws_folder, new_stage, file)
-
-        # parameters for copy function
-        current_path_args = {'Bucket': 'caliban-output',
-                             'Key': current_path}
-
-        s3.copy(current_path_args, 'caliban-input', next_path,
-                ExtraArgs={'ACL': 'public-read'})
-
-        url = 'https://caliban.deepcell.org/{}__{}__{}__' \
-              '{}__{}?{}'.format('caliban-input', 'caliban-output', aws_folder, new_stage, file,
-                                 url_encoded_dict)
-
-        # add caliban url to list
-        filename_list.append(url)
-
-    return filename_list
-
+    s3.copy(copy_source, input_bucket, key_dst,
+            ExtraArgs={'ACL': 'public-read'})
+   
 
 # TODO: catch missing files
 def aws_download_files(upload_log, output_dir):
