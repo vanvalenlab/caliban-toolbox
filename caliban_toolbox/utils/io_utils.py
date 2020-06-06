@@ -200,13 +200,16 @@ def load_npzs(crop_dir, log_data, verbose=True):
             if os.path.exists(npz_path):
                 temp_npz = np.load(npz_path)
 
+                # determine how labels were named
+                labels_key = 'y' if 'y' in temp_npz else 'annotated'
+
                 # last slice may be truncated, modify index
                 if slice == num_slices - 1:
-                    current_stack_len = temp_npz['X'].shape[1]
+                    current_stack_len = temp_npz[labels_key].shape[1]
                 else:
                     current_stack_len = slice_stack_len
 
-                stack[fov, :current_stack_len, crop, slice, ...] = temp_npz['y']
+                stack[fov, :current_stack_len, crop, slice, ...] = temp_npz[labels_key]
             else:
                 # npz not generated, did not contain any labels, keep blank
                 if verbose:

@@ -35,12 +35,15 @@ from itertools import product
 import xarray as xr
 
 
-def compute_crop_indices(img_len, crop_size, overlap_frac):
+def compute_crop_indices(img_len, crop_size=None, crop_num=None, overlap_frac=0):
     """Determine how to crop the image across one dimension.
 
     Args:
         img_len: length of the image for given dimension
-        crop_size: size in pixels of the crop in given dimension
+        crop_size: size in pixels of the crop in given dimension; must be specified if
+            crop_num not provided
+        crop_num: number of crops in the given dimension; must be specified if
+            crop_size not provided
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
     Returns:
@@ -49,8 +52,23 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
         int: number of pixels of padding at start and end of image in given dimension
     """
 
-    # compute overlap fraction in pixels
-    overlap_pix = math.floor(crop_size * overlap_frac)
+    # compute indices based on fixed number of pixels per crop
+    if crop_size is not None:
+
+        # compute overlap fraction in pixels
+        overlap_pix = math.floor(crop_size * overlap_frac)
+
+    # compute indices based on fixed number of crops
+    elif crop_num is not None:
+        # number of pixels in non-overlapping portion of crop
+        non_overlap_crop_size = np.ceil(img_len / crop_num)
+
+        # Technically this is the fraction the non-overlap, rather than fraction of the whole,
+        # but we're going to visually crop overlays anyway to make sure value is appropriate
+        overlap_pix = math.floor(non_overlap_crop_size * overlap_frac)
+
+        # total crop size
+        crop_size = non_overlap_crop_size + overlap_pix
 
     # the crops start at pixel 0, and are spaced crop_size - overlap_pix away from each other
     start_indices = np.arange(0, img_len - overlap_pix, crop_size - overlap_pix)
