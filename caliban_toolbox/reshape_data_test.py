@@ -58,8 +58,9 @@ def test_crop_multichannel_data():
                                             overlap_frac=overlap_frac,
                                             test_parameters=False)
 
-    expected_crop_num = len(crop_utils.compute_crop_indices(row_len, crop_size[0],
-                                                            overlap_frac)[0]) ** 2
+    expected_crop_num = len(crop_utils.compute_crop_indices(img_len=row_len,
+                                                            crop_size=crop_size[0],
+                                                            overlap_frac=overlap_frac)[0]) ** 2
     assert (X_data_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
                                      crop_size[0], crop_size[1], channel_len))
 

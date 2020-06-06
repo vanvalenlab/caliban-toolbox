@@ -1,0 +1,39 @@
+{
+	"TYPE" : ["cell", "HEK293"],
+	"CHANNEL_MARKER" : [{
+		"0" : "H2B-mClover"
+		}
+	],
+	"EXP_ID" : ["journal_pcbi_1005177"],
+	"RAW_DATA_ORIGIN" : [{
+		"FACILITY" : "stanford",
+		"COLLECTED_BY" : "Takamasa Kudo",
+		"DATE_COLLECTED" : "11_13_2017",
+		"DOI" : " https://doi.org/10.1371/journal.pcbi.1005177"
+		}
+	],
+	"IMAGING_PARAMETERS" : [{
+		"MICROSCOPE" : "Nikon Ti-E",
+		"CAMERA" : "Andor Neo 5.5",
+		"MAGNIFICATION" : "20x",
+		"NA": "",
+		"BINNING" : "2x2",
+		"PIXEL_SIZE" : "0.65um",
+		"EXPOSURE_TIME" : "",
+		"TIME_STEP" : ""
+		}
+	],
+		"DIMENSIONS" : [{
+		"X" : "1280",
+		"Y" : "1080"
+		}
+	],
+	"ONTOLOGY" : ["dynamic","2d","fluorescence","nuclear"],
+	"METHODS" : [{
+		"SUBTYPE" : "",
+		"CULTURE" : "",
+		"LABELING" : "",
+		"IMAGING" : ""
+		}
+	]
+}

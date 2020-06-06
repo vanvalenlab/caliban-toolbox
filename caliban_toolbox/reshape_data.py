@@ -33,15 +33,18 @@ import json
 import xarray as xr
 
 from caliban_toolbox.utils import crop_utils, slice_utils, io_utils
+from caliban_toolbox.utils.crop_utils import compute_crop_indices, crop_helper
 
 
-def crop_multichannel_data(X_data, y_data, crop_size, overlap_frac, test_parameters=False):
+def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overlap_frac=0.1,
+                           test_parameters=False):
     """Reads in a stack of images and crops them into small pieces for easier annotation
 
     Args:
         X_data: xarray containing raw images to be cropped
         y_data: xarray containing labeled images to be chopped
-        crop_size: (row_crop, col_crop) tuple specifying shape of the crop
+        crop_size: (row_crop, col_crop) tuple specifying the length of the crop, including overlap
+        crop_num: (row_num, col_num) tuple specifying number of crops
         overlap_frac: fraction that crops will overlap each other on each edge
         test_parameters: boolean to determine whether to run all fovs, or only the first
 
@@ -93,24 +96,33 @@ def crop_multichannel_data(X_data, y_data, crop_size, overlap_frac, test_paramet
         X_data, y_data = X_data[:1, ...], y_data[:1, ...]
 
     # compute the start and end coordinates for the row and column crops
-    row_starts, row_ends, row_padding = crop_utils.compute_crop_indices(img_len=X_data.shape[4],
-                                                                        crop_size=crop_size[0],
-                                                                        overlap_frac=overlap_frac)
+    if crop_size is not None:
+        row_starts, row_ends, row_padding = compute_crop_indices(img_len=X_data.shape[4],
+                                                                 crop_size=crop_size[0],
+                                                                 overlap_frac=overlap_frac)
 
-    col_starts, col_ends, col_padding = crop_utils.compute_crop_indices(img_len=X_data.shape[5],
-                                                                        crop_size=crop_size[1],
-                                                                        overlap_frac=overlap_frac)
+        col_starts, col_ends, col_padding = compute_crop_indices(img_len=X_data.shape[5],
+                                                                 crop_size=crop_size[1],
+                                                                 overlap_frac=overlap_frac)
+    else:
+        row_starts, row_ends, row_padding = compute_crop_indices(img_len=X_data.shape[4],
+                                                                 crop_num=crop_num[0],
+                                                                 overlap_frac=overlap_frac)
+
+        col_starts, col_ends, col_padding = compute_crop_indices(img_len=X_data.shape[5],
+                                                                 crop_num=crop_num[1],
+                                                                 overlap_frac=overlap_frac)
 
     # crop images
-    X_data_cropped, padded_shape = crop_utils.crop_helper(X_data, row_starts=row_starts,
-                                                          row_ends=row_ends,
-                                                          col_starts=col_starts, col_ends=col_ends,
-                                                          padding=(row_padding, col_padding))
+    X_data_cropped, padded_shape = crop_helper(X_data, row_starts=row_starts,
+                                               row_ends=row_ends,
+                                               col_starts=col_starts, col_ends=col_ends,
+                                               padding=(row_padding, col_padding))
 
-    y_data_cropped, padded_shape = crop_utils.crop_helper(y_data, row_starts=row_starts,
-                                                          row_ends=row_ends,
-                                                          col_starts=col_starts, col_ends=col_ends,
-                                                          padding=(row_padding, col_padding))
+    y_data_cropped, padded_shape = crop_helper(y_data, row_starts=row_starts,
+                                               row_ends=row_ends,
+                                               col_starts=col_starts, col_ends=col_ends,
+                                               padding=(row_padding, col_padding))
 
     # save relevant parameters for reconstructing image
     log_data = {}
