@@ -293,7 +293,6 @@ def download_figure_eight_output(base_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
-    upload_log = pd.read_csv(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'))
-    missing = aws_download_files(upload_log, output_dir)
+    missing = aws_download_files(log_file, output_dir)
 
     return missing
