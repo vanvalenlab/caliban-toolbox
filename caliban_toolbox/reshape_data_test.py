@@ -114,7 +114,6 @@ def test_crop_multichannel_data():
                                                 crop_num=(5, 5))
 
 
-
 def test_create_slice_data():
     # test output shape with even division of slice
     fov_len, stack_len, num_crops, num_slices, row_len, col_len, chan_len = 1, 40, 1, 1, 50, 50, 3
