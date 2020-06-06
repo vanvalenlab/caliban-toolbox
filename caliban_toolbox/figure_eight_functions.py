@@ -29,11 +29,8 @@ import stat
 import zipfile
 import pandas as pd
 import urllib
-<<<<<<< HEAD
 import json
-=======
 import re
->>>>>>> master
 
 from getpass import getpass
 from urllib.parse import urlencode
