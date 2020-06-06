@@ -1,0 +1,40 @@
+{
+	"TYPE" : ["cell", "A549"],
+	"CHANNEL_MARKER" : [{
+		"0" : "Phase"
+		}
+	],
+	"EXP_ID" : ["20190514_EP01"],
+	"RAW_DATA_ORIGIN" : [{
+		"FACILITY" : "Caltech",
+		"COLLECTED_BY" : "Edward Pao",
+		"DATE_COLLECTED" : "05_14_2019",
+		"DOI" : ""
+		}
+	],
+	"IMAGING_PARAMETERS" : [{
+		"MICROSCOPE" : "Nikon Eclipse Ti-2",
+		"CAMERA" : "Prime 95B",
+		"MAGNIFICATION" : "20x",
+		"NA": "0.45",
+		"BINNING" : "1x1",
+		"PIXEL_SIZE" : "0.55um",
+		"EXPOSURE_TIME" : "25ms",
+		"SLICE_SIZE" : "0.25um"
+		}
+	],
+	
+		"DIMENSIONS" : [{
+		"X" : "1608",
+		"Y" : "1608"
+		}
+	],
+	"ONTOLOGY" : ["static","2d","Phase"],
+	"METHODS" : [{
+		"SUBTYPE" : "",
+		"CULTURE" : "",
+		"LABELING" : "",
+		"IMAGING" : ""
+		}
+	]
+}
