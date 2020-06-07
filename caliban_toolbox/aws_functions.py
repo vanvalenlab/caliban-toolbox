@@ -86,21 +86,24 @@ def aws_upload_files(local_paths, aws_paths):
         print('\n')
 
 
-def aws_copy_files(input_bucket, output_bucket, key_src, key_dst):
+def aws_copy_files(current_folder, next_folder, filenames):
     """Copy files from one AWS bucket to another.
 
     Args:
-        source_paths: list of paths for current locations of files
-        dest_paths: list of paths for locations to be copied to
+        current_folder: aws folder with current files
+        next_folder: aws folder where files will be copied
+        filenames: list of NPZ files to copy
     """
 
     s3 = connect_aws()
 
-    copy_source = {'Bucket': output_bucket,
-                   'Key': key_src}
+    for file in filenames:
+        copy_source = {'Bucket': 'caliban-output',
+                       'Key': os.path.join(current_folder, file)}
 
-    s3.copy(copy_source, input_bucket, key_dst,
-            ExtraArgs={'ACL': 'public-read'})
+        s3.copy(CopySource=copy_source, Bucket='caliban-input',
+                Key=os.path.join(next_folder, file),
+                ExtraArgs={'ACL': 'public-read'})
 
 
 # TODO: catch missing files

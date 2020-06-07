@@ -36,7 +36,7 @@ from getpass import getpass
 from urllib.parse import urlencode
 
 from caliban_toolbox.log_file import create_upload_log
-from caliban_toolbox.aws_functions import aws_upload_files, aws_transfer_files, aws_download_files
+from caliban_toolbox.aws_functions import aws_upload_files, aws_copy_files, aws_download_files
 from caliban_toolbox.utils.misc_utils import list_npzs_folder
 
 
@@ -48,7 +48,7 @@ def _format_url(aws_folder, stage, npz, url_encoded_dict):
 
 
 def _create_next_log_name(previous_log_name, stage):
-    stage_num = previous_log_name.split('_')[1]
+    stage_num = int(previous_log_name.split('_')[1])
     new_log = 'stage_{}_{}_upload_log.csv'.format(stage_num + 1, stage)
 
     return new_log
@@ -109,7 +109,7 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
         npz_keys.append(os.path.join(aws_folder, stage, npz))
         url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
 
-    # TODO: think about better way to structure than than many lists
+    # TODO: think about better way to structure than many lists
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
@@ -133,26 +133,6 @@ def copy_job(job_id, key):
     new_job_id = new_job.json()['id']
 
     return new_job_id
-
-
-def rename_job(job_id, key, name):
-    """Helper function to create a Figure 8 job based on existing job.
-
-    Args:
-        job_id: ID number of job to rename
-        key: API key to access Figure 8 account
-        name: new name for job
-    """
-
-    headers = {'content-type': 'application/json'}
-    payload = {
-        'key': key,
-        'job': {
-            'title': name
-        }}
-    response = requests.put(
-        'https://api.figure-eight.com/v1/jobs/{}.json'.format(job_id), data=json.dumps(payload),
-        headers=headers)
 
 
 def upload_log_file(log_file, job_id, key):
@@ -271,13 +251,20 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
     previous_stage = previous_log['stage'][0]
     aws_folder = previous_log['aws_folder'][0]
 
+    current_bucket = os.path.join(aws_folder, previous_stage)
+    next_bucket = os.path.join(aws_folder, new_stage)
+
     # transfer files to new stage
-    filepaths = aws_transfer_files(aws_folder=aws_folder, completed_stage=previous_stage,
-                                   new_stage=new_stage, files_to_transfer=filenames,
-                                   pixel_only=pixel_only,
-                                   rgb_mode=rgb_mode, label_only=label_only)
+    aws_copy_files(current_folder=current_bucket, next_folder=next_bucket,
+                   filenames=filenames)
 
     new_log_name = _create_next_log_name(previous_log_file, new_stage)
+
+    # TODO: Decide if this should be handled by a separate function that is specific to transfer?
+    _, _, filepaths, _ = create_job_urls(crop_dir=os.path.join(base_dir, 'crop_dir'),
+                                         aws_folder=aws_folder, stage=new_stage,
+                                         pixel_only=pixel_only, label_only=label_only,
+                                         rgb_mode=rgb_mode)
 
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
@@ -285,8 +272,13 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
                       pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
                       log_name=new_log_name)
 
+    log_path = open(os.path.join(base_dir, 'logs', new_log_name), 'r')
+    log_file = log_path.read()
+
     # upload log file
-    upload_log_file(os.path.join(log_dir, new_log_name), new_job_id, key)
+    upload_log_file(log_file, new_job_id, key)
+
+    return log_file
 
 
 def download_report(job_id, log_dir):
