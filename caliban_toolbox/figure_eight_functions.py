@@ -145,7 +145,7 @@ def rename_job(job_id, key, name):
             'title': name
         }}
     response = requests.put(
-        'https://api.figure-eight.com/v1/jobs/{}.json'.format(job_id), data=json.dumps(payload),
+        'https://api.appen.com/v1/jobs/{}.json'.format(job_id), data=json.dumps(payload),
         headers=headers)
 
 
