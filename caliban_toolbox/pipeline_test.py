@@ -32,6 +32,16 @@ import xarray as xr
 from caliban_toolbox import pipeline
 
 
+def _make_npz_files(npz_num):
+    npz_list = []
+    for i in range(npz_num):
+        X_data = np.zeros((1, 256, 256, 2))
+        y_data = np.zeros((1, 256, 256, 1))
+        npz_list.append({'X': X_data, 'y': y_data})
+
+    return npz_list
+
+
 def test_find_sparse_images():
     images = np.zeros((10, 30, 30, 1))
     sparse_indices = np.random.choice(range(10), 5, replace=False)
@@ -81,3 +91,28 @@ def test_process_stitched_data():
         channels.to_netcdf(os.path.join(temp_dir, 'channel_data.xr'))
 
         pipeline.process_stitched_data(temp_dir)
+
+
+def test_concatenate_npz_files():
+    npz_num = 5
+    npz_list = _make_npz_files(npz_num=npz_num)
+    X_concat, y_concat = pipeline.concatenate_npz_files(npz_list)
+
+    assert X_concat.shape == (npz_num, 256, 256, 2)
+    assert y_concat.shape == (npz_num, 256, 256, 1)
+
+
+def test_create_combined_npz():
+    npz_list = _make_npz_files(5)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for idx, npz in enumerate(npz_list):
+            np.savez(os.path.join(temp_dir, 'test_npz_{}.npz'.format(idx)),
+                     X=npz['X'], y=npz['y'])
+
+        pipeline.create_combined_npz(npz_dir=temp_dir, save_name='combined.npz')
+
+        combined = np.load(os.path.join(temp_dir, 'combined.npz'))
+
+        assert combined['X'].shape == (5, 256, 256, 2)
+        assert combined['y'].shape == (5, 256, 256, 1)
