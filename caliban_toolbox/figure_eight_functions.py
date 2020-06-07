@@ -198,7 +198,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
 
     # set name of new job
     rename_job(new_job_id, key, job_name)
-    
+
     # get relevant paths
     npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
                                                            aws_folder=aws_folder,
