@@ -41,6 +41,44 @@ def _make_npzs(size, num):
     return npz_list
 
 
+def test_pad_image_stack():
+    # rows and cols both need to be modified
+    input_stack = np.zeros((2, 55, 55, 2))
+    tags = [1, 2]
+    input_stack[:, 0, 0, 0] = tags
+    crop_size = (10, 10)
+    padded_stack = build.pad_image_stack(images=input_stack, crop_size=crop_size)
+    assert padded_stack.shape == (2, 60, 60, 2)
+    assert np.all(padded_stack[:, 0, 0, 0] == tags)
+
+    # just rows need to be modified
+    input_stack = np.zeros((2, 50, 35, 2))
+    input_stack[:, 0, 0, 0] = tags
+    crop_size = (10, 10)
+    padded_stack = build.pad_image_stack(images=input_stack, crop_size=crop_size)
+    assert padded_stack.shape == (2, 50, 40, 2)
+    assert np.all(padded_stack[:, 0, 0, 0] == tags)
+
+    # neither needs to be modified
+    input_stack = np.zeros((2, 30, 50, 2))
+    input_stack[:, 0, 0, 0] = tags
+    crop_size = (10, 10)
+    padded_stack = build.pad_image_stack(images=input_stack, crop_size=crop_size)
+    assert padded_stack.shape == input_stack.shape
+    assert np.all(padded_stack[:, 0, 0, 0] == tags)
+
+
+def test_pad_image_edge_crops():
+    input_stack = np.zeros((2, 100, 100, 2))
+    tags = [1, 2]
+    input_stack[:, 0, 0, 0] = tags
+    crop_size = (20, 20)
+
+    padded_stack = build.pad_image_edge_crops(images=input_stack, crop_size=crop_size)
+    assert padded_stack.shape == (2, 120, 120, 2)
+    assert np.all(padded_stack[:, 10, 10, 0] == tags)
+
+
 def test_combine_npz_files():
     # NPZ files are appropriate size and resolution
     npz_list = _make_npzs((256, 256), 2)
