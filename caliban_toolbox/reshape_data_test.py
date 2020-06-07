@@ -88,6 +88,10 @@ def test_crop_multichannel_data():
     with pytest.raises(ValueError):
         _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
                                                 crop_size=(0, 5))
+    # bad crop_size values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(1.5, 5))
     # bad crop_num dtype
     with pytest.raises(ValueError):
         _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
@@ -100,6 +104,10 @@ def test_crop_multichannel_data():
     with pytest.raises(ValueError):
         _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
                                                 crop_num=(0, 5))
+    # bad crop_num values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(1.5, 5))
     # bad overlap_frac value
     with pytest.raises(ValueError):
         _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
