@@ -224,7 +224,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
     upload_log_file(log_file, new_job_id, key)
 
 
-def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
+def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage, job_name,
                               rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job based on the output of a previous Figure8 job
 
@@ -232,6 +232,7 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
         base_dir: full path to job directory
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
         new_stage: specifies new_stage for subsequent job
+        job_name: name for next job
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
@@ -242,6 +243,9 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage,
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
     print('New job ID is: ' + str(new_job_id))
+
+    # set name of new job
+    rename_job(new_job_id, key, job_name)
 
     # get info from previous stage
     log_dir = os.path.join(base_dir, 'logs')
