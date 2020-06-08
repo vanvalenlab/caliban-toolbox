@@ -31,7 +31,7 @@ import numpy as np
 from deepcell_toolbox.utils import resize, tile_image
 
 
-def pad_image_divisible(images, crop_size):
+def pad_image_stack(images, crop_size):
     """Pads an an array of images so that it is divisible by the specified crop_size
 
     Args:
