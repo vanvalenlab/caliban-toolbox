@@ -61,8 +61,8 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
         raise ValueError('Only one of crop_size and crop_num should be provided')
 
     if crop_size is not None:
-        if not isinstance(crop_size, tuple):
-            raise ValueError('crop_size must be a tuple')
+        if not isinstance(crop_size, (tuple, list)):
+            raise ValueError('crop_size must be a tuple or list')
 
         if len(crop_size) != 2:
             raise ValueError('crop_size must be a tuple of (row_crop, col_crop), '
@@ -75,8 +75,8 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
             raise ValueError('crop_size entries must be integers')
 
     if crop_num is not None:
-        if not isinstance(crop_num, tuple):
-            raise ValueError('crop_num must be a tuple')
+        if not isinstance(crop_num, (tuple, list)):
+            raise ValueError('crop_num must be a tuple or list')
 
         if len(crop_num) != 2:
             raise ValueError('crop_num must be a tuple of (num_row, num_col), '
