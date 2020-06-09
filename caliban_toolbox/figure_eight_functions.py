@@ -141,7 +141,7 @@ def rename_job(job_id, key, name):
     payload = {
         'key': key,
         'job': {'title': name}}
-    
+
     response = requests.put(
         'https://api.appen.com/v1/jobs/{}.json'.format(job_id), jason=payload)
 
