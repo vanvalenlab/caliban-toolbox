@@ -138,15 +138,12 @@ def rename_job(job_id, key, name):
             name: new name for job
         """
 
-    headers = {'content-type': 'application/json'}
     payload = {
         'key': key,
-        'job': {
-            'title': name
-        }}
+        'job': {'title': name}}
+    
     response = requests.put(
-        'https://api.appen.com/v1/jobs/{}.json'.format(job_id), data=json.dumps(payload),
-        headers=headers)
+        'https://api.appen.com/v1/jobs/{}.json'.format(job_id), jason=payload)
 
 
 def upload_log_file(log_file, job_id, key):
