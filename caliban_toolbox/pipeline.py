@@ -64,6 +64,9 @@ def create_job_folder(experiment_dir, metadata, fov_data, fov_names, fov_num):
 
     Args:
         experiment_dir: directory of relevant experiment
+        metadata: metadata file for experiment
+        fov_data: image data for current experiment
+        fov_names: names of FOVs in current experiment
         fov_num: number of FOVs to include in job
     """
 
