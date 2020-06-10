@@ -25,6 +25,7 @@
 # ==============================================================================
 import os
 import tempfile
+import pytest
 
 import numpy as np
 import xarray as xr
@@ -64,6 +65,61 @@ def test_crop_multichannel_data():
                                      crop_size[0], crop_size[1], channel_len))
 
     assert log_data["num_crops"] == expected_crop_num
+
+    # invalid arguments
+
+    # no crop_size or crop_num
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data)
+
+    # both crop_size and crop_num
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(20, 20), crop_num=(20, 20))
+    # bad crop_size dtype
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=5)
+    # bad crop_size shape
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(10, 5, 2))
+    # bad crop_size values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(0, 5))
+    # bad crop_size values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(1.5, 5))
+    # bad crop_num dtype
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=5)
+    # bad crop_num shape
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(10, 5, 2))
+    # bad crop_num values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(0, 5))
+    # bad crop_num values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(1.5, 5))
+    # bad overlap_frac value
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                overlap_frac=1.2)
+    # bad X_data dims
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data[0], y_data=test_y_data,
+                                                crop_size=(5, 5))
+    # bad y_data dims
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data[0],
+                                                crop_num=(5, 5))
 
 
 def test_create_slice_data():
