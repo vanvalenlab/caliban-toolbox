@@ -23,7 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import skimage.measure
+import skimage
 
 import numpy as np
 from caliban_toolbox import reshape_data
