@@ -173,7 +173,7 @@ def upload_log_file(log_file, job_id, key):
         print("Data successfully uploaded to Figure Eight.")
 
 
-def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stage,
+def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_name=None,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
 
@@ -181,8 +181,8 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
         base_dir: full path to job directory
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
         aws_folder: folder in aws bucket where files be stored
-        job_name: name for new job
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        job_name: name for new job
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
@@ -213,7 +213,10 @@ def create_figure_eight_job(base_dir, job_id_to_copy, job_name, aws_folder, stag
     print('New job ID is: ' + str(new_job_id))
 
     # set name of new job
-    rename_job(new_job_id, key, job_name)
+    if job_name is None:
+        print("Job name not supplied, copying name from template job")
+    else:
+        rename_job(new_job_id, key, job_name)
 
     # get relevant paths
     npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
