@@ -29,7 +29,6 @@ import stat
 import zipfile
 import pandas as pd
 import urllib
-import json
 import re
 
 from getpass import getpass
