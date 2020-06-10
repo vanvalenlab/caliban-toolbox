@@ -136,14 +136,14 @@ def rename_job(job_id, key, name):
             job_id: ID number of job to rename
             key: API key to access Figure 8 account
             name: new name for job
-        """
+    """
 
     payload = {
         'key': key,
-        'job': {'title': name}}
-
-    response = requests.put(
-        'https://api.appen.com/v1/jobs/{}.json'.format(job_id), jason=payload)
+        'job': {'title': name}
+    }
+    url = 'https://api.appen.com/v1/jobs/{}.json'.format(job_id)
+    response = requests.put(url, json=payload)
 
 
 def upload_log_file(log_file, job_id, key):
