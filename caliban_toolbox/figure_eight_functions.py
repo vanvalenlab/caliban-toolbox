@@ -298,6 +298,9 @@ def download_figure_eight_output(base_dir):
 
     Args:
         base_dir: directory containing relevant job files
+
+    Returns:
+        list: file names of NPZs not found in AWS bucket
     """
 
     # get information from job creation
@@ -316,4 +319,6 @@ def download_figure_eight_output(base_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
-    aws_download_files(log_file, output_dir)
+    missing = aws_download_files(log_file, output_dir)
+
+    return missing
