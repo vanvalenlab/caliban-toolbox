@@ -64,7 +64,7 @@ def update_job_metadata(metadata, update_dict):
     # TODO: figure out workflow for remaining in progress jobs
 
     in_progress = metadata.loc[metadata.status == 'in_progress', 'image_name']
-    included, excluded = update_dict['included'], update_dict['excluded']
+    included, excluded = update_dict.get('included'), update_dict.get('excluded')
 
     # make sure supplied excluded and included images are in progress for this job
     if not np.all(np.isin(included, in_progress)):

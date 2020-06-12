@@ -25,11 +25,6 @@
 # ==============================================================================
 
 import os
-import json
-
-import numpy as np
-
-from caliban_toolbox import metadata
 
 
 def get_job_folder_name(experiment_dir):
@@ -43,11 +38,13 @@ def get_job_folder_name(experiment_dir):
         string: name of the job folder
     """
 
+    # get all job folders
     files = os.listdir(experiment_dir)
     folders = [file for file in files if os.path.isdir(os.path.join(experiment_dir, file))]
     folders = [folder for folder in folders if 'caliban_job_' in folder]
     folders.sort()
 
+    # create new sequential folder name
     if len(folders) == 0:
         new_folder = 'caliban_job_0'
     else:

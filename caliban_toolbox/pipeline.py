@@ -46,6 +46,7 @@ def create_experiment_folder(image_names, raw_metadata, base_dir):
         string: full path to newly created experiment folder
     """
 
+    # make folder for current experiment
     experiment_id = raw_metadata['EXPERIMENT_ID']
     experiment_folder = os.path.join(base_dir, 'experiment_{}'.format(experiment_id))
     os.makedirs(experiment_folder)
@@ -74,15 +75,18 @@ def create_job_folder(experiment_dir, metadata, fov_data, fov_names, fov_num):
     job_folder_path, job_name = get_job_folder_name(experiment_dir)
     os.makedirs(job_folder_path)
 
+    # get specified number of new FOVs from list of available FOVs
     available_fovs = metadata[metadata['status'] == 'awaiting_prediction']
     new_fov_names = available_fovs['image_name'][:fov_num].values
 
+    # update the status of selected FOVs
     metadata.loc[metadata['image_name'].isin(new_fov_names),
                  ['status', 'job_folder']] = 'in_progress', job_name
 
+    # get image data corresponding to selected FOVs
     fov_idx = np.isin(fov_names, new_fov_names)
-
     new_fov_data = fov_data[fov_idx]
 
+    # save image data and metadata file
     np.savez(os.path.join(job_folder_path, 'raw_data.npz'), X=new_fov_data)
     metadata.to_csv(os.path.join(experiment_dir, 'metadata.csv'))
