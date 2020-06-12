@@ -26,8 +26,6 @@
 import numpy as np
 
 from caliban_toolbox import metadata
-import importlib
-importlib.reload(metadata)
 
 
 def _make_raw_metadata():

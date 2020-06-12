@@ -31,8 +31,6 @@ import pandas as pd
 import xarray as xr
 
 from caliban_toolbox import pipeline
-import importlib
-importlib.reload(pipeline)
 
 
 def _make_raw_metadata():

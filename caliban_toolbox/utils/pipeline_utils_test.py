@@ -29,9 +29,6 @@ import tempfile
 import numpy as np
 
 from caliban_toolbox.utils import pipeline_utils
-import importlib
-
-importlib.reload(pipeline_utils)
 
 
 def _make_raw_metadata():
