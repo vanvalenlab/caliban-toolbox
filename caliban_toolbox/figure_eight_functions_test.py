@@ -26,8 +26,18 @@
 import tempfile
 import os
 import pytest
+import json
+import requests_mock
+import urllib
+
+import numpy as np
+import pandas as pd
+
+from unittest.mock import patch
 
 from pathlib import Path
+from unittest.mock import patch
+
 
 from caliban_toolbox import figure_eight_functions
 
@@ -86,3 +96,65 @@ def test_create_job_urls():
     #                                                               pixel_only=pixel_only,
     #                                                               label_only=label_only,
     #                                                               rgb_mode=rgb_mode)
+
+
+# TODO: Is this test useful?
+def test_copy_job():
+    with requests_mock.Mocker() as m:
+
+        # create test data
+        test_job_id = 666
+        test_appen_key = 'a1b2c3'
+        return_id = 123
+        return_dict = {'status_code': 200, 'id': return_id}
+
+        # generate same url as function for mocking
+        url = 'https://api.appen.com/v1/jobs/{}/copy.json?'.format(str(test_job_id))
+
+        # mock the call
+        m.get(url, text=json.dumps(return_dict))
+        new_job_id = figure_eight_functions.copy_job(job_id=test_job_id, key=test_appen_key)
+
+        assert new_job_id == return_id
+
+
+def test_upload_log_file():
+    with requests_mock.Mocker() as m:
+
+        # create test data
+        data = {'project_url': 'https://caliban.deepcell.org/example_job.npz',
+                'stage': 'test'}
+        example_log_string = pd.DataFrame(data=data, index=range(1)).to_string()
+        test_key = 'a1b2c3'
+        test_job_id = 123
+
+        # generate same url as function for mocking
+        url = "https://api.appen.com/v1/jobs/{}/upload.json?{}"
+        url_dict = {'key': test_key, 'force': True}
+        url_encoded_dict = urllib.parse.urlencode(url_dict)
+        url = url.format(test_job_id, url_encoded_dict)
+
+        # mock the call
+        response_dict = {'status_code': 200}
+        m.put(url, text=json.dumps(response_dict))
+        figure_eight_functions.upload_log_file(log_file=example_log_string, job_id=test_job_id,
+                                               key=test_key)
+
+
+@patch('caliban_toolbox.aws_functions.aws_upload_files')
+@patch('caliban_toolbox.figure_eight_functions.copy_job')
+@patch("getpass.getpass")
+def test_create_figure_eight_job(getpas, copy_job, aws_upload):
+    getpas.return_value = 'test_api_key'
+    copy_job.return_value = 123
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        # create crop directory
+        crop_dir = os.path.join(temp_dir, 'crop_dir')
+        os.makedirs(crop_dir)
+        np.savez(os.path.join(crop_dir, 'test_crop.npz'))
+
+        figure_eight_functions.create_figure_eight_job(base_dir=temp_dir, job_id_to_copy=123,
+                                                       aws_folder='aws', stage='stage')
+

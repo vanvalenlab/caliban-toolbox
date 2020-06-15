@@ -31,7 +31,7 @@ import pandas as pd
 import urllib
 import re
 
-from getpass import getpass
+import getpass
 from urllib.parse import urlencode
 
 from caliban_toolbox.log_file import create_upload_log
@@ -144,10 +144,13 @@ def upload_log_file(log_file, job_id, key):
     url_encoded_dict = urllib.parse.urlencode(url_dict)
     url = url.format(job_id, url_encoded_dict)
 
-    csv_file = open(csv_path, 'r')
-    csv_data = csv_file.read()
+    #csv_file = open(csv_path, 'r')
+    #csv_data = csv_file.read()
 
     headers = {"Content-Type": "text/csv"}
+    print(url)
+    print(log_file)
+    print(headers)
     add_data = requests.put(url, data=log_file, headers=headers)
 
     if add_data.status_code != 200:
@@ -186,7 +189,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
     if len(list_npzs_folder(upload_folder)) == 0:
         raise ValueError('No NPZs found in crop dir')
 
-    key = str(getpass("Figure eight api key? "))
+    key = str(getpass.getpass("Figure eight api key? "))
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
@@ -202,7 +205,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                                                            rgb_mode=rgb_mode)
 
     # upload files to AWS bucket
-    aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
+    # aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
     log_name = 'stage_0_{}_upload_log.csv'.format(stage)
 
@@ -238,7 +241,7 @@ def download_report(job_id, log_dir):
     save_path = os.path.join(log_dir, 'job_report.zip')
 
     # password prompt for api info
-    key = str(getpass("Please enter your Figure Eight API key:"))
+    key = str(getpass.getpass("Please enter your Figure Eight API key:"))
 
     # construct url
     url = "https://api.appen.com/v1/jobs/{}.csv?".format(job_id)
