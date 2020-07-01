@@ -205,6 +205,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
                                                            rgb_mode=rgb_mode)
 
     # upload files to AWS bucket
+    # TODO: This function is not being caught by the mock and is still running
     # aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
     log_name = 'stage_0_{}_upload_log.csv'.format(stage)
@@ -212,14 +213,15 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=npzs, filepaths=url_paths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
-                      log_name=log_name)
-
-    log_path = open(os.path.join(base_dir, 'logs', log_name), 'r')
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
+    print(os.listdir(base_dir + '/logs'))
+    log_path = open(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), 'r')
     log_file = log_path.read()
 
     # upload log file
-    upload_log_file(log_file, new_job_id, key)
+    test_val = upload_log_file(log_file, new_job_id, key)
+    # TODO: placeholder to make sure this is being caught by mock
+    assert test_val == 567
 
 
 def download_report(job_id, log_dir):

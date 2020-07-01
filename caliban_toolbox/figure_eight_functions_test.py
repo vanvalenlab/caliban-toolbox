@@ -140,13 +140,15 @@ def test_upload_log_file():
         figure_eight_functions.upload_log_file(log_file=example_log_string, job_id=test_job_id,
                                                key=test_key)
 
-
+@patch('caliban_toolbox.figure_eight_functions.upload_log_file')
 @patch('caliban_toolbox.aws_functions.aws_upload_files')
 @patch('caliban_toolbox.figure_eight_functions.copy_job')
 @patch("getpass.getpass")
-def test_create_figure_eight_job(getpas, copy_job, aws_upload):
+def test_create_figure_eight_job(getpas, copy_job, aws_upload_files, upload_log_file):
     getpas.return_value = 'test_api_key'
     copy_job.return_value = 123
+    aws_upload_files.return_value = '200'
+    upload_log_file.return_value = 567
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
