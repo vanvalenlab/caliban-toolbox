@@ -141,7 +141,7 @@ def test_upload_log_file():
                                                key=test_key)
 
 @patch('caliban_toolbox.figure_eight_functions.upload_log_file')
-@patch('caliban_toolbox.aws_functions.aws_upload_files')
+@patch('caliban_toolbox.figure_eight_functions.aws_upload_files')
 @patch('caliban_toolbox.figure_eight_functions.copy_job')
 @patch("getpass.getpass")
 def test_create_figure_eight_job(getpas, copy_job, aws_upload_files, upload_log_file):

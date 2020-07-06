@@ -206,7 +206,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
 
     # upload files to AWS bucket
     # TODO: This function is not being caught by the mock and is still running
-    # aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
+    aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
     log_name = 'stage_0_{}_upload_log.csv'.format(stage)
 
