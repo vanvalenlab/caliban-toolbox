@@ -143,6 +143,7 @@ def test_upload_log_file():
 # TODO: This mocks almost every call within the function, so we don't get proper integration
 # testing of the different parts working together. However, better than not testing at all
 
+
 @patch('caliban_toolbox.figure_eight_functions.upload_log_file')
 @patch('caliban_toolbox.figure_eight_functions.aws_upload_files')
 @patch('caliban_toolbox.figure_eight_functions.copy_job')
