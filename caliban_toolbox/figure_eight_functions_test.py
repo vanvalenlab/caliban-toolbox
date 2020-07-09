@@ -140,6 +140,8 @@ def test_upload_log_file():
         figure_eight_functions.upload_log_file(log_file=example_log_string, job_id=test_job_id,
                                                key=test_key)
 
+# TODO: This mocks almost every call within the function, so we don't get proper integration
+# testing of the different parts working together. However, better than not testing at all
 
 @patch('caliban_toolbox.figure_eight_functions.upload_log_file')
 @patch('caliban_toolbox.figure_eight_functions.aws_upload_files')
@@ -184,16 +186,14 @@ def test_download_figure_eight_output(download_report, aws_download_files):
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        # create logs directory with zipped report and job creation log file
+        # create logs directory with zipped report
         os.makedirs(os.path.join(temp_dir, 'logs'))
         pathlib.Path(os.path.join(temp_dir, 'logs', 'example_file.csv')).touch()
         zip_path = os.path.join(temp_dir, 'logs', 'job_report.zip')
         zipfile.ZipFile(zip_path, mode='w').write(os.path.join(temp_dir, 'logs',
                                                                'example_file.csv'))
-
+        # create log file
         log_file = pd.DataFrame({'job_id': [1234]})
         log_file.to_csv(os.path.join(temp_dir, 'logs', 'stage_0_upload_log.csv'))
 
         figure_eight_functions.download_figure_eight_output(temp_dir)
-
-

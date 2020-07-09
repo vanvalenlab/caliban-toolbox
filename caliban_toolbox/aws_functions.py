@@ -26,15 +26,10 @@
 import os
 import sys
 import threading
-import re
 
 import boto3
 import botocore
-
-from urllib.parse import urlencode
 from getpass import getpass
-
-from caliban_toolbox.utils.misc_utils import list_npzs_folder
 
 
 # Taken from AWS Documentation
@@ -126,12 +121,12 @@ def aws_download_files(upload_log, output_dir):
         aws_path = os.path.join(aws_folder, stage, file)
 
         try:
-            s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+            s3.download_file(Bucket='caliban-output', Key=aws_path, Filename=local_path)
         except botocore.exceptions.ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == '404':
-                print('The file {} does not exist'.format(img))
-                missing.append(img)
+                print('The file {} does not exist'.format(aws_path))
+                missing.append(aws_path)
             else:
                 raise e
 
