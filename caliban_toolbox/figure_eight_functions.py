@@ -129,6 +129,22 @@ def copy_job(job_id, key):
     return new_job_id
 
 
+def rename_job(job_id, key, name):
+    """Helper function to create a Figure 8 job based on existing job.
+        Args:
+            job_id: ID number of job to rename
+            key: API key to access Figure 8 account
+            name: new name for job
+    """
+
+    payload = {
+        'key': key,
+        'job': {'title': name}
+    }
+    url = 'https://api.appen.com/v1/jobs/{}.json'.format(job_id)
+    response = requests.put(url, json=payload)
+
+
 def upload_log_file(log_file, job_id, key):
     """Upload log file to populate a job for Figure8
 
@@ -153,7 +169,7 @@ def upload_log_file(log_file, job_id, key):
         print("Data successfully uploaded to Figure Eight.")
 
 
-def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
+def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_name=None,
                             rgb_mode=False, label_only=False, pixel_only=False):
     """Create a Figure 8 job and upload data to it. New job ID printed out for convenience.
 
@@ -162,6 +178,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
         job_id_to_copy: ID number of Figure 8 job to use as template for new job
         aws_folder: folder in aws bucket where files be stored
         stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        job_name: name for new job
         pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
         label_only: flag specifying whether annotators will be restricted to label edit mode
         rgb_mode: flag specifying whether annotators will view images in RGB mode
@@ -190,6 +207,12 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage,
     if new_job_id == -1:
         return
     print('New job ID is: ' + str(new_job_id))
+
+    # set name of new job
+    if job_name is None:
+        print("Job name not supplied, copying name from template job")
+    else:
+        rename_job(new_job_id, key, job_name)
 
     # get relevant paths
     npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
@@ -269,6 +292,9 @@ def download_figure_eight_output(base_dir):
 
     Args:
         base_dir: directory containing relevant job files
+
+    Returns:
+        list: file names of NPZs not found in AWS bucket
     """
 
     # get information from job creation
@@ -286,4 +312,6 @@ def download_figure_eight_output(base_dir):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
-    aws_download_files(log_file, output_dir)
+    missing = aws_download_files(log_file, output_dir)
+
+    return missing
