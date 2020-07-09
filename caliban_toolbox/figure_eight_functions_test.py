@@ -29,6 +29,8 @@ import pytest
 import json
 import requests_mock
 import urllib
+import pathlib
+import zipfile
 
 import numpy as np
 import pandas as pd
@@ -140,12 +142,13 @@ def test_upload_log_file():
         figure_eight_functions.upload_log_file(log_file=example_log_string, job_id=test_job_id,
                                                key=test_key)
 
+
 @patch('caliban_toolbox.figure_eight_functions.upload_log_file')
 @patch('caliban_toolbox.figure_eight_functions.aws_upload_files')
 @patch('caliban_toolbox.figure_eight_functions.copy_job')
 @patch("getpass.getpass")
-def test_create_figure_eight_job(getpas, copy_job, aws_upload_files, upload_log_file):
-    getpas.return_value = 'test_api_key'
+def test_create_figure_eight_job(getpass, copy_job, aws_upload_files, upload_log_file):
+    getpass.return_value = 'test_api_key'
     copy_job.return_value = 123
     aws_upload_files.return_value = '200'
     upload_log_file.return_value = 567
@@ -159,4 +162,40 @@ def test_create_figure_eight_job(getpas, copy_job, aws_upload_files, upload_log_
 
         figure_eight_functions.create_figure_eight_job(base_dir=temp_dir, job_id_to_copy=123,
                                                        aws_folder='aws', stage='stage')
+
+
+def test_unzip_report():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # create example zip file
+        pathlib.Path(os.path.join(temp_dir, 'example_file.csv')).touch()
+        zip_path = os.path.join(temp_dir, 'job_report.zip')
+        zipfile.ZipFile(zip_path, mode='w').write(os.path.join(temp_dir, 'example_file.csv'))
+
+        figure_eight_functions.unzip_report(temp_dir)
+
+        assert os.path.exists(os.path.join(temp_dir, 'job_report.csv'))
+
+
+@patch('caliban_toolbox.figure_eight_functions.aws_download_files')
+@patch('caliban_toolbox.figure_eight_functions.download_report')
+def test_download_figure_eight_output(download_report, aws_download_files):
+
+    # we don't care about this return value, this is just to override existing function
+    download_report.return_value = 200
+    aws_download_files.return_value = 200
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        # create logs directory with zipped report and job creation log file
+        os.makedirs(os.path.join(temp_dir, 'logs'))
+        pathlib.Path(os.path.join(temp_dir, 'logs', 'example_file.csv')).touch()
+        zip_path = os.path.join(temp_dir, 'logs', 'job_report.zip')
+        zipfile.ZipFile(zip_path, mode='w').write(os.path.join(temp_dir, 'logs',
+                                                               'example_file.csv'))
+
+        log_file = pd.DataFrame({'job_id': [1234]})
+        log_file.to_csv(os.path.join(temp_dir, 'logs', 'stage_0_upload_log.csv'))
+
+        figure_eight_functions.download_figure_eight_output(temp_dir)
+
 
