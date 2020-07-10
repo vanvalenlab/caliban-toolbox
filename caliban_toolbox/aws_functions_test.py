@@ -25,52 +25,48 @@
 # ==============================================================================
 import os
 
-from unittest.mock import patch
 from caliban_toolbox import aws_functions
-import tempfile
 import pathlib
 
 
-# TODO: What is a better way to mock the s3 = connect_aws() call within this function
-@patch('caliban_toolbox.aws_functions.connect_aws')
-def test_aws_upload_files(connect_aws):
+class FakeS3(object):
 
-    class Fake_S3(object):
-        def upload_file(self, x1, x2, x3, Callback, ExtraArgs):
-            pass
+    def __init__(self, *_, **__):
+        pass
 
-    f_s3 = Fake_S3()
+    def client(self, *_, **__):
+        return self
 
-    connect_aws.return_value = f_s3
+    def upload_file(self, Filename, Bucket, Key, Callback, ExtraArgs):
+        assert os.path.exists(Filename)
+
+    def download_file(self, Bucket, Key, Filename):
+        pathlib.Path(Filename).touch()
+
+
+def test_aws_upload_files(mocker, tmp_path):
+    mocker.patch('getpass.getpass', lambda *x: None)
+    mocker.patch('boto3.Session', FakeS3)
+
     local_files = ['npz_file_' + str(num) for num in range(5)]
     aws_paths = ['aws_bucket/folder/npz_file_' + str(num) for num in range(5)]
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        for file in local_files:
-            pathlib.Path(os.path.join(temp_dir, file)).touch()
+    for file in local_files:
+        pathlib.Path(os.path.join(tmp_path, file)).touch()
 
-        local_paths = [os.path.join(temp_dir, file) for file in local_files]
+    local_paths = [os.path.join(tmp_path, file) for file in local_files]
 
-        aws_functions.aws_upload_files(local_paths=local_paths, aws_paths=aws_paths)
+    aws_functions.aws_upload_files(local_paths=local_paths, aws_paths=aws_paths)
 
 
-@patch('caliban_toolbox.aws_functions.connect_aws')
-def test_aws_download_files(connect_aws):
+def test_aws_download_files(mocker, tmp_path):
+    mocker.patch('getpass.getpass', lambda *x: None)
+    mocker.patch('boto3.Session', FakeS3)
 
-    class Fake_S3(object):
-        def download_file(self, Bucket, Key, Filename):
-            pass
-
-    f_s3 = Fake_S3()
-
-    connect_aws.return_value = f_s3
-
-    aws_paths = ['aws_bucket/folder/npz_file_' + str(num) for num in range(5)]
+    filenames = ['npz_file_' + str(num) for num in range(5)]
 
     upload_log = {'stage': ['stage_0'],
                   'aws_folder': ['temp_folder'],
-                  'filename': aws_paths}
+                  'filename': filenames}
 
-    output_dir = 'example/output/dir'
-
-    aws_functions.aws_download_files(upload_log=upload_log, output_dir=output_dir)
+    aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
