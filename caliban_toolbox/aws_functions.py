@@ -124,6 +124,7 @@ def aws_download_files(upload_log, output_dir):
             s3.download_file(Bucket='caliban-output', Key=aws_path, Filename=local_path)
         except botocore.exceptions.ClientError as e:
             error_code = e.response['Error']['Code']
+            print(error_code)
             if error_code == '404':
                 print('The file {} does not exist'.format(aws_path))
                 missing.append(aws_path)

@@ -24,6 +24,9 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import boto3
+import botocore
+import pytest
 
 from caliban_toolbox import aws_functions
 import pathlib
@@ -31,8 +34,8 @@ import pathlib
 
 class FakeS3(object):
 
-    def __init__(self, *_, **__):
-        pass
+    def __init__(self, aws_access_key_id='key', aws_secret_access_key='secret', raise_error=None):
+        self.raise_error = raise_error
 
     def client(self, *_, **__):
         return self
@@ -41,7 +44,14 @@ class FakeS3(object):
         assert os.path.exists(Filename)
 
     def download_file(self, Bucket, Key, Filename):
-        pathlib.Path(Filename).touch()
+        if self.raise_error is None:
+            pathlib.Path(Filename).touch()
+        elif self.raise_error is 'missing':
+            raise botocore.exceptions.ClientError(error_response={'Error': {'Code': '404'}},
+                                                  operation_name='missing_file')
+        elif self.raise_error is 'other':
+            raise botocore.exceptions.ClientError(error_response={'Error': {'Code': '555'}},
+                                                  operation_name='some_other_error')
 
 
 def test_aws_upload_files(mocker, tmp_path):
@@ -69,4 +79,17 @@ def test_aws_download_files(mocker, tmp_path):
                   'aws_folder': ['temp_folder'],
                   'filename': filenames}
 
-    aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
+    # no missing files
+    missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
+    assert missing == []
+
+    # catch missing file error, return list of missing files
+    mocker.patch('boto3.Session', FakeS3(raise_error='missing'))
+    missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
+    assert missing == filenames
+
+    # all other errors not caught
+    with pytest.raises(botocore.exceptions.ClientError):
+        mocker.patch('boto3.Session', FakeS3(raise_error='other'))
+        missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
+

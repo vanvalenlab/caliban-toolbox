@@ -23,7 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-import tempfile
 import os
 import pytest
 import json
@@ -36,7 +35,6 @@ import numpy as np
 import pandas as pd
 
 from pathlib import Path
-from unittest.mock import patch
 
 
 from caliban_toolbox import figure_eight_functions
@@ -52,6 +50,11 @@ class FakeOpen(object):
         pathlib.Path(os.path.join(save_folder, 'example_file.csv')).touch()
         zipfile.ZipFile(self.save_path, mode='w').write(os.path.join(save_folder,
                                                                      'example_file.csv'))
+
+
+class FakeResponse(object):
+    def __init__(self, status_code):
+        self.status_code = status_code
 
 
 def test_get_latest_log_file(tmp_path):
@@ -127,27 +130,30 @@ def test_copy_job():
         assert new_job_id == return_id
 
 
-def test_upload_log_file():
-    with requests_mock.Mocker() as m:
+def test_upload_log_file(mocker):
+    fake_response = FakeResponse(status_code=200)
 
-        # create test data
-        data = {'project_url': 'https://caliban.deepcell.org/example_job.npz',
-                'stage': 'test'}
-        example_log_string = pd.DataFrame(data=data, index=range(1)).to_string()
-        test_key = 'a1b2c3'
-        test_job_id = 123
+    mocker.patch('requests.put', lambda url, data, headers: fake_response)
 
-        # generate same url as function for mocking
-        url = "https://api.appen.com/v1/jobs/{}/upload.json?{}"
-        url_dict = {'key': test_key, 'force': True}
-        url_encoded_dict = urllib.parse.urlencode(url_dict)
-        url = url.format(test_job_id, url_encoded_dict)
+    # create test data
+    data = {'project_url': 'https://caliban.deepcell.org/example_job.npz',
+            'stage': 'test'}
+    example_log_string = pd.DataFrame(data=data, index=range(1)).to_string()
+    test_key = 'a1b2c3'
+    test_job_id = 123
 
-        # mock the call
-        response_dict = {'status_code': 200}
-        m.put(url, text=json.dumps(response_dict))
-        figure_eight_functions.upload_log_file(log_file=example_log_string, job_id=test_job_id,
-                                               key=test_key)
+    returned_status = figure_eight_functions.upload_log_file(log_file=example_log_string,
+                                                             job_id=test_job_id, key=test_key)
+    assert returned_status == fake_response.status_code
+
+    # bad status code
+    with pytest.raises(ValueError):
+        fake_response = FakeResponse(status_code=666)
+        mocker.patch('requests.put', lambda url, data, headers: fake_response)
+
+        returned_status = figure_eight_functions.upload_log_file(log_file=example_log_string,
+                                                                 job_id=test_job_id,
+                                                                 key=test_key)
 
 
 def test_create_figure_eight_job(mocker, tmp_path):
@@ -155,15 +161,18 @@ def test_create_figure_eight_job(mocker, tmp_path):
     mocker.patch('caliban_toolbox.figure_eight_functions.copy_job', lambda job_id, key: '123')
     mocker.patch('boto3.Session', FakeS3)
     mocker.patch('caliban_toolbox.figure_eight_functions.upload_log_file',
-                 lambda log_file, job_id, key: None)
+                 lambda log_file, job_id, key: 200)
 
     # create crop directory
     crop_dir = os.path.join(tmp_path, 'crop_dir')
     os.makedirs(crop_dir)
     np.savez(os.path.join(crop_dir, 'test_crop.npz'))
 
-    figure_eight_functions.create_figure_eight_job(base_dir=tmp_path, job_id_to_copy=123,
-                                                   aws_folder='aws', stage='stage')
+    status_code = figure_eight_functions.create_figure_eight_job(base_dir=tmp_path,
+                                                                 job_id_to_copy=123,
+                                                                 aws_folder='aws',
+                                                                 stage='stage')
+    assert status_code == 200
 
 
 def test_unzip_report(tmp_path):

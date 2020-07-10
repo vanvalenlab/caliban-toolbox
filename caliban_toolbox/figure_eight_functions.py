@@ -119,11 +119,12 @@ def copy_job(job_id, key):
     """
 
     url = 'https://api.appen.com/v1/jobs/{}/copy.json?'.format(str(job_id))
-    API_key = {"key": key}
+    API_key = {'key': key}
 
     new_job = requests.get(url, params=API_key)
     if new_job.status_code != 200:
-        print("copy_job not successful. Status code: ", new_job.status_code)
+        raise ValueError('copy_job not successful. Status code: '.format(new_job.status_code))
+
     new_job_id = new_job.json()['id']
 
     return new_job_id
@@ -155,18 +156,19 @@ def upload_log_file(log_file, job_id, key):
     """
 
     # format url with appropriate arguments
-    url = "https://api.appen.com/v1/jobs/{}/upload.json?{}"
+    url = 'https://api.appen.com/v1/jobs/{}/upload.json?{}'
     url_dict = {'key': key, 'force': True}
     url_encoded_dict = urllib.parse.urlencode(url_dict)
     url = url.format(job_id, url_encoded_dict)
 
-    headers = {"Content-Type": "text/csv"}
+    headers = {'Content-Type': 'text/csv'}
     add_data = requests.put(url, data=log_file, headers=headers)
 
     if add_data.status_code != 200:
-        print("Upload_data not successful. Status code: ", add_data.status_code)
+        raise ValueError('Upload_data not successful. Status code: '.format(add_data.status_code))
     else:
-        print("Data successfully uploaded to Figure Eight.")
+        print('Data successfully uploaded to Figure Eight.')
+        return add_data.status_code
 
 
 def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_name=None,
@@ -233,7 +235,9 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     log_file = log_path.read()
 
     # upload log file
-    upload_log_file(log_file, new_job_id, key)
+    status_code = upload_log_file(log_file, new_job_id, key)
+
+    return status_code
 
 
 def download_report(job_id, log_dir):
