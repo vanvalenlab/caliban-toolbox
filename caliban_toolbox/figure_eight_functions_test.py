@@ -43,12 +43,23 @@ from caliban_toolbox import figure_eight_functions
 from caliban_toolbox.aws_functions_test import FakeS3
 
 
+class FakeOpen(object):
+    def __init__(self, save_path, mode):
+        self.save_path = save_path
+
+    def write(self, content):
+        save_folder = os.path.dirname(self.save_path)
+        pathlib.Path(os.path.join(save_folder, 'example_file.csv')).touch()
+        zipfile.ZipFile(self.save_path, mode='w').write(os.path.join(save_folder,
+                                                                     'example_file.csv'))
+
+
 def test_get_latest_log_file(tmp_path):
     upload_logs = ['stage_0_upload_log.csv', 'stage_3_upload_log.csv',
                    'stage_8_upload_log.csv']
 
     for log in upload_logs:
-        Path(os.path.join(temp_dir, log)).touch()
+        Path(os.path.join(tmp_path, log)).touch()
 
     latest_file = figure_eight_functions.get_latest_log_file(tmp_path)
     assert latest_file == 'stage_8_upload_log.csv'
@@ -97,7 +108,6 @@ def test_create_job_urls(tmp_path):
     #                                                               rgb_mode=rgb_mode)
 
 
-# TODO: Is this test useful?
 def test_copy_job():
     with requests_mock.Mocker() as m:
 
@@ -168,23 +178,14 @@ def test_unzip_report(tmp_path):
     assert os.path.exists(os.path.join(tmp_path, 'job_report.csv'))
 
 
-@patch('caliban_toolbox.figure_eight_functions.aws_download_files')
-@patch('caliban_toolbox.figure_eight_functions.open')
-@patch('caliban_toolbox.figure_eight_functions.getpass')
-def test_download_figure_eight_output(getpass, open, aws_download_files, tmp_path):
+def test_download_figure_eight_output(mocker, tmp_path):
 
-    # we don't care about this return value, this is just to override existing function
-    getpass.getpass.return_value = 200
-    open.write.return_value = 200
-    aws_download_files.return_value = 200
+    mocker.patch('getpass.getpass', lambda *x: 'example_pass')
+    mocker.patch('caliban_toolbox.figure_eight_functions.open', FakeOpen)
+    mocker.patch('caliban_toolbox.figure_eight_functions.aws_download_files', FakeS3)
 
-    # create logs directory with zipped report
+    # create logs directory with upload log
     os.makedirs(os.path.join(tmp_path, 'logs'))
-    pathlib.Path(os.path.join(tmp_path, 'logs', 'example_file.csv')).touch()
-    zip_path = os.path.join(tmp_path, 'logs', 'job_report.zip')
-    zipfile.ZipFile(zip_path, mode='w').write(os.path.join(tmp_path, 'logs',
-                                                           'example_file.csv'))
-    # create log file
     log_file = pd.DataFrame({'job_id': [1234]})
     log_file.to_csv(os.path.join(tmp_path, 'logs', 'stage_0_upload_log.csv'))
 
