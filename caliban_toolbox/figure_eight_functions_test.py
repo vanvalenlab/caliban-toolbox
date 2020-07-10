@@ -191,11 +191,28 @@ def test_download_figure_eight_output(mocker, tmp_path):
 
     mocker.patch('getpass.getpass', lambda *x: 'example_pass')
     mocker.patch('caliban_toolbox.figure_eight_functions.open', FakeOpen)
-    mocker.patch('caliban_toolbox.figure_eight_functions.aws_download_files', FakeS3)
+    mocker.patch('boto3.Session', FakeS3)
 
     # create logs directory with upload log
     os.makedirs(os.path.join(tmp_path, 'logs'))
-    log_file = pd.DataFrame({'job_id': [1234]})
+    log_dict = {'job_id': [1234, 1234],
+                'filename': ['example_1.npz', 'example_2.npz'],
+                'aws_folder': ['example_folder', 'example_folder'],
+                'stage': ['stage_0', 'stage_0']
+                }
+
+    log_file = pd.DataFrame(log_dict)
+
     log_file.to_csv(os.path.join(tmp_path, 'logs', 'stage_0_upload_log.csv'))
 
-    figure_eight_functions.download_figure_eight_output(tmp_path)
+    missing = figure_eight_functions.download_figure_eight_output(tmp_path)
+    assert missing == []
+
+    # catch missing file error, return list of missing files
+    mocker.patch('boto3.Session',
+                 lambda aws_access_key_id, aws_secret_access_key: FakeS3(raise_error='missing'))
+    missing = figure_eight_functions.download_figure_eight_output(tmp_path)
+    missing = [os.path.split(file_path)[1] for file_path in missing]
+    assert missing == log_dict['filename']
+
+

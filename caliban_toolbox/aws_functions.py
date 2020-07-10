@@ -102,6 +102,7 @@ def aws_download_files(upload_log, output_dir):
     """
 
     s3 = connect_aws()
+    print("upload log is {}".format(upload_log))
 
     # get files
     files_to_download = upload_log['filename']

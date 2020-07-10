@@ -84,12 +84,15 @@ def test_aws_download_files(mocker, tmp_path):
     assert missing == []
 
     # catch missing file error, return list of missing files
-    mocker.patch('boto3.Session', FakeS3(raise_error='missing'))
+    mocker.patch('boto3.Session',
+                 lambda aws_access_key_id, aws_secret_access_key: FakeS3(raise_error='missing'))
     missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
+    missing = [os.path.split(file_path)[1] for file_path in missing]
     assert missing == filenames
 
     # all other errors not caught
     with pytest.raises(botocore.exceptions.ClientError):
-        mocker.patch('boto3.Session', FakeS3(raise_error='other'))
+        mocker.patch('boto3.Session',
+                     lambda aws_access_key_id, aws_secret_access_key: FakeS3(raise_error='other'))
         missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
 
