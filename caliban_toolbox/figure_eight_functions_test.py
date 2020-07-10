@@ -214,5 +214,3 @@ def test_download_figure_eight_output(mocker, tmp_path):
     missing = figure_eight_functions.download_figure_eight_output(tmp_path)
     missing = [os.path.split(file_path)[1] for file_path in missing]
     assert missing == log_dict['filename']
-
-

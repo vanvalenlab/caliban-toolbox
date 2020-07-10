@@ -95,4 +95,3 @@ def test_aws_download_files(mocker, tmp_path):
         mocker.patch('boto3.Session',
                      lambda aws_access_key_id, aws_secret_access_key: FakeS3(raise_error='other'))
         missing = aws_functions.aws_download_files(upload_log=upload_log, output_dir=tmp_path)
-
