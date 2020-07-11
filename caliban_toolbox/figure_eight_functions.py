@@ -317,6 +317,5 @@ def download_figure_eight_output(base_dir):
         os.makedirs(output_dir)
 
     missing = aws_download_files(log_file, output_dir)
-    print(missing)
 
     return missing

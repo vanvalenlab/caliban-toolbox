@@ -54,6 +54,7 @@ class FakeS3(object):
                                                   operation_name='some_other_error')
 
 
+# TODO: Can we spy on this function in order to have some sort of correctness test here?
 def test_aws_upload_files(mocker, tmp_path):
     mocker.patch('getpass.getpass', lambda *x: None)
     mocker.patch('boto3.Session', FakeS3)
