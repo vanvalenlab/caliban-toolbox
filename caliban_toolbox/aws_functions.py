@@ -26,15 +26,10 @@
 import os
 import sys
 import threading
-import re
 
 import boto3
 import botocore
-
-from urllib.parse import urlencode
-from getpass import getpass
-
-from caliban_toolbox.utils.misc_utils import list_npzs_folder
+import getpass
 
 
 # Taken from AWS Documentation
@@ -57,8 +52,8 @@ class ProgressPercentage(object):
 
 
 def connect_aws():
-    AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
-    AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
+    AWS_ACCESS_KEY_ID = getpass.getpass('What is your AWS access key id? ')
+    AWS_SECRET_ACCESS_KEY = getpass.getpass('What is your AWS secret access key id? ')
 
     session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
                             aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
@@ -80,7 +75,7 @@ def aws_upload_files(local_paths, aws_paths):
 
     # upload images
     for i in range(len(local_paths)):
-        s3.upload_file(local_paths[i], 'caliban-input', aws_paths[i],
+        s3.upload_file(Filename=local_paths[i], Bucket='caliban-input', Key=aws_paths[i],
                        Callback=ProgressPercentage(local_paths[i]),
                        ExtraArgs={'ACL': 'public-read',
                                   'Metadata': {'source_path': local_paths[i]}})
@@ -126,12 +121,13 @@ def aws_download_files(upload_log, output_dir):
         aws_path = os.path.join(aws_folder, stage, file)
 
         try:
-            s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+            s3.download_file(Bucket='caliban-output', Key=aws_path, Filename=local_path)
         except botocore.exceptions.ClientError as e:
             error_code = e.response['Error']['Code']
+
             if error_code == '404':
-                print('The file {} does not exist'.format(img))
-                missing.append(img)
+                print('The file {} does not exist'.format(aws_path))
+                missing.append(aws_path)
             else:
                 raise e
 

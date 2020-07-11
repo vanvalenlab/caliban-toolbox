@@ -31,7 +31,7 @@ import pandas as pd
 import urllib
 import re
 
-from getpass import getpass
+import getpass
 from urllib.parse import urlencode
 
 from caliban_toolbox.log_file import create_upload_log
@@ -119,11 +119,12 @@ def copy_job(job_id, key):
     """
 
     url = 'https://api.appen.com/v1/jobs/{}/copy.json?'.format(str(job_id))
-    API_key = {"key": key}
+    API_key = {'key': key}
 
     new_job = requests.get(url, params=API_key)
     if new_job.status_code != 200:
-        print("copy_job not successful. Status code: ", new_job.status_code)
+        raise ValueError('copy_job not successful. Status code: '.format(new_job.status_code))
+
     new_job_id = new_job.json()['id']
 
     return new_job_id
@@ -155,21 +156,19 @@ def upload_log_file(log_file, job_id, key):
     """
 
     # format url with appropriate arguments
-    url = "https://api.appen.com/v1/jobs/{}/upload.json?{}"
+    url = 'https://api.appen.com/v1/jobs/{}/upload.json?{}'
     url_dict = {'key': key, 'force': True}
     url_encoded_dict = urllib.parse.urlencode(url_dict)
     url = url.format(job_id, url_encoded_dict)
 
-    csv_file = open(csv_path, 'r')
-    csv_data = csv_file.read()
-
-    headers = {"Content-Type": "text/csv"}
+    headers = {'Content-Type': 'text/csv'}
     add_data = requests.put(url, data=log_file, headers=headers)
 
     if add_data.status_code != 200:
-        print("Upload_data not successful. Status code: ", add_data.status_code)
+        raise ValueError('Upload_data not successful. Status code: '.format(add_data.status_code))
     else:
-        print("Data successfully uploaded to Figure Eight.")
+        print('Data successfully uploaded to Figure Eight.')
+        return add_data.status_code
 
 
 def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_name=None,
@@ -203,7 +202,7 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     if len(list_npzs_folder(upload_folder)) == 0:
         raise ValueError('No NPZs found in crop dir')
 
-    key = str(getpass("Figure eight api key? "))
+    key = str(getpass.getpass("Figure eight api key? "))
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
@@ -227,19 +226,18 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
-    log_name = 'stage_0_{}_upload_log.csv'.format(stage)
-
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=npzs, filepaths=url_paths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
-                      log_name=log_name)
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
 
-    log_path = open(os.path.join(base_dir, 'logs', log_name), 'r')
+    log_path = open(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), 'r')
     log_file = log_path.read()
 
     # upload log file
-    upload_log_file(log_file, new_job_id, key)
+    status_code = upload_log_file(log_file, new_job_id, key)
+
+    return status_code
 
 
 def download_report(job_id, log_dir):
@@ -261,7 +259,7 @@ def download_report(job_id, log_dir):
     save_path = os.path.join(log_dir, 'job_report.zip')
 
     # password prompt for api info
-    key = str(getpass("Please enter your Figure Eight API key:"))
+    key = str(getpass.getpass("Please enter your Figure Eight API key:"))
 
     # construct url
     url = "https://api.appen.com/v1/jobs/{}.csv?".format(job_id)
@@ -310,7 +308,6 @@ def download_figure_eight_output(base_dir):
     job_id = log_file['job_id'][0]
 
     # download Figure 8 report
-    log_dir = os.path.join(base_dir, 'logs')
     download_report(job_id=job_id, log_dir=log_dir)
     unzip_report(log_dir=log_dir)
 
