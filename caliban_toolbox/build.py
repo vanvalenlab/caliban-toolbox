@@ -59,35 +59,12 @@ def pad_image_stack(images, crop_size):
         return new_images
 
 
-def pad_image_edge_crops(images, crop_size):
-    """Add padding to an image to enable additional edge crops to be generated
-
-    Args:
-        images: array of images to crop
-        crop_size: size of crops that will be produced
-
-    Returns:
-        np.array: padded image
-    """
-    row_offset, col_offset = int(crop_size[0] / 2), int(crop_size[1] / 2)
-
-    padded_images = np.zeros((images.shape[0], images.shape[1] + crop_size[0],
-                              images.shape[2] + crop_size[1], images.shape[3]))
-
-    padded_images[:, row_offset:-row_offset, col_offset:-col_offset, :] = images
-
-    return padded_images
-
-
-def combine_npz_files(npz_list, resize_ratios, extra_edge_padding=False,
-                      stride_ratio=1, final_size=(256, 256)):
+def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 256)):
     """Take a series of NPZ files and combine together into single training NPZ
 
     Args:
         npz_list: list of NPZ files to combine
         resize_ratios: ratio used to resize each NPZ if data is of different resolutions
-        extra_edge_padding: if True, adds padding equal to half of the crop size on either edge
-            of the image to increase the number of crops produced from the original image
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
         final_size: size of the final crops to be produced
     Returns:
@@ -119,11 +96,7 @@ def combine_npz_files(npz_list, resize_ratios, extra_edge_padding=False,
             current_x = pad_image_stack(images=current_x, crop_size=final_size)
             current_y = pad_image_stack(images=current_y, crop_size=final_size)
 
-            if extra_edge_padding:
-                # create buffer on either edge to increase number of crops
-                current_x = pad_image_edge_crops(images=current_x, crop_size=final_size)
-                current_y = pad_image_edge_crops(images=current_y, crop_size=final_size)
-
+            # create x and y crops
             current_x, _ = tile_image(image=current_x, model_input_shape=final_size,
                                       stride_ratio=stride_ratio)
             current_y, _ = tile_image(image=current_y, model_input_shape=final_size,

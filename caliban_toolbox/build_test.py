@@ -68,17 +68,6 @@ def test_pad_image_stack():
     assert np.all(padded_stack[:, 0, 0, 0] == tags)
 
 
-def test_pad_image_edge_crops():
-    input_stack = np.zeros((2, 100, 100, 2))
-    tags = [1, 2]
-    input_stack[:, 0, 0, 0] = tags
-    crop_size = (20, 20)
-
-    padded_stack = build.pad_image_edge_crops(images=input_stack, crop_size=crop_size)
-    assert padded_stack.shape == (2, 120, 120, 2)
-    assert np.all(padded_stack[:, 10, 10, 0] == tags)
-
-
 def test_combine_npz_files():
     # NPZ files are appropriate size and resolution
     npz_list = _make_npzs((256, 256), 2)
