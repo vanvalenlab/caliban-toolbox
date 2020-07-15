@@ -230,12 +230,15 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
+    log_name = 'stage_0_{}_upload_log.csv'.format(stage)
+
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=npzs, filepaths=url_paths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                      log_name=log_name)
 
-    log_path = open(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), 'r')
+    log_path = open(os.path.join(base_dir, 'logs', log_name), 'r')
     log_file = log_path.read()
 
     # upload log file
