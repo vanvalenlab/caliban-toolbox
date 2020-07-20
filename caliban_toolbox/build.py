@@ -63,7 +63,7 @@ def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 
     """Take a series of NPZ files and combine together into single training NPZ
 
     Args:
-        npz_list: list of NPZ files to combine
+        npz_list: list of NPZ files to combine. Currently only works on 2D static data
         resize_ratios: ratio used to resize each NPZ if data is of different resolutions
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
         final_size: size of the final crops to be produced
