@@ -23,6 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import json
 import requests
 import os
 import stat
@@ -35,7 +36,7 @@ import getpass
 from urllib.parse import urlencode
 
 from caliban_toolbox.log_file import create_upload_log
-from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
+from caliban_toolbox.aws_functions import aws_upload_files, aws_copy_files, aws_download_files
 from caliban_toolbox.utils.misc_utils import list_npzs_folder
 
 
@@ -47,7 +48,7 @@ def _format_url(aws_folder, stage, npz, url_encoded_dict):
 
 
 def _create_next_log_name(previous_log_name, stage):
-    stage_num = previous_log_name.split('_')[1]
+    stage_num = int(previous_log_name.split('_')[1])
     new_log = 'stage_{}_{}_upload_log.csv'.format(stage_num + 1, stage)
 
     return new_log
@@ -55,8 +56,10 @@ def _create_next_log_name(previous_log_name, stage):
 
 def get_latest_log_file(log_dir):
     """Find the latest log file in the log directory
+
     Args:
         log_dir: full path to log directory
+
     Returns:
         string: name of the latest log file
     """
@@ -69,6 +72,7 @@ def get_latest_log_file(log_dir):
 
 def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mode):
     """Helper function to create relevant URLs for caliban log and AWS upload
+
     Args:
         crop_dir: full path to directory with the npz crops
         aws_folder: path for images to be stored in AWS
@@ -76,11 +80,13 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
         pixel_only: boolean flag to determine if only pixel mode is available
         label_only: boolean flag to determine if only label is available
         rgb_mode: boolean flag to determine if rgb mode will be enabled
+
     Returns:
         list: list of paths to local NPZs to be uploaded
         list: list of paths to desintation for NPZs
         list: list of URLs to supply to figure8 to to display crops
         list: list of NPZs that will be uploaded
+
     Raises:
         ValueError: If URLs are not valid
     """
@@ -103,7 +109,7 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
         npz_keys.append(os.path.join(aws_folder, stage, npz))
         url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
 
-    # TODO: think about better way to structure than than many lists
+    # TODO: think about better way to structure than many lists
     return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
@@ -206,8 +212,6 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
 
     # copy job without data
     new_job_id = copy_job(job_id_to_copy, key)
-    if new_job_id == -1:
-        return
     print('New job ID is: ' + str(new_job_id))
 
     # set name of new job
@@ -226,18 +230,82 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
 
+    log_name = 'stage_0_{}_upload_log.csv'.format(stage)
+
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
                       filenames=npzs, filepaths=url_paths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only)
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                      log_name=log_name)
 
-    log_path = open(os.path.join(base_dir, 'logs/stage_0_upload_log.csv'), 'r')
+    log_path = open(os.path.join(base_dir, 'logs', log_name), 'r')
     log_file = log_path.read()
 
     # upload log file
     status_code = upload_log_file(log_file, new_job_id, key)
 
     return status_code
+
+
+def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage, job_name,
+                              rgb_mode=False, label_only=False, pixel_only=False):
+    """Create a Figure 8 job based on the output of a previous Figure8 job
+
+    Args:
+        base_dir: full path to job directory
+        job_id_to_copy: ID number of Figure 8 job to use as template for new job
+        new_stage: specifies new_stage for subsequent job
+        job_name: name for next job
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
+    """
+
+    key = str(getpass("Figure eight api key?"))
+
+    # copy job without data
+    new_job_id = copy_job(job_id_to_copy, key)
+    print('New job ID is: ' + str(new_job_id))
+
+    # set name of new job
+    rename_job(new_job_id, key, job_name)
+
+    # get info from previous stage
+    log_dir = os.path.join(base_dir, 'logs')
+    previous_log_file = get_latest_log_file(log_dir)
+    previous_log = pd.read_csv(os.path.join(log_dir, previous_log_file))
+    filenames = previous_log['filename']
+    previous_stage = previous_log['stage'][0]
+    aws_folder = previous_log['aws_folder'][0]
+
+    current_bucket = os.path.join(aws_folder, previous_stage)
+    next_bucket = os.path.join(aws_folder, new_stage)
+
+    # transfer files to new stage
+    aws_copy_files(current_folder=current_bucket, next_folder=next_bucket,
+                   filenames=filenames)
+
+    new_log_name = _create_next_log_name(previous_log_file, new_stage)
+
+    # TODO: Decide if this should be handled by a separate function that is specific to transfer?
+    _, _, filepaths, _ = create_job_urls(crop_dir=os.path.join(base_dir, 'crop_dir'),
+                                         aws_folder=aws_folder, stage=new_stage,
+                                         pixel_only=pixel_only, label_only=label_only,
+                                         rgb_mode=rgb_mode)
+
+    # Generate log file for current job
+    create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
+                      filenames=filenames, filepaths=filepaths, job_id=new_job_id,
+                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                      log_name=new_log_name)
+
+    log_path = open(os.path.join(base_dir, 'logs', new_log_name), 'r')
+    log_file = log_path.read()
+
+    # upload log file
+    upload_log_file(log_file, new_job_id, key)
+
+    return log_file
 
 
 def download_report(job_id, log_dir):

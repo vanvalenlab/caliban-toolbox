@@ -66,9 +66,9 @@ def connect_aws():
 def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
 
-        Args:
-            local_paths: list of paths to npz files
-            aws_paths: list of paths for saving npz files in AWS
+    Args:
+        local_paths: list of paths to npz files
+        aws_paths: list of paths for saving npz files in AWS
     """
 
     s3 = connect_aws()
@@ -82,17 +82,27 @@ def aws_upload_files(local_paths, aws_paths):
         print('\n')
 
 
-def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
-    """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
+def aws_copy_files(current_folder, next_folder, filenames):
+    """Copy files from one AWS bucket to another.
 
-    copy_source = {'Bucket': output_bucket,
-                   'Key': key_src}
+    Args:
+        current_folder: aws folder with current files
+        next_folder: aws folder where files will be copied
+        filenames: list of NPZ files to copy
+    """
 
-    s3.copy(copy_source, input_bucket, key_dst,
-            ExtraArgs={'ACL': 'public-read'})
+    s3 = connect_aws()
+
+    for file in filenames:
+        copy_source = {'Bucket': 'caliban-output',
+                       'Key': os.path.join(current_folder, file)}
+
+        s3.copy(CopySource=copy_source, Bucket='caliban-input',
+                Key=os.path.join(next_folder, file),
+                ExtraArgs={'ACL': 'public-read'})
 
 
+# TODO: catch missing files
 def aws_download_files(upload_log, output_dir):
     """Download files following Figure 8 annotation.
 

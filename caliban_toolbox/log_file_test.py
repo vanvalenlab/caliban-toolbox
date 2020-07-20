@@ -40,10 +40,12 @@ def test_create_upload_log():
     job_id = '007'
 
     with tempfile.TemporaryDirectory() as temp_dir:
+        log_name = 'test_log.csv'
         create_upload_log(base_dir=temp_dir, stage=stage, aws_folder=aws_folder,
                           filenames=filenames, filepaths=filepaths, job_id=job_id,
-                          pixel_only=False, rgb_mode=True, label_only=True)
+                          pixel_only=False, rgb_mode=True, label_only=True,
+                          log_name=log_name)
 
-        log_file = pd.read_csv(os.path.join(temp_dir, 'logs/stage_0_upload_log.csv'))
+        log_file = pd.read_csv(os.path.join(temp_dir, 'logs', log_name))
 
         assert np.all(log_file['filename'] == filenames)
