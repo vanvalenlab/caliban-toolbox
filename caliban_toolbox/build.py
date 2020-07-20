@@ -81,6 +81,7 @@ def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 
         current_y = npz['y']
 
         # resize if needed
+        # TODO: Add tolerance to control when resizing happens
         current_resize = resize_ratios[idx]
         if current_resize != 1:
             new_shape = (int(current_x.shape[1] * current_resize),
