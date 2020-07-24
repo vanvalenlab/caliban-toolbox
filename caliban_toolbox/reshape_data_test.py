@@ -178,9 +178,7 @@ def test_reconstruct_image_stack():
         io_utils.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped, original_data=X_data,
                                        log_data=log_data, save_dir=temp_dir)
 
-        reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
-
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
         # dims are the same
         assert np.all(stitched_imgs.shape == y_data.shape)
@@ -219,8 +217,7 @@ def test_reconstruct_image_stack():
                                        blank_labels="include",
                                        save_format="npz", verbose=False)
 
-        reshape_data.reconstruct_image_stack(temp_dir)
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(temp_dir)
 
         assert np.all(stitched_imgs.shape == y_data.shape)
         assert np.all(np.equal(stitched_imgs[0, :, 0, 0, 0, 0, 0], tags))
@@ -272,8 +269,7 @@ def test_reconstruct_image_stack():
                                        blank_labels="include",
                                        save_format="npz", verbose=False)
 
-        reshape_data.reconstruct_image_stack(temp_dir)
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(temp_dir)
 
         assert np.all(stitched_imgs.shape == y_data.shape)
 
