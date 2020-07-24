@@ -146,7 +146,7 @@ def test_crop_helper():
                                              col_ends=col_ends,
                                              padding=(row_padding, col_padding))
 
-    assert (cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
+    assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
 
     # test crops with number specified rather than size
     row_crop_num, col_crop_num = 5, 6
@@ -163,7 +163,8 @@ def test_crop_helper():
                                              col_ends=col_ends,
                                              padding=(row_padding, col_padding))
 
-    assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
+    # Because overlap is calculated differently, final size is not exactly equal
+    assert (cropped.shape == (fov_len, stack_len, 30, slice_num, 48, 40, chan_len))
 
     # test that correct region of image is being cropped
     row_crop, col_crop = 40, 40
