@@ -94,8 +94,11 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
     if list(X_data.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']:
         raise ValueError('X_data does not have expected dims, found {}'.format(X_data.dims))
 
-    if list(y_data.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']:
+    if list(y_data.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'compartments']:
         raise ValueError('y_data does not have expected dims, found {}'.format(y_data.dims))
+
+    if y_data.shape[-1] != 1:
+        raise ValueError('Only one type of segmentation label can be processed at a time')
 
     # check if testing or running all samples
     if test_parameters:
@@ -141,6 +144,7 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
     log_data['row_padding'] = int(row_padding)
     log_data['col_padding'] = int(col_padding)
     log_data['num_crops'] = X_data_cropped.shape[2]
+    log_data['label_name'] = y_data.dims[-1]
 
     return X_data_cropped, y_data_cropped, log_data
 
@@ -216,11 +220,12 @@ def reconstruct_image_stack(crop_dir, verbose=True):
 
     # labels for each index within a dimension
     _, stack_len, _, _, row_len, col_len, _ = log_data['original_shape']
+    label_name = log_data['label_name']
     coordinate_labels = [log_data['fov_names'], range(stack_len), range(1),
-                         range(1), range(row_len), range(col_len), ['segmentation_label']]
+                         range(1), range(row_len), range(col_len), [label_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'compartments']
 
     stitched_xr = xr.DataArray(data=image_stack, coords=coordinate_labels,
                                dims=dimension_labels)

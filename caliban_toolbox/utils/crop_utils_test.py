@@ -32,7 +32,8 @@ from caliban_toolbox.utils import crop_utils
 import xarray as xr
 
 
-def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len):
+def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len,
+                   last_dim_name='channels'):
     """Test function to generate a blank xarray with the supplied dimensions
 
     Inputs
@@ -43,6 +44,7 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
         row_num: number of rows
         col_num: number of cols
         chan_num: number of channels
+        last_dim_name: name of last dimension. Either channels or compartments for X or y data
 
     Outputs
         test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
@@ -56,7 +58,7 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
                                  coords=[fovs, range(stack_len), range(crop_num), range(slice_num),
                                          range(row_len), range(col_len), channels],
                                  dims=["fovs", "stacks", "crops", "slices",
-                                       "rows", "cols", "channels"])
+                                       "rows", "cols", last_dim_name])
 
     return test_stack_xr
 
@@ -195,7 +197,8 @@ def test_stitch_crops():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=1)
+                            row_len=row_len, col_len=col_len, chan_len=1,
+                            last_dim_name='compartments')
 
     # create image with artificial objects to be segmented
 
@@ -258,7 +261,8 @@ def test_stitch_crops():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=chan_len)
+                            row_len=row_len, col_len=col_len, chan_len=chan_len,
+                            last_dim_name='compartments')
     side_len = 40
     cell_num = y_data.shape[4] // side_len
 
@@ -309,7 +313,7 @@ def test_stitch_crops():
     log_data["num_crops"] = y_cropped.shape[2]
     log_data["original_shape"] = y_data.shape
     log_data["fov_names"] = y_data.fovs.values.tolist()
-    log_data["channel_names"] = y_data.channels.values.tolist()
+    log_data["label_name"] = str(y_data.coords['compartments'][0].values)
 
     stitched_img = crop_utils.stitch_crops(crop_stack=y_cropped, log_data=log_data)
 

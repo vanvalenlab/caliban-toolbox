@@ -49,7 +49,7 @@ def test_crop_multichannel_data():
 
     test_y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                  slice_num=slice_num, row_len=row_len, col_len=col_len,
-                                 chan_len=channel_len)
+                                 chan_len=channel_len, last_dim_name='compartments')
 
     X_data_cropped, y_data_cropped, log_data = \
         reshape_data.crop_multichannel_data(X_data=test_X_data,
@@ -133,7 +133,7 @@ def test_create_slice_data():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
                             slice_num=num_slices, row_len=row_len, col_len=col_len,
-                            chan_len=chan_len)
+                            chan_len=chan_len, last_dim_name='compartments')
 
     X_slice, y_slice, slice_indices = reshape_data.create_slice_data(X_data, y_data,
                                                                      slice_stack_len)
@@ -155,7 +155,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # create image with artificial objects to be segmented
 
@@ -203,7 +204,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # tag upper left hand corner of the label in each image
         tags = np.arange(stack_len)
@@ -237,7 +239,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # create image with artificial objects to be segmented
 

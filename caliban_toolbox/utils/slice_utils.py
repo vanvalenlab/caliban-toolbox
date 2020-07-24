@@ -86,6 +86,9 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
     if input_slice_num > 1:
         raise ValueError('Input array already contains slice data')
 
+    # get name of last dimension from input data to determine if X or y
+    last_dim_name = data_xr.dims[-1]
+
     slice_num = len(slice_start_indices)
     sliced_stack_len = slice_end_indices[0] - slice_start_indices[0]
 
@@ -95,10 +98,10 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
 
     # labels for each index within a dimension
     coordinate_labels = [data_xr.fovs, range(sliced_stack_len), range(crop_num), range(slice_num),
-                         range(row_len), range(col_len), data_xr.channels]
+                         range(row_len), range(col_len), data_xr[last_dim_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
+    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', last_dim_name]
 
     slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=dimension_labels)
 
