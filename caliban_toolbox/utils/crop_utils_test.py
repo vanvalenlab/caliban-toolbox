@@ -146,6 +146,23 @@ def test_crop_helper():
                                              col_ends=col_ends,
                                              padding=(row_padding, col_padding))
 
+    assert (cropped.shape == (fov_len, stack_len, 1, slice_num, row_len, col_len, chan_len))
+
+    # test crops with number specified rather than size
+    row_crop_num, col_crop_num = 5, 6
+    row_starts, row_ends, row_padding = \
+        crop_utils.compute_crop_indices(img_len=row_len, crop_num=row_crop_num,
+                                        overlap_frac=overlap_frac)
+
+    col_starts, col_ends, col_padding = \
+        crop_utils.compute_crop_indices(img_len=col_len, crop_num=col_crop_num,
+                                        overlap_frac=overlap_frac)
+
+    cropped, padded = crop_utils.crop_helper(input_data=test_xr, row_starts=row_starts,
+                                             row_ends=row_ends, col_starts=col_starts,
+                                             col_ends=col_ends,
+                                             padding=(row_padding, col_padding))
+
     assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
 
     # test that correct region of image is being cropped
