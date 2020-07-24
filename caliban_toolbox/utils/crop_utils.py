@@ -61,7 +61,7 @@ def compute_crop_indices(img_len, crop_size=None, crop_num=None, overlap_frac=0)
     # compute indices based on fixed number of crops
     elif crop_num is not None:
         # number of pixels in non-overlapping portion of crop
-        non_overlap_crop_size = np.ceil(img_len / crop_num)
+        non_overlap_crop_size = np.ceil(img_len / crop_num).astype('int')
 
         # Technically this is the fraction the non-overlap, rather than fraction of the whole,
         # but we're going to visually crop overlays anyway to make sure value is appropriate
