@@ -64,7 +64,7 @@ def save_stitched_npzs(stitched_channels, stitched_labels, save_dir):
         y = stitched_labels[i:(i + 1), ...]
         save_path = os.path.join(save_dir, stitched_labels.fovs.values[i] + '.npz')
 
-        np.savez(save_path, X=X, y=y)
+        np.savez_compressed(save_path, X=X, y=y)
 
 
 def process_stitched_data(base_dir):
@@ -124,4 +124,4 @@ def create_combined_npz(npz_dir, save_name):
 
     X_concat, y_concat = concatenate_npz_files(npz_list=npz_list)
 
-    np.savez(os.path.join(npz_dir, save_name), X=X_concat, y=y_concat)
+    np.savez_compressed(os.path.join(npz_dir, save_name), X=X_concat, y=y_concat)

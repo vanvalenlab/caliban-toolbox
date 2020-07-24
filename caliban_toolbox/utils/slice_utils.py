@@ -91,7 +91,7 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
 
     # create xarray to hold slices
     slice_data = np.zeros((fov_len, sliced_stack_len, crop_num,
-                           slice_num, row_len, col_len, chan_len))
+                           slice_num, row_len, col_len, chan_len), dtype=data_xr.dtype)
 
     # labels for each index within a dimension
     coordinate_labels = [data_xr.fovs, range(sliced_stack_len), range(crop_num), range(slice_num),
@@ -143,7 +143,8 @@ def stitch_slices(slice_stack, log_data):
     slice_end_indices = log_data['slice_end_indices']
     num_slices, fov_names = log_data['num_slices'], log_data['fov_names']
 
-    stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1))
+    stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1),
+                               dtype=slice_stack.dtype)
 
     # loop slice indices to generate sliced data
     for i in range(num_slices - 1):

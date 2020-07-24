@@ -110,7 +110,7 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
 
     # create xarray to hold crops
     cropped_stack = np.zeros((fov_len, stack_len, crop_num, slice_num,
-                              crop_size_row, crop_size_col, channel_len))
+                              crop_size_row, crop_size_col, channel_len), dtype=input_data.dtype)
 
     # labels for each index within a dimension
     coordinate_labels = [input_data.fovs, input_data.stacks, range(crop_num), input_data.slices,
@@ -152,7 +152,7 @@ def stitch_crops(crop_stack, log_data):
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
     row_padding, col_padding = log_data.get('row_padding', 0), log_data.get('col_padding', 0)
     stitched_labels = np.zeros((fov_len, stack_len, 1, 1, row_size + row_padding,
-                                col_size + col_padding, 1))
+                                col_size + col_padding, 1), dtype=crop_stack.dtype)
 
     row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
     col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
