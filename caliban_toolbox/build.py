@@ -43,23 +43,19 @@ def compute_cell_size(npz_file, method='median', by_image=True):
             the cell size across the entire npz is returned
 
     Returns:
-        cell_sizes: list of typical cell size in NPZ
+        average_sizes: list of typical cell size in NPZ
 
     Raises: ValueError if invalid method supplied
     Raises: ValueError if data does have len(shape) of 4
     """
 
     valid_methods = set(['median', 'mean'])
-    if method not in valid_methods:
+    if method.lower() not in valid_methods:
         raise ValueError('Invalid method supplied: got {}, '
                          'method must be one of {}'.format(method, valid_methods))
 
     # initialize variables
     cell_sizes = []
-
-    if not by_image:
-        cell_size_acum = []
-
     labels = npz_file['y']
 
     if len(labels.shape) != 4:
@@ -69,32 +65,28 @@ def compute_cell_size(npz_file, method='median', by_image=True):
         current_label = labels[i, :, :, 0]
         area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
 
-        # compute separately for each image
-        if by_image:
+        cell_sizes.append(area)
+
+    # compute for each list corresponding to each image
+    if by_image:
+        average_cell_sizes = []
+        for size_list in cell_sizes:
             if method == 'mean':
-                current_cell_size = np.mean(area)
+                average_cell_sizes.append(np.mean(size_list))
             elif method == 'median':
-                current_cell_size = np.median(area)
-            else:
-                raise ValueError('Invalid method supplied')
+                average_cell_sizes.append(np.median(size_list))
 
-            cell_sizes.append(current_cell_size)
-
-        # compute for all images at once after loop finishes
-        else:
-            cell_size_acum.append(area)
-
-    # compute summary across entire NPZ
-    if not by_image:
-        all_cell_sizes = np.concatenate(cell_size_acum)
+    # compute across all lists from all images
+    else:
+        all_cell_sizes = np.concatenate(cell_sizes)
         if method == 'mean':
-            cell_sizes = [np.mean(all_cell_sizes)]
+            average_cell_sizes = [np.mean(all_cell_sizes)]
         elif method == 'median':
-            cell_sizes = [np.median(all_cell_sizes)]
+            average_cell_sizes = [np.median(all_cell_sizes)]
         else:
             raise ValueError('Invalid method supplied')
 
-    return cell_sizes
+    return average_cell_sizes
 
 
 def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_ratio):
@@ -106,7 +98,6 @@ def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_rati
         resize_ratio: resize ratio for the images
         final_size: the desired shape of the output image
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
-
 
     Returns:
         reshaped_X, reshaped_y: resized and cropped version of input images

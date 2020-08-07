@@ -45,29 +45,33 @@ def _make_npzs(sizes, num_images):
 
 def test_compute_cell_size():
     labels = np.zeros((3, 40, 40, 1), dtype='int')
+
+    # create cell of size 10x10, 5x5, and 2x2
     labels[0, :10, :10, 0] = 1
     labels[0, 20:25, 20:25, 0] = 2
     labels[0, 12:14, 16:18] = 3
 
+    # create cell of size 4x4, 5x5, 3x3
     labels[1, :4, :4, 0] = 2
     labels[1, 30:35, 35:40, 0] = 3
     labels[1, 36:39, 30:33, 0] = 1
 
+    # create cell of size 9x9
     labels[2, 30:39, 20:29] = 1
 
     example_npz = {'y': labels}
 
     cell_sizes = build.compute_cell_size(npz_file=example_npz, method='median', by_image=True)
-    assert np.all(cell_sizes == [25, 16, 81])
+    assert np.all(cell_sizes == [25, 16, 81])  # median within each individual image
 
     cell_sizes = build.compute_cell_size(npz_file=example_npz, method='median', by_image=False)
-    assert cell_sizes == [25]
+    assert cell_sizes == [25]  # median across all images
 
     cell_sizes = build.compute_cell_size(npz_file=example_npz, method='mean', by_image=True)
-    assert np.all(np.round(cell_sizes, 2) == [43, 16.67, 81])
+    assert np.all(np.round(cell_sizes, 2) == [43, 16.67, 81])  # mean within each individual image
 
     cell_sizes = build.compute_cell_size(npz_file=example_npz, method='mean', by_image=False)
-    assert np.round(cell_sizes, 2) == [37.14]
+    assert np.round(cell_sizes, 2) == [37.14]  # mean across all images
 
     # incorrect method
     with pytest.raises(ValueError):
@@ -247,3 +251,16 @@ def test_combine_npz_files():
 
     # check correct size of NPZs
     assert combined_x.shape[1:3] == final_size
+
+    # mismatch between resize_ratios and npz size
+    with pytest.raises(ValueError):
+        # different resizing for each image in the NPZ
+        num_images = [4, 2]
+        sizes = [(256, 256), (256, 256)]
+        npz_resize_list = _make_npzs(sizes=sizes, num_images=num_images)
+        resize_ratios = [[1, 1, 1], [1, 2]]
+        final_size = (256, 256)
+
+        _, _ = build.combine_npz_files(npz_list=npz_resize_list,
+                                       resize_ratios=resize_ratios,
+                                       final_size=final_size)
