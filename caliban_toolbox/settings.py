@@ -27,12 +27,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-from decouple import config
 
-X_DIMENSION_LABELS = config('DIMENSION_LABELS', cast=list,
-                            default=['fovs', 'stacks', 'crops', 'slices',
-                                     'rows', 'cols', 'channels'])
+X_DIMENSION_LABELS = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
 
-Y_DIMENSION_LABELS = config('DIMENSION_LABELS', cast=list,
-                            default=['fovs', 'stacks', 'crops', 'slices',
-                                     'rows', 'cols', 'compartments'])
+Y_DIMENSION_LABELS = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'compartments']
