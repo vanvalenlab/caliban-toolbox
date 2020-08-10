@@ -101,9 +101,7 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
                          range(row_len), range(col_len), data_xr[last_dim_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', last_dim_name]
-
-    slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=dimension_labels)
+    slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=data_xr.dims)
 
     # loop through slice indices to generate sliced data
     slice_counter = 0

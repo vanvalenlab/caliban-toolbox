@@ -122,7 +122,7 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir,
                 raise NotImplementedError()
 
     log_data['fov_names'] = fov_names.tolist()
-    log_data['label_name'] = str(y_data.coords['compartments'][0].values)
+    log_data['label_name'] = str(y_data.coords[y_data.dims[-1]][0].values)
     log_data['original_shape'] = original_data.shape
     log_data['slice_stack_len'] = X_data.shape[1]
     log_data['save_format'] = save_format

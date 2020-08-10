@@ -32,6 +32,7 @@ import json
 
 import xarray as xr
 
+from caliban_toolbox import settings
 from caliban_toolbox.utils import crop_utils, slice_utils, io_utils
 from caliban_toolbox.utils.crop_utils import compute_crop_indices, crop_helper
 
@@ -91,10 +92,10 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
     if overlap_frac < 0 or overlap_frac > 1:
         raise ValueError('overlap_frac must be between 0 and 1')
 
-    if list(X_data.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']:
+    if list(X_data.dims) != settings.X_DIMENSION_LABELS:
         raise ValueError('X_data does not have expected dims, found {}'.format(X_data.dims))
 
-    if list(y_data.dims) != ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'compartments']:
+    if list(y_data.dims) != settings.Y_DIMENSION_LABELS:
         raise ValueError('y_data does not have expected dims, found {}'.format(y_data.dims))
 
     if y_data.shape[-1] != 1:
@@ -168,12 +169,11 @@ def create_slice_data(X_data, y_data, slice_stack_len, slice_overlap=0):
         raise ValueError('invalid input data shape, '
                          'expected array of len(7), got {}'.format(X_data.shape))
 
-    if len(y_data.shape) != 7:
-        raise ValueError('invalid input data shape, '
-                         'expected array of len(7), got {}'.format(y_data.shape))
+    if list(X_data.dims) != settings.X_DIMENSION_LABELS:
+        raise ValueError('X_data does not have expected dims, found {}'.format(X_data.dims))
 
-    if slice_stack_len > X_data.shape[1]:
-        raise ValueError('slice size is greater than stack length')
+    if list(y_data.dims) != settings.Y_DIMENSION_LABELS:
+        raise ValueError('y_data does not have expected dims, found {}'.format(y_data.dims))
 
     # compute indices for slices
     stack_len = X_data.shape[1]
@@ -225,9 +225,7 @@ def reconstruct_image_stack(crop_dir, verbose=True):
                          range(1), range(row_len), range(col_len), [label_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'compartments']
-
     stitched_xr = xr.DataArray(data=image_stack, coords=coordinate_labels,
-                               dims=dimension_labels)
+                               dims=settings.Y_DIMENSION_LABELS)
 
     stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.xr'))
