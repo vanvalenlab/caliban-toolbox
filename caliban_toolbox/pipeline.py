@@ -55,8 +55,8 @@ def save_stitched_npzs(stitched_channels, stitched_labels, save_dir):
     """Takes corrected labels and channels and saves them into NPZ format
 
     Args:
-        stitched_channels: original channel data
-        stitched_labels: stitched labels
+        stitched_channels: xarray containing original channel data
+        stitched_labels: xarray containing stitched labels
     """
 
     for i in range(stitched_channels.shape[0]):
@@ -65,23 +65,6 @@ def save_stitched_npzs(stitched_channels, stitched_labels, save_dir):
         save_path = os.path.join(save_dir, stitched_labels.fovs.values[i] + '.npz')
 
         np.savez_compressed(save_path, X=X, y=y)
-
-
-def process_stitched_data(base_dir):
-    """Takes stitched output and creates folder of NPZs for review
-
-    Args:
-        base_dir: directory to read from
-    """
-
-    stitched_labels = xr.load_dataarray(os.path.join(base_dir, 'output', 'stitched_labels.xr'))
-    channel_data = xr.load_dataarray(os.path.join(base_dir, 'channel_data.xr'))
-
-    stitched_folder = os.path.join(base_dir, 'stitched_npzs')
-    os.makedirs(stitched_folder)
-
-    save_stitched_npzs(stitched_channels=channel_data, stitched_labels=stitched_labels,
-                       save_dir=stitched_folder)
 
 
 def concatenate_npz_files(npz_list):

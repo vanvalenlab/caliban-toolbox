@@ -75,24 +75,6 @@ def test_save_stitched_npzs():
         assert np.all(np.isin(npzs, npz_names))
 
 
-def test_process_stitched_data():
-    channels = np.zeros((4, 100, 100, 2))
-    labels = np.zeros((4, 100, 100, 1))
-
-    coords_labels = [['fov1', 'fov2', 'fov3', 'fov4'], range(100), range(100), [0]]
-    coords_channels = [['fov1', 'fov2', 'fov3', 'fov4'], range(100), range(100), range(2)]
-    dims = ['fovs', 'rows', 'cols', 'channels']
-    labels = xr.DataArray(labels, coords=coords_labels, dims=dims)
-    channels = xr.DataArray(channels, coords=coords_channels, dims=dims)
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        os.makedirs(os.path.join(temp_dir, 'output'))
-        labels.to_netcdf(os.path.join(temp_dir, 'output', 'stitched_labels.xr'))
-        channels.to_netcdf(os.path.join(temp_dir, 'channel_data.xr'))
-
-        pipeline.process_stitched_data(temp_dir)
-
-
 def test_concatenate_npz_files():
     npz_num = 5
     npz_list = _make_npz_files(npz_num=npz_num)

@@ -193,6 +193,9 @@ def reconstruct_image_stack(crop_dir, verbose=True):
         Args:
             crop_dir: full path to directory with cropped images
             verbose: flag to control print statements
+
+        Returns:
+            stitched_images: xarray containing the stitched image stack
         """
 
     # sanitize inputs
@@ -225,4 +228,4 @@ def reconstruct_image_stack(crop_dir, verbose=True):
     stitched_xr = xr.DataArray(data=image_stack, coords=coordinate_labels,
                                dims=dimension_labels)
 
-    stitched_xr.to_netcdf(os.path.join(crop_dir, 'stitched_images.xr'))
+    return stitched_xr
