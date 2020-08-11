@@ -28,7 +28,102 @@ import math
 
 import numpy as np
 
+from skimage.measure import regionprops_table
+
 from deepcell_toolbox.utils import resize, tile_image
+
+
+def compute_cell_size(npz_file, method='median', by_image=True):
+    """Computes the typical cell size from a stack of labeled data
+
+    Args:
+        npz_file: Paired X and y data
+        method: one of (mean, median) used to compute the cell size
+        by_image: if true, cell size is reported for each image in npz_file. Otherwise,
+            the cell size across the entire npz is returned
+
+    Returns:
+        average_sizes: list of typical cell size in NPZ
+
+    Raises: ValueError if invalid method supplied
+    Raises: ValueError if data does have len(shape) of 4
+    """
+
+    valid_methods = set(['median', 'mean'])
+    if method.lower() not in valid_methods:
+        raise ValueError('Invalid method supplied: got {}, '
+                         'method must be one of {}'.format(method, valid_methods))
+
+    # initialize variables
+    cell_sizes = []
+    labels = npz_file['y']
+
+    if len(labels.shape) != 4:
+        raise ValueError('Labeled data must be 4D')
+
+    for i in range(labels.shape[0]):
+        current_label = labels[i, :, :, 0]
+        area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
+
+        cell_sizes.append(area)
+
+    # compute for each list corresponding to each image
+    if by_image:
+        average_cell_sizes = []
+        for size_list in cell_sizes:
+            if method == 'mean':
+                average_cell_sizes.append(np.mean(size_list))
+            elif method == 'median':
+                average_cell_sizes.append(np.median(size_list))
+
+    # compute across all lists from all images
+    else:
+        all_cell_sizes = np.concatenate(cell_sizes)
+        if method == 'mean':
+            average_cell_sizes = [np.mean(all_cell_sizes)]
+        elif method == 'median':
+            average_cell_sizes = [np.median(all_cell_sizes)]
+        else:
+            raise ValueError('Invalid method supplied')
+
+    return average_cell_sizes
+
+
+def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_ratio):
+    """Takes a stack of X and y data and reshapes and crops them to match output dimensions
+
+    Args:
+        X_data: 4D numpy array of image data
+        y_data: 4D numpy array of labeled data
+        resize_ratio: resize ratio for the images
+        final_size: the desired shape of the output image
+        stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
+
+    Returns:
+        reshaped_X, reshaped_y: resized and cropped version of input images
+    """
+
+    # resize if needed
+    # TODO: Add tolerance to control when resizing happens
+    if resize_ratio != 1:
+        new_shape = (int(X_data.shape[1] * resize_ratio),
+                     int(X_data.shape[2] * resize_ratio))
+
+        X_data = resize(data=X_data, shape=new_shape)
+        y_data = resize(data=y_data, shape=new_shape, labeled_image=True)
+
+    # crop if needed
+    if X_data.shape[1:3] != final_size:
+        # pad image so that crops divide evenly
+        X_data = pad_image_stack(images=X_data, crop_size=final_size)
+        y_data = pad_image_stack(images=y_data, crop_size=final_size)
+
+        # create x and y crops
+        X_data, _ = tile_image(image=X_data, model_input_shape=final_size,
+                               stride_ratio=stride_ratio)
+        y_data, _ = tile_image(image=y_data, model_input_shape=final_size,
+                               stride_ratio=stride_ratio)
+    return X_data, y_data
 
 
 def pad_image_stack(images, crop_size):
@@ -64,48 +159,62 @@ def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 
 
     Args:
         npz_list: list of NPZ files to combine. Currently only works on 2D static data
-        resize_ratios: ratio used to resize each NPZ if data is of different resolutions
+        resize_ratios: ratio used to resize each NPZ if data is of different resolutions. Must
+            be either 1 for each NPZ file, or 1 for each image within the NPZ file
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
         final_size: size of the final crops to be produced
+
     Returns:
         np.array: array containing resized and cropped data from all input NPZs
-    Raises:
-        ValueError: If resize ratios are not integers
-    """
 
+    Raises:
+        ValueError: If mismatch between number of resize ratios and number of images
+    """
     combined_x = []
     combined_y = []
 
     for idx, npz in enumerate(npz_list):
         current_x = npz['X']
         current_y = npz['y']
-
-        # resize if needed
-        # TODO: Add tolerance to control when resizing happens
         current_resize = resize_ratios[idx]
-        if current_resize != 1:
-            new_shape = (int(current_x.shape[1] * current_resize),
-                         int(current_x.shape[2] * current_resize))
 
-            current_x = resize(data=current_x, shape=new_shape)
-            current_y = resize(data=current_y, shape=new_shape, labeled_image=True)
+        # same resize value for entire NPZ file
+        if len(current_resize) == 1:
+            current_x, current_y = reshape_training_image(X_data=current_x,
+                                                          y_data=current_y,
+                                                          resize_ratio=current_resize[0],
+                                                          final_size=final_size,
+                                                          stride_ratio=stride_ratio)
+            combined_x.append(current_x)
+            combined_y.append(current_y)
 
-        # crop if needed
-        if current_x.shape[1:3] != final_size:
+        # different resize value for each image within the NPZ file
+        else:
+            unique_x, unique_y = [], []
+            if len(current_resize) != current_x.shape[0]:
+                raise ValueError('Resize ratios must have same length as image data.'
+                                 'Provided resize ratios has length {} '
+                                 'and image data has shape {}'.format(len(resize_ratios),
+                                                                      current_x.shape))
+            # loop over each image and resize + crop appropriately
+            for img in range(current_x.shape[0]):
+                x_batch, y_batch = reshape_training_image(X_data=current_x[img:(img + 1)],
+                                                          y_data=current_y[img:(img + 1)],
+                                                          resize_ratio=current_resize[img],
+                                                          final_size=final_size,
+                                                          stride_ratio=stride_ratio)
+                unique_x.append(x_batch)
+                unique_y.append(y_batch)
 
-            # pad image so that crops divide evenly
-            current_x = pad_image_stack(images=current_x, crop_size=final_size)
-            current_y = pad_image_stack(images=current_y, crop_size=final_size)
+            # combine all images from this NPZ together
+            current_x = np.concatenate(unique_x, axis=0)
+            current_y = np.concatenate(unique_y, axis=0)
 
-            # create x and y crops
-            current_x, _ = tile_image(image=current_x, model_input_shape=final_size,
-                                      stride_ratio=stride_ratio)
-            current_y, _ = tile_image(image=current_y, model_input_shape=final_size,
-                                      stride_ratio=stride_ratio)
+            # add combined images from this NPZ onto main accumulator list
+            combined_x.append(current_x)
+            combined_y.append(current_y)
 
-        combined_x.append(current_x)
-        combined_y.append(current_y)
-
+    # combine all images from all NPZs together
     combined_x = np.concatenate(combined_x, axis=0)
     combined_y = np.concatenate(combined_y, axis=0)
 
