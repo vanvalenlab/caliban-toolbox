@@ -86,7 +86,7 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     """Crops an image into pieces according to supplied coordinates
 
     Args:
-        input_data: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be cropped
+        input_data: xarray of either X or y data to be cropped
         row_starts: list of indices where row crops start
         row_ends: list of indices where row crops end
         col_starts: list of indices where col crops start
@@ -104,6 +104,9 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     if input_crop_num > 1:
         raise ValueError("Array has already been cropped")
 
+    # get name of last dimension from input data to determine if X or y
+    last_dim_name = input_data.dims[-1]
+
     crop_num = len(row_starts) * len(col_starts)
     crop_size_row = row_ends[0] - row_starts[0]
     crop_size_col = col_ends[0] - col_starts[0]
@@ -114,12 +117,10 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
 
     # labels for each index within a dimension
     coordinate_labels = [input_data.fovs, input_data.stacks, range(crop_num), input_data.slices,
-                         range(crop_size_row), range(crop_size_col), input_data.channels]
+                         range(crop_size_row), range(crop_size_col), input_data[last_dim_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
-
-    cropped_xr = xr.DataArray(data=cropped_stack, coords=coordinate_labels, dims=dimension_labels)
+    cropped_xr = xr.DataArray(data=cropped_stack, coords=coordinate_labels, dims=input_data.dims)
 
     # pad the input to account for imperfectly overlapping final crop in rows and cols
     formatted_padding = ((0, 0), (0, 0), (0, 0), (0, 0), (0, padding[0]), (0, padding[1]), (0, 0))
