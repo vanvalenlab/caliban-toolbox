@@ -32,93 +32,31 @@ import numpy as np
 
 from skimage.segmentation import relabel_sequential
 
+from caliban_toolbox.utils.misc_utils import list_npzs_folder
+
 
 class DatasetBuilder(object):
+    """Class to build a dataset from annotated data
+
+    Args:
+        dataset_path: path to dataset. Within the dataset, each unique experiment
+            has its own folder with a dedicated metadata file
+    """
     def __init__(self,
-                 dataset_path='/data/multiplex_imaging_data',
+                 dataset_path=None,
                  resize=False):
 
         self.dataset_path = dataset_path
         self.resize = resize
-        self.dataset_folders = os.listdir(dataset_path)
-        self._create_tissue_and_platform_dict()
 
-        X_list = []
-        y_list = []
-        tissue_ids = []
-        platform_ids = []
+        if not os.path.exists(dataset_path):
+            raise ValueError('Invalid dataset path supplied')
 
-        for folder in self.dataset_folders:
-            folder_path = os.path.join(self.dataset_path, folder)
-            X, y, tissue_id, platform_id = self._load_dataset(folder_path)
-            X_list.append(X)
-            y_list.append(y)
-            tissue_ids.append(tissue_id)
-            platform_ids.append(platform_id)
 
-        self.X = np.concatenate(X_list, axis=0)
-        self.y = np.concatenate(y_list, axis=0)
-        self.tissue_ids = np.concatenate(tissue_ids, axis=0)
-        self.platform_ids = np.concatenate(platform_ids, axis=0)
-
-    def _load_dataset(self, path):
-
-        X_list = []
-        y_list = []
-
-        files = os.listdir(path)
-        for file in files:
-            file_path = os.path.join(path, file)
-            if file.endswith('.npz'):
-                training_data = np.load(file_path)
-
-                X = training_data['X']
-                y = training_data['y']
-
-                # Insert code for rescaling dataset if necessary
-                size = compute_cell_size(y, by_image=False, method='median')
-
-                if self.resize:
-                    if size[0] < 300 or size[0] > 500:
-                        resize_ratio = 400 / size[0]
-                    else:
-                        resize_ratio = 1
-                else:
-                    resize_ratio = 1
-
-                X, y = reshape_training_image(X, y,
-                                              resize_ratio=resize_ratio,
-                                              final_size=(512, 512),
-                                              stride_ratio=1)
-
-                for b in range(y.shape[0]):
-                    yb = y[b, ..., 0]
-                    yb, _, _ = relabel_sequential(yb)
-                    y[b, ..., 0] = yb
-
-                X_list.append(X)
-                y_list.append(y)
-
-            elif file.endswith('.json'):
-                with open(file_path) as f:
-                    metadata = json.load(f)
-
-        X = np.concatenate(X_list, axis=0)
-        y = np.concatenate(y_list, axis=0)
-
-        tissue = metadata['tissue']
-        platform = metadata['platform']
-        tissue_id = self.tissue_dict[tissue]
-        platform_id = self.platform_dict[platform]
-
-        tissue_ids = np.array([tissue_id] * X.shape[0])
-        platform_ids = np.array([platform_id] * X.shape[0])
-
-        print(X.shape, y.shape)
-
-        return X, y, tissue_ids, platform_ids
 
     def _create_tissue_and_platform_dict(self):
+        """Creates a dictionary mapping strings to numeric values for all platforms and tissues"""
+
         tissues = []
         platforms = []
         for folder in self.dataset_folders:
@@ -150,9 +88,80 @@ class DatasetBuilder(object):
         self.platform_dict = platform_dict
         self.rev_platform_dict = rev_platform_dict
 
+
+    def _load_experiment(self, experiment_path):
+        """Load the NPZ files present in a single experiment folder
+
+        Args:
+            experiment_path: the full path to a folder of NPZ files and metadata file
+
+        Returns:
+            tuple of X and y data from all NPZ files in the experiment
+            tissue_ids: list of same length as training data with numeric tissue id
+            platform_ids: list of same length as training data with numeric platform id
+        """
+
+        X_list = []
+        y_list = []
+
+        # get all NPZ files present in current experiment directory
+        npz_files = list_npzs_folder(experiment_path)
+        for file in npz_files:
+            npz_path = os.path.join(experiment_path, file)
+            training_data = np.load(npz_path)
+
+            X = training_data['X']
+            y = training_data['y']
+
+            X_list.append(X)
+            y_list.append(y)
+
+        # get associated metadata
+        metadata_path = os.path.join(experiment_path, 'metadata.json')
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+
+        # combine all NPZ files together
+        X = np.concatenate(X_list, axis=0)
+        y = np.concatenate(y_list, axis=0)
+
+        tissue = metadata['tissue']
+        platform = metadata['platform']
+        tissue_id = self.tissue_dict[tissue]
+        platform_id = self.platform_dict[platform]
+
+        tissue_ids = np.array([tissue_id] * X.shape[0])
+        platform_ids = np.array([platform_id] * X.shape[0])
+
+        return X, y, tissue_ids, platform_ids
+
+
+
     def build_dataset(self,
                       tissues='all',
                       platforms='all'):
+
+        self.dataset_folders = os.listdir(dataset_path)
+        self._create_tissue_and_platform_dict()
+
+        X_list = []
+        y_list = []
+        tissue_ids = []
+        platform_ids = []
+
+        for folder in self.dataset_folders:
+            folder_path = os.path.join(self.dataset_path, folder)
+            X, y, tissue_id, platform_id = self._load_dataset(folder_path)
+            X_list.append(X)
+            y_list.append(y)
+            tissue_ids.append(tissue_id)
+            platform_ids.append(platform_id)
+
+        self.X = np.concatenate(X_list, axis=0)
+        self.y = np.concatenate(y_list, axis=0)
+        self.tissue_ids = np.concatenate(tissue_ids, axis=0)
+        self.platform_ids = np.concatenate(platform_ids, axis=0)
+
 
         if isinstance(tissues, list):
             for tissue in tissues:
