@@ -35,82 +35,9 @@ import re
 import getpass
 from urllib.parse import urlencode
 
-from caliban_toolbox.log_file import create_upload_log
 from caliban_toolbox.aws_functions import aws_upload_files, aws_copy_files, aws_download_files
+from caliban_toolbox import crowdsource
 from caliban_toolbox.utils.misc_utils import list_npzs_folder
-
-
-def _format_url(aws_folder, stage, npz, url_encoded_dict):
-    base_url = 'https://caliban.deepcell.org/caliban-input__caliban-output__{}__{}__{}?{}'
-    formatted_url = base_url.format(aws_folder, stage, npz, url_encoded_dict)
-
-    return formatted_url
-
-
-def _create_next_log_name(previous_log_name, stage):
-    stage_num = int(previous_log_name.split('_')[1])
-    new_log = 'stage_{}_{}_upload_log.csv'.format(stage_num + 1, stage)
-
-    return new_log
-
-
-def get_latest_log_file(log_dir):
-    """Find the latest log file in the log directory
-
-    Args:
-        log_dir: full path to log directory
-
-    Returns:
-        string: name of the latest log file
-    """
-    files = os.listdir(log_dir)
-    log_files = [file for file in files if 'upload_log.csv' in file]
-    log_files.sort()
-
-    return log_files[-1]
-
-
-def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mode):
-    """Helper function to create relevant URLs for caliban log and AWS upload
-
-    Args:
-        crop_dir: full path to directory with the npz crops
-        aws_folder: path for images to be stored in AWS
-        stage: which stage of the correction process this job is for
-        pixel_only: boolean flag to determine if only pixel mode is available
-        label_only: boolean flag to determine if only label is available
-        rgb_mode: boolean flag to determine if rgb mode will be enabled
-
-    Returns:
-        list: list of paths to local NPZs to be uploaded
-        list: list of paths to desintation for NPZs
-        list: list of URLs to supply to figure8 to to display crops
-        list: list of NPZs that will be uploaded
-
-    Raises:
-        ValueError: If URLs are not valid
-    """
-    # TODO: check that URLS don't contain invalid character
-    # load the images from specified folder but not the json log file
-    npzs_to_upload = list_npzs_folder(crop_dir)
-
-    # change slashes separating nested folders to underscores for URL generation
-    subfolders = re.split('/', aws_folder)
-    subfolders = '__'.join(subfolders)
-
-    # create dictionary to hold boolean flags
-    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
-    url_encoded_dict = urlencode(url_dict)
-
-    # create path to npz, key to upload npz, and url path for figure8
-    npz_paths, npz_keys, url_paths = [], [], []
-    for npz in npzs_to_upload:
-        npz_paths.append(os.path.join(crop_dir, npz))
-        npz_keys.append(os.path.join(aws_folder, stage, npz))
-        url_paths.append(_format_url(subfolders, stage, npz, url_encoded_dict))
-
-    # TODO: think about better way to structure than many lists
-    return npz_paths, npz_keys, url_paths, npzs_to_upload
 
 
 def copy_job(job_id, key):
@@ -150,6 +77,46 @@ def rename_job(job_id, key, name):
     }
     url = 'https://api.appen.com/v1/jobs/{}.json'.format(job_id)
     response = requests.put(url, json=payload)
+
+
+def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id, log_name,
+                      pixel_only=False, label_only=False, rgb_mode=False):
+    """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
+
+    Args:
+        base_dir: full path to directory where job results will be stored
+        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        aws_folder: folder in aws bucket where files be stored
+        filenames: list of all files to be uploaded
+        filepaths: list of complete urls to images in Amazon S3 bucket
+        job_id: internal Figure Eight id for job
+        log_name: name for log file
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
+    """
+
+    data = {'project_url': filepaths,
+            'filename': filenames,
+            'stage': stage,
+            'aws_folder': aws_folder,
+            'job_id': job_id,
+            'pixel_only': pixel_only,
+            'label_only': label_only,
+            'rgb_mode': rgb_mode}
+    dataframe = pd.DataFrame(data=data, index=range(len(filepaths)))
+
+    # create file location, name file
+    log_dir = os.path.join(base_dir, 'logs')
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+
+        # add folder modification permissions to deal with files from file explorer
+        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
+        os.chmod(log_dir, mode)
+
+    # save csv file
+    dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
 
 
 def upload_log_file(log_file, job_id, key):
@@ -221,11 +188,12 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
         rename_job(new_job_id, key, job_name)
 
     # get relevant paths
-    npz_paths, npz_keys, url_paths, npzs = create_job_urls(crop_dir=upload_folder,
-                                                           aws_folder=aws_folder,
-                                                           stage=stage, pixel_only=pixel_only,
-                                                           label_only=label_only,
-                                                           rgb_mode=rgb_mode)
+    npz_paths, npz_keys, url_paths, npzs = crowdsource.create_job_urls(crop_dir=upload_folder,
+                                                                       aws_folder=aws_folder,
+                                                                       stage=stage,
+                                                                       pixel_only=pixel_only,
+                                                                       label_only=label_only,
+                                                                       rgb_mode=rgb_mode)
 
     # upload files to AWS bucket
     aws_upload_files(local_paths=npz_paths, aws_paths=npz_keys)
@@ -272,7 +240,7 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage, job_name,
 
     # get info from previous stage
     log_dir = os.path.join(base_dir, 'logs')
-    previous_log_file = get_latest_log_file(log_dir)
+    previous_log_file = crowdsource.get_latest_log_file(log_dir)
     previous_log = pd.read_csv(os.path.join(log_dir, previous_log_file))
     filenames = previous_log['filename']
     previous_stage = previous_log['stage'][0]
@@ -285,13 +253,13 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage, job_name,
     aws_copy_files(current_folder=current_bucket, next_folder=next_bucket,
                    filenames=filenames)
 
-    new_log_name = _create_next_log_name(previous_log_file, new_stage)
+    new_log_name = crowdsource._create_next_log_name(previous_log_file, new_stage)
 
     # TODO: Decide if this should be handled by a separate function that is specific to transfer?
-    _, _, filepaths, _ = create_job_urls(crop_dir=os.path.join(base_dir, 'crop_dir'),
-                                         aws_folder=aws_folder, stage=new_stage,
-                                         pixel_only=pixel_only, label_only=label_only,
-                                         rgb_mode=rgb_mode)
+    _, _, filepaths, _ = crowdsource.create_job_urls(crop_dir=os.path.join(base_dir, 'crop_dir'),
+                                                     aws_folder=aws_folder, stage=new_stage,
+                                                     pixel_only=pixel_only, label_only=label_only,
+                                                     rgb_mode=rgb_mode)
 
     # Generate log file for current job
     create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
@@ -371,7 +339,7 @@ def download_figure_eight_output(base_dir):
 
     # get information from job creation
     log_dir = os.path.join(base_dir, 'logs')
-    latest_log = get_latest_log_file(log_dir)
+    latest_log = crowdsource.get_latest_log_file(log_dir)
     log_file = pd.read_csv(os.path.join(log_dir, latest_log))
     job_id = log_file['job_id'][0]
 
