@@ -33,6 +33,7 @@ from caliban_toolbox.aws_functions_test import FakeS3
 
 
 def test_create_anolytics_job(mocker, tmp_path):
+    mocker.patch('getpass.getpass', lambda *x: 'test_api_key')
     mocker.patch('boto3.Session', FakeS3)
 
     # create crop directory
@@ -49,6 +50,7 @@ def test_create_anolytics_job(mocker, tmp_path):
 
 
 def test_download_anolytics_output(mocker, tmp_path):
+    mocker.patch('getpass.getpass', lambda *x: 'test_api_key')
     mocker.patch('boto3.Session', FakeS3)
 
     # create logs directory with upload log
@@ -71,4 +73,3 @@ def test_download_anolytics_output(mocker, tmp_path):
     missing = anolytics.download_anolytics_output(tmp_path)
     missing = [os.path.split(file_path)[1] for file_path in missing]
     assert missing == log_dict['filename']
-
