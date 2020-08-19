@@ -23,12 +23,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import numpy as np
 
 from deepcell_toolbox.metrics import Metrics, stats_pixelbased
 from scipy.stats import hmean
 
 
 class DatasetBenchmarker(object):
+    """Class to perform benchmarking across different tissue and platform types
+
+    Args:
+        y_true: true labels
+        y_pred: predicted labels
+        tissue_ids: list of tissue ids for each image
+        platform_ids: list of platform ids for each image
+        model_name: name of the model used to generate the predictions
+        metrics_kwargs: arguments to be passed to metrics package
+
+    Raises:
+        ValueError: if y_true and y_pred have different shapes
+        ValueError: if y_true and y_pred are not 4D
+        ValueError: if tissue_ids or platform_ids is not same length as labels
+    """
     def __init__(self,
                  y_true,
                  y_pred,
@@ -36,73 +52,69 @@ class DatasetBenchmarker(object):
                  platform_ids,
                  model_name,
                  metrics_kwargs={}):
+        if y_true.shape != y_pred.shape:
+            raise ValueError('Shape mismatch: y_true has shape {}, '
+                             'y_pred has shape {}. Labels must have the same'
+                             'shape.'.format(y_true.shape, y_pred.shape))
+        if len(y_true.shape) != 4:
+            raise ValueError('Data must be 4D, supplied data is {}'.format(y_true.shape))
+
         self.y_true = y_true
         self.y_pred = y_pred
+
+        if len({y_true.shape[0], len(tissue_ids), len(platform_ids)}) != 1:
+            raise ValueError('Tissue_ids and platform_ids must have same length as labels')
+
         self.tissue_ids = tissue_ids
         self.platform_ids = platform_ids
         self.model_name = model_name
         self.metrics = Metrics(model_name, **metrics_kwargs)
 
+    def _benchmark_category(self, category_ids):
+        """Compute benchmark stats over the different categories in supplied list
+
+        Args:
+            category_ids: list specifying which category each image belongs to
+
+        Returns:
+            stats_dict: dictionary of benchmarking results
+        """
+
+        unique_ids = np.unique(category_ids)
+
+        # create dict to hold stats across each category
+        stats_dict = {}
+        for uid in unique_ids:
+            stats_dict[uid] = {}
+            category_idx = np.isin(category_ids, uid)
+
+            # sum metrics across individual images
+            for key in self.metrics.stats:
+                stats_dict[uid][key] = self.metrics.stats[key][category_idx].sum()
+
+            # compute additional metrics not produced by Metrics class
+            stats_dict[uid]['recall'] = \
+                stats_dict[uid]['correct_detections'] / stats_dict[uid]['n_true']
+
+            stats_dict[uid]['precision'] = \
+                stats_dict[uid]['correct_detections'] / stats_dict[uid]['n_pred']
+
+            stats_dict[uid]['f1'] = \
+                hmean([stats_dict[uid]['recall'], stats_dict[uid]['precision']])
+
+            pixel_stats = stats_pixelbased(self.y_true[category_idx] != 0,
+                                           self.y_pred[category_idx] != 0)
+            stats_dict[uid]['jaccard'] = pixel_stats['jaccard']
+
+        return stats_dict
+
     def benchmark(self):
-        # Benchmark
-        benchmark_all = {}
-        benchmark_by_tissue = {}
-        benchmark_by_platform = {}
+        self.metrics.calc_object_stats(self.y_true, self.y_pred)
 
-        # Benchmark all the data
-        benchmark_all = self._benchmark(self.y_true, self.y_pred)
+        tissue_stats = self._benchmark_category(category_ids=self.tissue_ids)
+        platform_stats = self._benchmark_category(category_ids=self.platform_ids)
+        all_stats = self._benchmark_category(category_ids=['all'] * len(self.tissue_ids))
 
-        # Extract benchmarks by tissue
-        unique_ids = np.unique(self.tissue_ids)
-        stats_by_tissue = {}
+        return tissue_stats, platform_stats, all_stats
 
-        for uid in unique_ids:
-            stats_by_tissue[uid] = {}
-            for key in self.stats:
-                stats_by_tissue[uid][key] = self.stats[key][self.tissue_ids == uid]
-            stats_by_tissue[uid]['recall'] = stats_by_tissue[uid]['correct_detections'].sum() / \
-                                             stats_by_tissue[uid]['n_true'].sum()
-            stats_by_tissue[uid]['precision'] = stats_by_tissue[uid]['correct_detections'].sum() / \
-                                                stats_by_tissue[uid]['n_pred'].sum()
-            stats_by_tissue[uid]['f1'] = hmean(
-                [stats_by_tissue[uid]['recall'], stats_by_tissue[uid]['precision']])
 
-        # Extract benchmarks by platform
-        unique_ids = np.unique(self.platform_ids)
-        stats_by_platform = {}
-
-        for uid in unique_ids:
-            stats_by_platform[uid] = {}
-            for key in self.stats:
-                stats_by_platform[uid][key] = self.stats[key][self.platform_ids == uid]
-            stats_by_platform[uid]['recall'] = stats_by_platform[uid]['correct_detections'].sum() / \
-                                               stats_by_platform[uid]['n_true'].sum()
-            stats_by_platform[uid]['precision'] = stats_by_platform[uid][
-                                                      'correct_detections'].sum() / \
-                                                  stats_by_platform[uid]['n_pred'].sum()
-            stats_by_platform[uid]['f1'] = hmean(
-                [stats_by_platform[uid]['recall'], stats_by_platform[uid]['precision']])
-
-        self.stats_by_tissue = stats_by_tissue
-        self.stats_by_platform = stats_by_platform
-
-        return self.stats_all, self.stats_by_tissue, self.stats_by_platform
-
-    def _benchmark(self, y_true, y_pred):
-        self.metrics.calc_object_stats(y_true, y_pred)
-        stats = self.metrics.stats.copy()
-
-        stats_all = {}
-        stats_all['recall'] = stats['correct_detections'].sum() / stats['n_true'].sum()
-        stats_all['precision'] = stats['correct_detections'].sum() / stats['n_pred'].sum()
-        stats_all['F1'] = hmean([stats_all['recall'], stats_all['precision']])
-
-        for key in stats:
-            stats_all[key] = stats[key].sum()
-
-        # Calculate jaccard index for pixel classification
-        pixel_stats = stats_pixelbased(y_true != 0, y_pred != 0)
-        stats_all['jaccard'] = pixel_stats['jaccard']
-
-        self.stats = stats
-        self.stats_all = stats_all
