@@ -25,6 +25,7 @@
 # ==============================================================================
 import os
 import json
+import pytest
 
 import numpy as np
 
@@ -32,17 +33,18 @@ import numpy as np
 from caliban_toolbox.dataset_builder import train_val_test_split, DatasetBuilder
 
 
-def create_npz(path, X_shape=(5, 20, 20, 3), y_shape=(5, 20, 20, 1)):
+def _create_test_npz(path, X_shape=(2, 20, 20, 3), y_shape=(2, 20, 20, 1)):
     X_data = np.zeros(X_shape)
     y_data = np.zeros(y_shape)
     np.savez(path, X=X_data, y=y_data)
 
 
-def create_dataset_dir(path, tissue_list, platform_list, npz_num):
+def _create_test_dataset(path, experiment_list, tissue_list, platform_list, npz_num):
     """Creates an example directory to load data from
 
     Args:
         path: folder to hold datasets
+        experiment_list: list of experiment names
         tissue_list: list of tissue types for each experiment
         platform_list: list of platform types for each experiment
         npz_num: number of unique NPZ files within each experiment
@@ -50,14 +52,12 @@ def create_dataset_dir(path, tissue_list, platform_list, npz_num):
     Raises:
         ValueError: If tissue_list, platform_list, or NPZ_num have different lengths
     """
-
-    if len(tissue_list) != len(platform_list) or len(tissue_list) != len(npz_num):
+    lengths = [len(x) for x in [experiment_list, tissue_list, platform_list, npz_num]]
+    if len(set(lengths)) != 1:
         raise ValueError('All inputs must have the same length')
 
-    exp_names = ['experiment_{}'.format(i) for i in range(len(platform_list))]
-
-    for i in range(len(exp_names)):
-        experiment_folder = os.path.join(path, exp_names[i])
+    for i in range(len(experiment_list)):
+        experiment_folder = os.path.join(path, experiment_list[i])
         os.makedirs(experiment_folder)
 
         metadata = dict()
@@ -69,33 +69,42 @@ def create_dataset_dir(path, tissue_list, platform_list, npz_num):
         with open(metadata_path, 'w') as write_file:
             json.dump(metadata, write_file)
 
-        for npz in range(len(npz_num)):
-            create_npz(os.path.join(experiment_folder, 'sub_exp_{}.npz'.format(npz)))
+        for npz in range(npz_num[i]):
+            _create_test_npz(os.path.join(experiment_folder, 'sub_exp_{}.npz'.format(npz)))
 
 
 def test__init__(tmp_path):
-    resize = False
-    db = DatasetBuilder(dataset_path=tmp_path, resize=resize)
+    # no folders in dataset
+    with pytest.raises(ValueError):
+        _ = DatasetBuilder(dataset_path=tmp_path)
+
+    # single folder
+    os.makedirs(os.path.join(tmp_path, 'example_folder'))
+    db = DatasetBuilder(dataset_path=tmp_path)
 
     assert db.dataset_path == tmp_path
-    assert db.resize == resize
+
+    # bad path
+    with pytest.raises(ValueError):
+        _ = DatasetBuilder(dataset_path='bad_path')
 
 
 def test__create_tissue_and_platform_dict(tmp_path):
     # create dataset
+    experiment_list = ['exp{}'.format(i) for i in range(5)]
     tissue_list = ['tissue1', 'tissue2', 'tissue3', 'tissue2', 'tissue1']
     platform_list = ['platform1', 'platform1', 'platform2', 'platform2', 'platform3']
     npz_num = [1] * 5
-    create_dataset_dir(tmp_path, tissue_list=tissue_list, platform_list=platform_list,
-                       npz_num=npz_num)
+    _create_test_dataset(tmp_path, experiment_list=experiment_list, tissue_list=tissue_list,
+                         platform_list=platform_list, npz_num=npz_num)
 
     db = DatasetBuilder(dataset_path=tmp_path)
 
     db._create_tissue_and_platform_dict()
 
     # check that all tissues and platforms added
-    assert db.all_tissues == set(tissue_list)
-    assert db.all_platforms == set(platform_list)
+    assert set(db.all_tissues) == set(tissue_list)
+    assert set(db.all_platforms) == set(platform_list)
 
     # check that each entry in dict correctly maps to corresponding entry in reverse dict
     for tissue in set(tissue_list):
@@ -109,6 +118,71 @@ def test__create_tissue_and_platform_dict(tmp_path):
         reversed_platform = db.rev_platform_dict[platform_id]
 
         assert platform == reversed_platform
+
+
+def test__load_experiment_single_npz(tmp_path):
+    exp_list, tissue_list, platform_list, npz_num = ['exp1'], ['tissue1'], ['platform1'], [1]
+    _create_test_dataset(tmp_path, experiment_list=exp_list, tissue_list=tissue_list,
+                         platform_list=platform_list, npz_num=npz_num)
+
+    # initialize db
+    db = DatasetBuilder(tmp_path)
+    tissue_dict = {tissue_list[0]: 42}
+    rev_tissue_dict = {42: tissue_list[0]}
+
+    platform_dict = {platform_list[0]: 7}
+    rev_platform_dict = {7: platform_list[0]}
+
+    # create dicts
+    db.tissue_dict = tissue_dict
+    db.rev_tissue_dict = rev_tissue_dict
+    db.platform_dict = platform_dict
+    db.rev_platform_dict = rev_platform_dict
+
+    # load dataset
+    X, y, tissue, platform = db._load_experiment(os.path.join(tmp_path, exp_list[0]))
+
+    # A single NPZ with 2 images
+    assert X.shape[0] == 2
+    assert y.shape[0] == 2
+
+    assert tissue == tissue_list[0]
+    assert platform == platform_list[0]
+
+
+def test__load_experiment_multiple_npz(tmp_path):
+    exp_list, tissue_list, platform_list, npz_num = ['exp1'], ['tissue1'], ['platform1'], [5]
+    _create_test_dataset(tmp_path, experiment_list=exp_list, tissue_list=tissue_list,
+                         platform_list=platform_list, npz_num=npz_num)
+
+    # initialize db
+    db = DatasetBuilder(tmp_path)
+    tissue_dict = {tissue_list[0]: 42}
+    rev_tissue_dict = {42: tissue_list[0]}
+
+    platform_dict = {platform_list[0]: 7}
+    rev_platform_dict = {7: platform_list[0]}
+
+    # create dicts
+    db.tissue_dict = tissue_dict
+    db.rev_tissue_dict = rev_tissue_dict
+    db.platform_dict = platform_dict
+    db.rev_platform_dict = rev_platform_dict
+
+    # load dataset
+    X, y, tissue, platform = db._load_experiment(os.path.join(tmp_path, exp_list[0]))
+
+    # 5 NPZs with 2 images each
+    assert X.shape[0] == 10
+    assert y.shape[0] == 10
+
+    assert tissue == tissue_list[0]
+    assert platform == platform_list[0]
+
+
+
+
+
 
 
 def test_train_val_test_split():

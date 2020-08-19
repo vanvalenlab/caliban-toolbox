@@ -32,7 +32,7 @@ import numpy as np
 
 from skimage.segmentation import relabel_sequential
 
-from caliban_toolbox.utils.misc_utils import list_npzs_folder
+from caliban_toolbox.utils.misc_utils import list_npzs_folder, list_folders
 
 
 class DatasetBuilder(object):
@@ -41,18 +41,39 @@ class DatasetBuilder(object):
     Args:
         dataset_path: path to dataset. Within the dataset, each unique experiment
             has its own folder with a dedicated metadata file
+
+    Raises:
+        ValueError: if invalid dataset_path
+        ValueError: if no folders in dataset_path
     """
     def __init__(self,
-                 dataset_path=None,
-                 resize=False):
+                 dataset_path):
 
         self.dataset_path = dataset_path
-        self.resize = resize
 
         if not os.path.exists(dataset_path):
             raise ValueError('Invalid dataset path supplied')
 
+        dataset_folders = list_folders(dataset_path)
+        if dataset_folders == []:
+            raise ValueError('No folders found in dataset')
+        self.dataset_folders = dataset_folders
 
+        # dicts to hold string to numeric mapping information
+        self.tissue_dict = {}
+        self.platform_dict = {}
+        self.rev_tissue_dict = {}
+        self.rev_platform_dict = {}
+
+        # dicts to hold aggregated data
+        self.train_dict = {}
+        self.val_dict = {}
+        self.test_dict = {}
+
+        # parameters for splitting the data
+        self.train_ratio = None
+        self.val_ratio = None
+        self.test_ratio = None
 
     def _create_tissue_and_platform_dict(self):
         """Creates a dictionary mapping strings to numeric values for all platforms and tissues"""
@@ -88,7 +109,6 @@ class DatasetBuilder(object):
         self.platform_dict = platform_dict
         self.rev_platform_dict = rev_platform_dict
 
-
     def _load_experiment(self, experiment_path):
         """Load the NPZ files present in a single experiment folder
 
@@ -97,8 +117,8 @@ class DatasetBuilder(object):
 
         Returns:
             tuple of X and y data from all NPZ files in the experiment
-            tissue_ids: list of same length as training data with numeric tissue id
-            platform_ids: list of same length as training data with numeric platform id
+            tissue: the tissue type of this experiment
+            platform: the platform type of this experiment
         """
 
         X_list = []
@@ -127,35 +147,52 @@ class DatasetBuilder(object):
 
         tissue = metadata['tissue']
         platform = metadata['platform']
-        tissue_id = self.tissue_dict[tissue]
-        platform_id = self.platform_dict[platform]
 
-        tissue_ids = np.array([tissue_id] * X.shape[0])
-        platform_ids = np.array([platform_id] * X.shape[0])
+        return X, y, tissue, platform
 
-        return X, y, tissue_ids, platform_ids
+    def _load_all_experiments(self, train_ratio, val_ratio, test_ratio):
+        """Loads all experiment data from experiment folder to enable dataset building
 
+        Args:
+            train_ratio: fraction of data in training split
+            val_ratio: fraction of data in val split
+            test_ratio: fraction of data in test split
 
+        Raises:
+            ValueError: If any of the NPZ files have different image dimensions
+        """
+        self._create_tissue_and_platform_dict()
+
+        X_train, X_val, X_test = [], [], []
+        y_train, y_val, y_test = [], [], []
+        tissue_ids_train, tissue_ids_val, tissue_ids_test = [], [], []
+        platform_ids_train, platform_ids_val, platform_ids_test = [], [], []
+
+        for folder in self.dataset_folders:
+            folder_path = os.path.join(self.dataset_path, folder)
+            X, y, tissue, platform_id = self._load_experiment(folder_path)
+
+            X_train_batch, y_train_batch, X_val_batch, y_val_batch, X_test_batch, y_test_batch = \
+                train_val_test_split(X_data=X, y_data=y,
+                                     train_ratio=train_ratio,
+                                     val_ratio=val_ratio,
+                                     test_ratio=test_ratio)
+
+            tissue_ids_train_batch = []
+            tissue_ids.append(tissue_id)
+            platform_ids.append(platform_id)
 
     def build_dataset(self,
                       tissues='all',
                       platforms='all'):
 
-        self.dataset_folders = os.listdir(dataset_path)
-        self._create_tissue_and_platform_dict()
 
         X_list = []
         y_list = []
         tissue_ids = []
         platform_ids = []
 
-        for folder in self.dataset_folders:
-            folder_path = os.path.join(self.dataset_path, folder)
-            X, y, tissue_id, platform_id = self._load_dataset(folder_path)
-            X_list.append(X)
-            y_list.append(y)
-            tissue_ids.append(tissue_id)
-            platform_ids.append(platform_id)
+
 
         self.X = np.concatenate(X_list, axis=0)
         self.y = np.concatenate(y_list, axis=0)
@@ -258,17 +295,13 @@ def train_val_test_split(X_data, y_data, train_ratio=0.8, val_ratio=0.1, test_ra
     X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
                                                                   test_size=remainder_size,
                                                                   random_state=seed)
-    # check and see if there is a test split
-    if test_ratio > 0:
 
-        # compute fraction of remainder that is test
-        test_size = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
+    # compute fraction of remainder that is test
+    test_size = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
 
-        # split remainder into val and test
-        X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
-                                                        test_size=test_size,
-                                                        random_state=seed)
+    # split remainder into val and test
+    X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
+                                                    test_size=test_size,
+                                                    random_state=seed)
 
-        return (X_train, y_train), (X_val, y_val), (X_test, y_test)
-    else:
-        return (X_train, y_train), (X_remainder, y_remainder)
+    return X_train, y_train, X_val, y_val, X_test, y_test
