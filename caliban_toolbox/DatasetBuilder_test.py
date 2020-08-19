@@ -357,6 +357,36 @@ def test__reshape_dict_by_image(tmp_path, mocker):
         assert len(tissue_labels) == 5 * ((constant_val + 1) ** 2)
 
 
+def test__clean_labels(tmp_path):
+    # workaround so that __init__ doesn't throw an error
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    db = DatasetBuilder(tmp_path)
+
+    test_label = np.zeros((50, 50))
+    test_label[:10, :10] = 2
+    test_label[12:17, 12:17] = 2
+    test_label[20:22, 22:23] = 3
+
+    test_labels = np.zeros((2, 50, 50, 1))
+    test_labels[0, ..., 0] = test_label
+
+    # relabel sequential
+    new_y = db._clean_labels(y=test_labels, relabel_hard=False)
+    assert len(np.unique(new_y)) == 2 + 1
+
+    # true relabel
+    new_y = db._clean_labels(y=test_labels, relabel_hard=True)
+    assert len(np.unique(new_y)) == 3 + 1
+
+    # remove small objects
+    new_y = db._clean_labels(y=test_labels, relabel_hard=True, small_object_threshold=15)
+    assert len(np.unique(new_y)) == 2 + 1
+
+    # remove sparse images
+    new_y = db._clean_labels(y=test_labels, relabel_hard=True, min_objects=1)
+    assert new_y.shape[0] == 1
+
+
 def test_build_dataset(tmp_path):
     # create dataset
     experiments = ['exp{}'.format(i) for i in range(5)]
@@ -396,3 +426,7 @@ def test_build_dataset(tmp_path):
     for base_dict, crop_dict in zip(output_dicts, output_dicts_crop):
         X_base, X_crop = base_dict['X'], crop_dict['X']
         assert X_base.shape[0] * 4 == X_crop.shape[0]
+
+    # check that NPZs have been relabeled
+    for current_dict in output_dicts:
+        assert len(np.unique(current_dict['y'])) == 2

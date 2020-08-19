@@ -30,6 +30,7 @@ import numpy as np
 
 from skimage.segmentation import relabel_sequential
 from skimage.measure import label
+from skimage.morphology import remove_small_objects
 
 from caliban_toolbox.utils.misc_utils import list_npzs_folder, list_folders
 from caliban_toolbox.build import train_val_test_split, reshape_training_data, compute_cell_size
@@ -368,6 +369,40 @@ class DatasetBuilder(object):
         return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
                 'platform_list': platform_list_new}
 
+    def _clean_labels(self, y, relabel_hard=False, small_object_threshold=0, min_objects=0):
+        """Cleans labels prior to creating final dict
+
+        Args:
+            relabel_hard: if True, relabels image with label. Otherwise,
+                uses relabel_sequential.
+            small_object_threshold: threshold for removing small objects
+            min_objects: minimum number of objects per image
+
+        Returns:
+            cleaned_y: labels with relevant transformations applied
+        """
+
+        keep_idx = np.repeat(True, y.shape[0])
+        cleaned_y = np.zeros_like(y)
+
+        for i in range(y.shape[0]):
+            if relabel_hard:
+                y_new = label(y[i, :, :, 0])
+            else:
+                y_new, _, _ = relabel_sequential(y[i, :, :, 0])
+
+            y_new = remove_small_objects(y_new, min_size=small_object_threshold)
+
+            unique_objects = len(np.unique(y_new)) - 1
+            if unique_objects < min_objects:
+                keep_idx[i] = False
+
+            cleaned_y[i, :, :, 0] = y_new
+
+        cleaned_y = cleaned_y[keep_idx]
+
+        return cleaned_y
+
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
                       data_split=(0.8, 0.1, 0.1), seed=0):
         """Construct a dataset for model training and evaluation
@@ -431,24 +466,22 @@ class DatasetBuilder(object):
         if self.seed != seed or self.data_split != data_split:
             self._load_all_experiments(data_split=data_split, seed=seed)
 
-        # subset dicts to include requested tissues and platforms
-        train_dict, val_dict, test_dict = self.train_dict, self.val_dict, self.test_dict
-        train_dict = self._subset_data_dict(data_dict=train_dict, tissues=tissues,
-                                            platforms=platforms)
+        dicts = [self.train_dict, self.val_dict, self.test_dict]
 
-        val_dict = self._subset_data_dict(data_dict=val_dict, tissues=tissues,
-                                          platforms=platforms)
+        # process each dict
+        for idx, current_dict in enumerate(dicts):
+            # subset dict to include only relevant tissues and platforms
+            current_dict = self._subset_data_dict(data_dict=current_dict, tissues=tissues,
+                                                  platforms=platforms)
 
-        test_dict = self._subset_data_dict(data_dict=test_dict, tissues=tissues,
-                                           platforms=platforms)
+            # if necessary, reshape and resize data to be of correct output size
+            if current_dict['X'].shape[1:3] != output_shape or resize is not False:
+                current_dict = self._reshape_dict(dict=current_dict, resize=resize,
+                                                  output_shape=output_shape)
+            # clean labels
+            cleaned_labels = self._clean_labels(current_dict['y'])
+            current_dict['y'] = cleaned_labels
 
-        # if necessary, reshape and resize data to be of correct output size
-        if train_dict['X'].shape[1:3] != output_shape or resize is not False:
-            train_dict = self._reshape_dict(dict=train_dict, resize=resize,
-                                            output_shape=output_shape)
-            val_dict = self._reshape_dict(dict=val_dict, resize=resize,
-                                          output_shape=output_shape)
-            test_dict = self._reshape_dict(dict=test_dict, resize=resize,
-                                           output_shape=output_shape)
+            dicts[idx] = current_dict
 
-        return train_dict, val_dict, test_dict
+        return dicts
