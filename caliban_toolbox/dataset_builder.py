@@ -54,10 +54,10 @@ class DatasetBuilder(object):
         if not os.path.exists(dataset_path):
             raise ValueError('Invalid dataset path supplied')
 
-        dataset_folders = list_folders(dataset_path)
-        if dataset_folders == []:
-            raise ValueError('No folders found in dataset')
-        self.dataset_folders = dataset_folders
+        experiment_folders = list_folders(dataset_path)
+        if experiment_folders == []:
+            raise ValueError('No experiment folders found in dataset')
+        self.experiment_folders = experiment_folders
 
         # dicts to hold string to numeric mapping information
         self.tissue_dict = {}
@@ -80,7 +80,7 @@ class DatasetBuilder(object):
 
         tissues = []
         platforms = []
-        for folder in self.dataset_folders:
+        for folder in self.experiment_folders:
             file_path = os.path.join(self.dataset_path, folder, 'metadata.json')
             with open(file_path) as f:
                 metadata = json.load(f)
@@ -162,25 +162,73 @@ class DatasetBuilder(object):
             ValueError: If any of the NPZ files have different image dimensions
         """
         self._create_tissue_and_platform_dict()
+        self.train_ratio = train_ratio
+        self.val_ratio = val_ratio
+        self.test_ratio = test_ratio
 
         X_train, X_val, X_test = [], [], []
         y_train, y_val, y_test = [], [], []
         tissue_ids_train, tissue_ids_val, tissue_ids_test = [], [], []
         platform_ids_train, platform_ids_val, platform_ids_test = [], [], []
 
-        for folder in self.dataset_folders:
-            folder_path = os.path.join(self.dataset_path, folder)
-            X, y, tissue, platform_id = self._load_experiment(folder_path)
+        # loop through all experiments
+        for folder in self.experiment_folders:
 
+            # Get all NPZ files from each experiment
+            folder_path = os.path.join(self.dataset_path, folder)
+            X, y, tissue, platform = self._load_experiment(folder_path)
+
+            # split data according to specified ratios
             X_train_batch, y_train_batch, X_val_batch, y_val_batch, X_test_batch, y_test_batch = \
                 train_val_test_split(X_data=X, y_data=y,
                                      train_ratio=train_ratio,
                                      val_ratio=val_ratio,
                                      test_ratio=test_ratio)
 
-            tissue_ids_train_batch = []
-            tissue_ids.append(tissue_id)
-            platform_ids.append(platform_id)
+            # get numeric IDs
+            tissue_id = self.tissue_dict[tissue]
+            platform_id = self.platform_dict[platform]
+
+            # construct list for each split
+            tissue_ids_train_batch = [tissue_id] * X_train_batch.shape[0]
+            platform_ids_train_batch = [platform_id] * X_train_batch.shape[0]
+
+            tissue_ids_val_batch = [tissue_id] * X_val_batch.shape[0]
+            platform_ids_val_batch = [platform_id] * X_val_batch.shape[0]
+
+            tissue_ids_test_batch = [tissue_id] * X_test_batch.shape[0]
+            platform_ids_test_batch = [platform_id] * X_test_batch.shape[0]
+
+            # append batch to main list
+            X_train.append(X_train_batch)
+            X_val.append(X_val_batch)
+            X_test.append(X_test_batch)
+
+            y_train.append(y_train_batch)
+            y_val.append(y_val_batch)
+            y_test.append(y_test_batch)
+
+            tissue_ids_train.append(tissue_ids_train_batch)
+            tissue_ids_val.append(tissue_ids_val_batch)
+            tissue_ids_test.append(tissue_ids_test_batch)
+
+            platform_ids_train.append(platform_ids_train_batch)
+            platform_ids_val.append(platform_ids_val_batch)
+            platform_ids_test.append(platform_ids_test_batch)
+
+        # create combined dicts
+        train_dict = {'X': X_train, 'y': y_train, 'tissue_ids': tissue_ids_train,
+                      'platform_ids': platform_ids_train}
+
+        val_dict = {'X': X_val, 'y': y_val, 'tissue_ids': tissue_ids_val,
+                    'platform_ids': platform_ids_val}
+
+        test_dict = {'X': X_test, 'y': y_test, 'tissue_ids': tissue_ids_test,
+                     'platform_ids': platform_ids_test}
+
+        self.train_dict = train_dict
+        self.val_dict = val_dict
+        self.test_dict = test_dict
 
     def build_dataset(self,
                       tissues='all',

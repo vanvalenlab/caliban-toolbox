@@ -127,17 +127,6 @@ def test__load_experiment_single_npz(tmp_path):
 
     # initialize db
     db = DatasetBuilder(tmp_path)
-    tissue_dict = {tissue_list[0]: 42}
-    rev_tissue_dict = {42: tissue_list[0]}
-
-    platform_dict = {platform_list[0]: 7}
-    rev_platform_dict = {7: platform_list[0]}
-
-    # create dicts
-    db.tissue_dict = tissue_dict
-    db.rev_tissue_dict = rev_tissue_dict
-    db.platform_dict = platform_dict
-    db.rev_platform_dict = rev_platform_dict
 
     # load dataset
     X, y, tissue, platform = db._load_experiment(os.path.join(tmp_path, exp_list[0]))
@@ -157,17 +146,6 @@ def test__load_experiment_multiple_npz(tmp_path):
 
     # initialize db
     db = DatasetBuilder(tmp_path)
-    tissue_dict = {tissue_list[0]: 42}
-    rev_tissue_dict = {42: tissue_list[0]}
-
-    platform_dict = {platform_list[0]: 7}
-    rev_platform_dict = {7: platform_list[0]}
-
-    # create dicts
-    db.tissue_dict = tissue_dict
-    db.rev_tissue_dict = rev_tissue_dict
-    db.platform_dict = platform_dict
-    db.rev_platform_dict = rev_platform_dict
 
     # load dataset
     X, y, tissue, platform = db._load_experiment(os.path.join(tmp_path, exp_list[0]))
@@ -182,26 +160,23 @@ def test__load_experiment_multiple_npz(tmp_path):
 
 
 
-
-
-
 def test_train_val_test_split():
     X_data = np.zeros((100, 5, 5, 3))
     y_data = np.zeros((100, 5, 5, 1))
 
     train_ratio, val_ratio, test_ratio = 0.7, 0.2, 0.1
 
-    train_split, val_split, test_split = train_val_test_split(X_data=X_data,
-                                                              y_data=y_data,
-                                                              train_ratio=train_ratio,
-                                                              val_ratio=val_ratio,
-                                                              test_ratio=test_ratio)
+    X_train, y_train, X_val, y_val, X_test, y_test, = train_val_test_split(X_data=X_data,
+                                                                           y_data=y_data,
+                                                                           train_ratio=train_ratio,
+                                                                           val_ratio=val_ratio,
+                                                                           test_ratio=test_ratio)
 
-    assert train_split[0].shape[0] == 100 * train_ratio
-    assert train_split[1].shape[0] == 100 * train_ratio
+    assert X_train.shape[0] == 100 * train_ratio
+    assert y_train.shape[0] == 100 * train_ratio
 
-    assert val_split[0].shape[0] == 100 * val_ratio
-    assert val_split[1].shape[0] == 100 * val_ratio
+    assert X_val.shape[0] == 100 * val_ratio
+    assert y_val.shape[0] == 100 * val_ratio
 
-    assert test_split[0].shape[0] == 100 * test_ratio
-    assert test_split[1].shape[0] == 100 * test_ratio
+    assert X_test.shape[0] == 100 * test_ratio
+    assert y_test.shape[0] == 100 * test_ratio
