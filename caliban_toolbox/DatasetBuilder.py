@@ -25,12 +25,11 @@
 # ==============================================================================
 
 import os
-import errno
 import json
-import math
 import numpy as np
 
 from skimage.segmentation import relabel_sequential
+from skimage.measure import label
 
 from caliban_toolbox.utils.misc_utils import list_npzs_folder, list_folders
 from caliban_toolbox.build import train_val_test_split
@@ -63,25 +62,17 @@ class DatasetBuilder(object):
         self.all_tissues = []
         self.all_platforms = []
 
-        # dicts to hold string to numeric mapping information
-        self.tissue_dict = {}
-        self.platform_dict = {}
-        self.rev_tissue_dict = {}
-        self.rev_platform_dict = {}
-
         # dicts to hold aggregated data
         self.train_dict = {}
         self.val_dict = {}
         self.test_dict = {}
 
         # parameters for splitting the data
-        self.train_ratio = None
-        self.val_ratio = None
-        self.test_ratio = None
+        self.data_split = None
         self.seed = None
 
-    def _create_tissue_and_platform_dict(self):
-        """Creates a dictionary mapping strings to numeric values for all platforms and tissues"""
+    def _identify_tissue_and_platform_types(self):
+        """Identify all of the unique tissues and platforms in the dataset"""
 
         tissues = []
         platforms = []
@@ -92,27 +83,8 @@ class DatasetBuilder(object):
             tissues.append(metadata['tissue'])
             platforms.append(metadata['platform'])
 
-        tissues = list(set(tissues))
-        platforms = list(set(platforms))
-        self.all_tissues = tissues
-        self.all_platforms = platforms
-
-        tissue_dict = {}
-        rev_tissue_dict = {}
-        platform_dict = {}
-        rev_platform_dict = {}
-
-        for i, tissue in enumerate(tissues):
-            tissue_dict[tissue] = i
-            rev_tissue_dict[i] = tissue
-        for i, platform in enumerate(platforms):
-            platform_dict[platform] = i
-            rev_platform_dict[i] = platform
-
-        self.tissue_dict = tissue_dict
-        self.rev_tissue_dict = rev_tissue_dict
-        self.platform_dict = platform_dict
-        self.rev_platform_dict = rev_platform_dict
+        self.all_tissues = list(set(tissues))
+        self.all_platforms = list(set(platforms))
 
     def _load_experiment(self, experiment_path):
         """Load the NPZ files present in a single experiment folder
@@ -167,8 +139,8 @@ class DatasetBuilder(object):
         """
         X_train, X_val, X_test = [], [], []
         y_train, y_val, y_test = [], [], []
-        tissue_ids_train, tissue_ids_val, tissue_ids_test = [], [], []
-        platform_ids_train, platform_ids_val, platform_ids_test = [], [], []
+        tissue_list_train, tissue_list_val, tissue_list_test = [], [], []
+        platform_list_train, platform_list_val, platform_list_test = [], [], []
 
         # loop through all experiments
         for folder in self.experiment_folders:
@@ -181,19 +153,15 @@ class DatasetBuilder(object):
             X_train_batch, y_train_batch, X_val_batch, y_val_batch, X_test_batch, y_test_batch = \
                 train_val_test_split(X_data=X, y_data=y, data_split=data_split, seed=seed)
 
-            # get numeric IDs
-            tissue_id = self.tissue_dict[tissue]
-            platform_id = self.platform_dict[platform]
-
             # construct list for each split
-            tissue_ids_train_batch = [tissue_id] * X_train_batch.shape[0]
-            platform_ids_train_batch = [platform_id] * X_train_batch.shape[0]
+            tissue_list_train_batch = [tissue] * X_train_batch.shape[0]
+            platform_list_train_batch = [platform] * X_train_batch.shape[0]
 
-            tissue_ids_val_batch = [tissue_id] * X_val_batch.shape[0]
-            platform_ids_val_batch = [platform_id] * X_val_batch.shape[0]
+            tissue_list_val_batch = [tissue] * X_val_batch.shape[0]
+            platform_list_val_batch = [platform] * X_val_batch.shape[0]
 
-            tissue_ids_test_batch = [tissue_id] * X_test_batch.shape[0]
-            platform_ids_test_batch = [platform_id] * X_test_batch.shape[0]
+            tissue_list_test_batch = [tissue] * X_test_batch.shape[0]
+            platform_list_test_batch = [platform] * X_test_batch.shape[0]
 
             # append batch to main list
             X_train.append(X_train_batch)
@@ -204,13 +172,13 @@ class DatasetBuilder(object):
             y_val.append(y_val_batch)
             y_test.append(y_test_batch)
 
-            tissue_ids_train.append(tissue_ids_train_batch)
-            tissue_ids_val.append(tissue_ids_val_batch)
-            tissue_ids_test.append(tissue_ids_test_batch)
+            tissue_list_train.append(tissue_list_train_batch)
+            tissue_list_val.append(tissue_list_val_batch)
+            tissue_list_test.append(tissue_list_test_batch)
 
-            platform_ids_train.append(platform_ids_train_batch)
-            platform_ids_val.append(platform_ids_val_batch)
-            platform_ids_test.append(platform_ids_test_batch)
+            platform_list_train.append(platform_list_train_batch)
+            platform_list_val.append(platform_list_val_batch)
+            platform_list_test.append(platform_list_test_batch)
 
         # make sure that all data has same shape
         first_shape = X_train[0].shape
@@ -230,23 +198,23 @@ class DatasetBuilder(object):
         y_val = np.concatenate(y_val, axis=0)
         y_test = np.concatenate(y_test, axis=0)
 
-        tissue_ids_train = np.concatenate(tissue_ids_train, axis=0)
-        tissue_ids_val = np.concatenate(tissue_ids_val, axis=0)
-        tissue_ids_test = np.concatenate(tissue_ids_test, axis=0)
+        tissue_list_train = np.concatenate(tissue_list_train, axis=0)
+        tissue_list_val = np.concatenate(tissue_list_val, axis=0)
+        tissue_list_test = np.concatenate(tissue_list_test, axis=0)
 
-        platform_ids_train = np.concatenate(platform_ids_train, axis=0)
-        platform_ids_val = np.concatenate(platform_ids_val, axis=0)
-        platform_ids_test = np.concatenate(platform_ids_test, axis=0)
+        platform_list_train = np.concatenate(platform_list_train, axis=0)
+        platform_list_val = np.concatenate(platform_list_val, axis=0)
+        platform_list_test = np.concatenate(platform_list_test, axis=0)
 
         # create combined dicts
-        train_dict = {'X': X_train, 'y': y_train, 'tissue_id': tissue_ids_train,
-                      'platform_id': platform_ids_train}
+        train_dict = {'X': X_train, 'y': y_train, 'tissue_list': tissue_list_train,
+                      'platform_list': platform_list_train}
 
-        val_dict = {'X': X_val, 'y': y_val, 'tissue_id': tissue_ids_val,
-                    'platform_id': platform_ids_val}
+        val_dict = {'X': X_val, 'y': y_val, 'tissue_list': tissue_list_val,
+                    'platform_list': platform_list_val}
 
-        test_dict = {'X': X_test, 'y': y_test, 'tissue_id': tissue_ids_test,
-                     'platform_id': platform_ids_test}
+        test_dict = {'X': X_test, 'y': y_test, 'tissue_list': tissue_list_test,
+                     'platform_list': platform_list_test}
 
         self.train_dict = train_dict
         self.val_dict = val_dict
@@ -269,15 +237,11 @@ class DatasetBuilder(object):
             ValueError: If no matching data for tissue/platform combination
         """
         X, y = data_dict['X'], data_dict['y']
-        tissue_id, platform_id = data_dict['tissue_id'], data_dict['platform_id']
+        tissue_list, platform_list = data_dict['tissue_list'], data_dict['platform_list']
 
-        # Identify locations with the correct tissue types
-        selected_tissue_ids = [self.tissue_dict[tissue] for tissue in tissues]
-        tissue_idx = np.isin(tissue_id, selected_tissue_ids)
-
-        # Identify locations with the correct platform types
-        selected_platform_ids = [self.platform_dict[platform] for platform in platforms]
-        platform_idx = np.isin(platform_id, selected_platform_ids)
+        # Identify locations with the correct categories types
+        tissue_idx = np.isin(tissue_list, tissues)
+        platform_idx = np.isin(platform_list, platforms)
 
         # get indices which meet both criteria
         combined_idx = tissue_idx * platform_idx
@@ -287,10 +251,11 @@ class DatasetBuilder(object):
             raise ValueError('No matching data for specified parameters')
 
         X, y = X[combined_idx], y[combined_idx]
-        tissue_id, platform_id = tissue_id[combined_idx], platform_id[combined_idx]
+        tissue_list = np.array(tissue_list)[combined_idx]
+        platform_list = np.array(platform_list)[combined_idx]
 
-        subset_dict = {'X': X, 'y': y, 'tissue_id': tissue_id, 'platform_id': platform_id}
-
+        subset_dict = {'X': X, 'y': y, 'tissue_list': list(tissue_list),
+                       'platform_list': list(platform_list)}
         return subset_dict
 
     def build_dataset(self, tissues='all', platforms='all', shape=(512, 512),
@@ -319,7 +284,7 @@ class DatasetBuilder(object):
             ValueError: If invalid platforms argument specified
         """
         if self.all_tissues == []:
-            self._create_tissue_and_platform_dict()
+            self._identify_tissue_and_platform_types()
 
         # validate inputs
         if isinstance(tissues, list):
@@ -365,7 +330,4 @@ class DatasetBuilder(object):
                                                   platforms=platforms)
 
         return train_dict_subset, val_dict_subset, test_dict_subset
-
-
-
 
