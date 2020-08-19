@@ -116,5 +116,3 @@ class DatasetBenchmarker(object):
         all_stats = self._benchmark_category(category_ids=['all'] * len(self.tissue_ids))
 
         return tissue_stats, platform_stats, all_stats
-
-
