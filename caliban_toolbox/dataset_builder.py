@@ -59,6 +59,9 @@ class DatasetBuilder(object):
             raise ValueError('No experiment folders found in dataset')
         self.experiment_folders = experiment_folders
 
+        self.all_tissues = []
+        self.all_platforms = []
+
         # dicts to hold string to numeric mapping information
         self.tissue_dict = {}
         self.platform_dict = {}
@@ -74,6 +77,7 @@ class DatasetBuilder(object):
         self.train_ratio = None
         self.val_ratio = None
         self.test_ratio = None
+        self.seed = None
 
     def _create_tissue_and_platform_dict(self):
         """Creates a dictionary mapping strings to numeric values for all platforms and tissues"""
@@ -150,21 +154,17 @@ class DatasetBuilder(object):
 
         return X, y, tissue, platform
 
-    def _load_all_experiments(self, train_ratio, val_ratio, test_ratio):
+    def _load_all_experiments(self, data_split, seed):
         """Loads all experiment data from experiment folder to enable dataset building
 
         Args:
-            train_ratio: fraction of data in training split
-            val_ratio: fraction of data in val split
-            test_ratio: fraction of data in test split
+            data_split: tuple specifying the fraction of the dataset for train/val/test
+            seed: seed for reproducible splitting of dataset
 
         Raises:
-            ValueError: If any of the NPZ files have different image dimensions
+            ValueError: If any of the NPZ files have different non-batch dimensions
         """
-        self._create_tissue_and_platform_dict()
-        self.train_ratio = train_ratio
-        self.val_ratio = val_ratio
-        self.test_ratio = test_ratio
+        train_ratio, val_ratio, test_ratio = data_split[0], data_split[1], data_split[2]
 
         X_train, X_val, X_test = [], [], []
         y_train, y_val, y_test = [], [], []
@@ -183,7 +183,8 @@ class DatasetBuilder(object):
                 train_val_test_split(X_data=X, y_data=y,
                                      train_ratio=train_ratio,
                                      val_ratio=val_ratio,
-                                     test_ratio=test_ratio)
+                                     test_ratio=test_ratio,
+                                     seed=seed)
 
             # get numeric IDs
             tissue_id = self.tissue_dict[tissue]
@@ -216,38 +217,118 @@ class DatasetBuilder(object):
             platform_ids_val.append(platform_ids_val_batch)
             platform_ids_test.append(platform_ids_test_batch)
 
+        # make sure that all data has same shape
+        first_shape = X_train[0].shape
+        for i in range(1, len(X_train)):
+            current_shape = X_train[i].shape
+            if first_shape[1:] != current_shape[1:]:
+                raise ValueError('Found mismatching dimensions between '
+                                 'first NPZ and npz at position {}. '
+                                 'Shapes of {}, {}'.format(i, first_shape, current_shape))
+
+        # concatenate lists together
+        X_train = np.concatenate(X_train, axis=0)
+        X_val = np.concatenate(X_val, axis=0)
+        X_test = np.concatenate(X_test, axis=0)
+
+        y_train = np.concatenate(y_train, axis=0)
+        y_val = np.concatenate(y_val, axis=0)
+        y_test = np.concatenate(y_test, axis=0)
+
+        tissue_ids_train = np.concatenate(tissue_ids_train, axis=0)
+        tissue_ids_val = np.concatenate(tissue_ids_val, axis=0)
+        tissue_ids_test = np.concatenate(tissue_ids_test, axis=0)
+
+        platform_ids_train = np.concatenate(platform_ids_train, axis=0)
+        platform_ids_val = np.concatenate(platform_ids_val, axis=0)
+        platform_ids_test = np.concatenate(platform_ids_test, axis=0)
+
         # create combined dicts
-        train_dict = {'X': X_train, 'y': y_train, 'tissue_ids': tissue_ids_train,
-                      'platform_ids': platform_ids_train}
+        train_dict = {'X': X_train, 'y': y_train, 'tissue_id': tissue_ids_train,
+                      'platform_id': platform_ids_train}
 
-        val_dict = {'X': X_val, 'y': y_val, 'tissue_ids': tissue_ids_val,
-                    'platform_ids': platform_ids_val}
+        val_dict = {'X': X_val, 'y': y_val, 'tissue_id': tissue_ids_val,
+                    'platform_id': platform_ids_val}
 
-        test_dict = {'X': X_test, 'y': y_test, 'tissue_ids': tissue_ids_test,
-                     'platform_ids': platform_ids_test}
+        test_dict = {'X': X_test, 'y': y_test, 'tissue_id': tissue_ids_test,
+                     'platform_id': platform_ids_test}
 
         self.train_dict = train_dict
         self.val_dict = val_dict
         self.test_dict = test_dict
+        self.train_ratio = train_ratio
+        self.val_ratio = val_ratio
+        self.test_ratio = test_ratio
+        self.seed = seed
 
-    def build_dataset(self,
-                      tissues='all',
-                      platforms='all'):
+    def _subset_data_dict(self, data_dict, tissues, platforms):
+        """Subsets a dictionary to only include from the specified tissues and platforms
 
+        Args:
+            data_dict: dictionary to subset from
+            tissues: list of tissues to include
+            platforms: list of platforms to include
 
-        X_list = []
-        y_list = []
-        tissue_ids = []
-        platform_ids = []
+        Returns:
+            subset_dict: dictionary containing examples desired data
 
+        Raises:
+            ValueError: If no matching data for tissue/platform combination
+        """
+        X, y  = data_dict['X'], data_dict['y']
+        tissue_id, platform_id = data_dict['tissue_id'], data_dict['platform_id']
 
+        # Identify locations with the correct tissue types
+        selected_tissue_ids = [self.tissue_dict[tissue] for tissue in tissues]
+        tissue_idx = np.isin(tissue_id, selected_tissue_ids)
 
-        self.X = np.concatenate(X_list, axis=0)
-        self.y = np.concatenate(y_list, axis=0)
-        self.tissue_ids = np.concatenate(tissue_ids, axis=0)
-        self.platform_ids = np.concatenate(platform_ids, axis=0)
+        # Identify locations with the correct platform types
+        selected_platform_ids = [self.platform_dict[platform] for platform in platforms]
+        platform_idx = np.isin(platform_id, selected_platform_ids)
 
+        # get indices which meet both criteria
+        combined_idx = tissue_idx * platform_idx
 
+        # check that there is data which meets requirements
+        if np.sum(combined_idx) == 0:
+            raise ValueError('No matching data for specified parameters')
+
+        X, y = X[combined_idx], y[combined_idx]
+        tissue_id, platform_id = tissue_id[combined_idx], platform_id[combined_idx]
+
+        subset_dict = {'X': X, 'y': y, 'tissue_id': tissue_id, 'platform_id': platform_id}
+
+        return subset_dict
+
+    def build_dataset(self, tissues='all', platforms='all', shape=(512, 512),
+                      data_split=(0.8, 0.1, 0.1), seed=0):
+        """Construct a dataset for model training and evaluation
+
+        Args:
+            tissues: which tissues to include. Must be either a list of tissue types,
+                a single tissue type, or 'all'
+            platforms: which platforms to include. Must be either a list of platform types,
+                a single platform type, or 'all'
+            shape: output shape for dataset
+            resize: flag to control resizing the input data.
+                Valid arguments:
+                    - False. No resizing
+                    - by_tissue. Resizes by median cell size within each tissue type
+                    - by_image. REsizes by median cell size within each image
+            data_split: tuple specifying the fraction of the dataset for train/val/test
+            seed: seed for reproducible splitting of dataset
+
+        Returns:
+            list of dicts containing the split dataset
+
+        Raises:
+            ValueError: If invalid tissues argument specified
+            ValueError: If invalid platforms argument specified
+        """
+        if self.all_tissues == []:
+            self._create_tissue_and_platform_dict()
+
+        # validate inputs
         if isinstance(tissues, list):
             for tissue in tissues:
                 if tissue not in self.all_tissues:
@@ -258,8 +339,8 @@ class DatasetBuilder(object):
             tissues = [tissues]
         else:
             raise ValueError(
-                'tissues should be "all", one of {}, or a list of acceptable tissue types'.format(
-                    self.all_tissues))
+                'tissues should be "all", one of {}, or a list '
+                'of acceptable tissue types'.format(self.all_tissues))
 
         if isinstance(platforms, list):
             for platform in platforms:
@@ -274,34 +355,26 @@ class DatasetBuilder(object):
                 'platforms should be "all", one of {}, or a list of acceptable platform types'.format(
                     self.all_platforms))
 
-        # Identify locations with the correct tissue types
-        tissue_numbers = [self.tissue_dict[tissue] for tissue in tissues]
-        tissue_locs = [tid in tissue_numbers for tid in self.tissue_ids]
+        train_ratio, val_ratio, test_ratio = data_split[0], data_split[1], data_split[2]
+        # if any of the split parameters are different we need to reload the dataset
+        if np.any([self.seed != seed, self.train_ratio != train_ratio, self.val_ratio != val_ratio,
+                  self.test_ratio != test_ratio]):
+            self._load_all_experiments(data_split=data_split, seed=seed)
 
-        # Identify locations with the correct platform types
-        platform_numbers = [self.platform_dict[platform] for platform in platforms]
-        platform_locs = [pid in platform_numbers for pid in self.platform_ids]
 
-        tissue_locs = np.array(tissue_locs)
-        platform_locs = np.array(platform_locs)
-        good_locations = tissue_locs * platform_locs
+        # TODO resize data
+        # if shape ! shape
 
-        X_dict = self.X[good_locations]
-        y_dict = self.y[good_locations]
-        tissue_ids_dict = self.tissue_ids[good_locations]
-        platform_ids_dict = self.platform_ids[good_locations]
+        train_dict_subset = self._subset_data_dict(data_dict=self.train_dict, tissues=tissues,
+                                                   platforms=platforms)
 
-        train_dict = {}
-        train_dict['X'] = X_dict
-        train_dict['y'] = y_dict
-        train_dict['tissue_ids'] = tissue_ids_dict
-        train_dict['platform_ids'] = platform_ids_dict
-        train_dict['tissue_dict'] = self.tissue_dict
-        train_dict['platform_dict'] = self.platform_dict
-        train_dict['rev_tissue_dict'] = self.rev_tissue_dict
-        train_dict['rev_platform_dict'] = self.rev_platform_dict
+        val_dict_subset = self._subset_data_dict(data_dict=self.val_dict, tissues=tissues,
+                                                  platforms=platforms)
 
-        return train_dict
+        test_dict_subset = self._subset_data_dict(data_dict=self.test_dict, tissues=tissues,
+                                                  platforms=platforms)
+
+        return train_dict_subset, val_dict_subset, test_dict_subset
 
 
 from sklearn.model_selection import train_test_split
