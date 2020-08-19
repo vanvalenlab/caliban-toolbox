@@ -33,6 +33,7 @@ import numpy as np
 from skimage.segmentation import relabel_sequential
 
 from caliban_toolbox.utils.misc_utils import list_npzs_folder, list_folders
+from caliban_toolbox.build import train_val_test_split
 
 
 class DatasetBuilder(object):
@@ -164,8 +165,6 @@ class DatasetBuilder(object):
         Raises:
             ValueError: If any of the NPZ files have different non-batch dimensions
         """
-        train_ratio, val_ratio, test_ratio = data_split[0], data_split[1], data_split[2]
-
         X_train, X_val, X_test = [], [], []
         y_train, y_val, y_test = [], [], []
         tissue_ids_train, tissue_ids_val, tissue_ids_test = [], [], []
@@ -180,11 +179,7 @@ class DatasetBuilder(object):
 
             # split data according to specified ratios
             X_train_batch, y_train_batch, X_val_batch, y_val_batch, X_test_batch, y_test_batch = \
-                train_val_test_split(X_data=X, y_data=y,
-                                     train_ratio=train_ratio,
-                                     val_ratio=val_ratio,
-                                     test_ratio=test_ratio,
-                                     seed=seed)
+                train_val_test_split(X_data=X, y_data=y, data_split=data_split, seed=seed)
 
             # get numeric IDs
             tissue_id = self.tissue_dict[tissue]
@@ -256,9 +251,7 @@ class DatasetBuilder(object):
         self.train_dict = train_dict
         self.val_dict = val_dict
         self.test_dict = test_dict
-        self.train_ratio = train_ratio
-        self.val_ratio = val_ratio
-        self.test_ratio = test_ratio
+        self.data_split = data_split
         self.seed = seed
 
     def _subset_data_dict(self, data_dict, tissues, platforms):
@@ -275,7 +268,7 @@ class DatasetBuilder(object):
         Raises:
             ValueError: If no matching data for tissue/platform combination
         """
-        X, y  = data_dict['X'], data_dict['y']
+        X, y = data_dict['X'], data_dict['y']
         tissue_id, platform_id = data_dict['tissue_id'], data_dict['platform_id']
 
         # Identify locations with the correct tissue types
@@ -352,15 +345,12 @@ class DatasetBuilder(object):
             platforms = [platforms]
         else:
             raise ValueError(
-                'platforms should be "all", one of {}, or a list of acceptable platform types'.format(
-                    self.all_platforms))
+                'platforms should be "all", one of {}, or a list of acceptable '
+                'platform types'.format(self.all_platforms))
 
-        train_ratio, val_ratio, test_ratio = data_split[0], data_split[1], data_split[2]
         # if any of the split parameters are different we need to reload the dataset
-        if np.any([self.seed != seed, self.train_ratio != train_ratio, self.val_ratio != val_ratio,
-                  self.test_ratio != test_ratio]):
+        if self.seed != seed or self.data_split != data_split:
             self._load_all_experiments(data_split=data_split, seed=seed)
-
 
         # TODO resize data
         # if shape ! shape
@@ -369,7 +359,7 @@ class DatasetBuilder(object):
                                                    platforms=platforms)
 
         val_dict_subset = self._subset_data_dict(data_dict=self.val_dict, tissues=tissues,
-                                                  platforms=platforms)
+                                                 platforms=platforms)
 
         test_dict_subset = self._subset_data_dict(data_dict=self.test_dict, tissues=tissues,
                                                   platforms=platforms)
@@ -377,52 +367,5 @@ class DatasetBuilder(object):
         return train_dict_subset, val_dict_subset, test_dict_subset
 
 
-from sklearn.model_selection import train_test_split
 
 
-def train_val_test_split(X_data, y_data, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, seed=None):
-    """Randomly splits supplied data into specified sizes for model assessment
-
-    Args:
-        X_data: array of X data
-        y_data: array of y_data
-        train_ratio: fraction of dataset for train split
-        val_ratio: fraction of dataset for val split
-        test_ratio: optional fraction of dataset for test split,
-            otherwise only computes a train/val split
-        seed: random seed for reproducible splits
-
-    Returns:
-        list of X and y data split appropriately
-
-    Raises:
-        ValueError: if ratios do not sum to 1
-        ValueError: If length of X and y data is not equal
-    """
-
-    total = np.round(train_ratio + val_ratio + test_ratio, decimals=2)
-    if total != 1:
-        raise ValueError('Data splits must sum to 1, supplied splits sum to {}'.format(total))
-
-    if X_data.shape[0] != y_data.shape[0]:
-        raise ValueError('Supplied X and y data do not have the same '
-                         'length over batches dimension. '
-                         'X.shape: {}, y.shape: {}'.format(X_data.shape, y_data.shape))
-
-    # compute fraction not in train
-    remainder_size = np.round(1 - train_ratio, decimals=2)
-
-    # split dataset into train and remainder
-    X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
-                                                                  test_size=remainder_size,
-                                                                  random_state=seed)
-
-    # compute fraction of remainder that is test
-    test_size = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
-
-    # split remainder into val and test
-    X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
-                                                    test_size=test_size,
-                                                    random_state=seed)
-
-    return X_train, y_train, X_val, y_val, X_test, y_test

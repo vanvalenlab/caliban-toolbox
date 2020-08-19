@@ -30,7 +30,7 @@ import pytest
 import numpy as np
 
 
-from caliban_toolbox.dataset_builder import train_val_test_split, DatasetBuilder
+from caliban_toolbox.DatasetBuilder import train_val_test_split, DatasetBuilder
 
 
 def _create_test_npz(path, constant_value=1, X_shape=(10, 20, 20, 3), y_shape=(10, 20, 20, 1)):
@@ -208,7 +208,7 @@ def test__load_all_experiments(tmp_path):
             images = X_data[tissue_idx]
             assert np.all(images == constant_val)
 
-        # loop over each platform type, and check that the NPZ is filled with correct constant value
+        # loop over each platform type, and check that the NPZ contains correct constant value
         for constant_val, platform_name in enumerate(platform_list):
             platform_id = platform_dict[platform_name]
 
@@ -295,7 +295,6 @@ def test_build_dataset(tmp_path):
         assert set(current_tissues) == set(tissue_ids)
         assert set(current_platforms) == set(platform_ids)
 
-
     # dataset with only a subset included
     tissue_list, tissue_ids = tissue_list[:3], tissue_ids[:3]
     platform_list, platform_ids = platform_list[:3], platform_ids[:3]
@@ -307,25 +306,3 @@ def test_build_dataset(tmp_path):
         current_platforms = dict['platform_id']
         assert set(current_tissues) == set(tissue_ids)
         assert set(current_platforms) == set(platform_ids)
-
-
-def test_train_val_test_split():
-    X_data = np.zeros((100, 5, 5, 3))
-    y_data = np.zeros((100, 5, 5, 1))
-
-    train_ratio, val_ratio, test_ratio = 0.7, 0.2, 0.1
-
-    X_train, y_train, X_val, y_val, X_test, y_test, = train_val_test_split(X_data=X_data,
-                                                                           y_data=y_data,
-                                                                           train_ratio=train_ratio,
-                                                                           val_ratio=val_ratio,
-                                                                           test_ratio=test_ratio)
-
-    assert X_train.shape[0] == 100 * train_ratio
-    assert y_train.shape[0] == 100 * train_ratio
-
-    assert X_val.shape[0] == 100 * val_ratio
-    assert y_val.shape[0] == 100 * val_ratio
-
-    assert X_test.shape[0] == 100 * test_ratio
-    assert y_test.shape[0] == 100 * test_ratio

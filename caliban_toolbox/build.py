@@ -29,6 +29,8 @@ import math
 import numpy as np
 
 from skimage.measure import regionprops_table
+from sklearn.model_selection import train_test_split
+
 
 from deepcell_toolbox.utils import resize, tile_image
 
@@ -219,3 +221,54 @@ def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 
     combined_y = np.concatenate(combined_y, axis=0)
 
     return combined_x, combined_y
+
+
+def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
+    """Randomly splits supplied data into specified sizes for model assessment
+
+    Args:
+        X_data: array of X data
+        y_data: array of y_data
+        data_split: tuple specifying the fraction of the dataset for train/val/test
+        seed: random seed for reproducible splits
+
+    Returns:
+        list of X and y data split appropriately
+
+    Raises:
+        ValueError: if ratios do not sum to 1
+        ValueError: if any of the splits are 0
+        ValueError: If length of X and y data is not equal
+    """
+
+    total = np.round(np.sum(data_split), decimals=2)
+    if total != 1:
+        raise ValueError('Data splits must sum to 1, supplied splits sum to {}'.format(total))
+
+    if 0 in data_split:
+        raise ValueError('All splits must be non-zero')
+
+    if X_data.shape[0] != y_data.shape[0]:
+        raise ValueError('Supplied X and y data do not have the same '
+                         'length over batches dimension. '
+                         'X.shape: {}, y.shape: {}'.format(X_data.shape, y_data.shape))
+
+    train_ratio, val_ratio, test_ratio = data_split
+
+    # compute fraction not in train
+    remainder_size = np.round(1 - train_ratio, decimals=2)
+
+    # split dataset into train and remainder
+    X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
+                                                                  test_size=remainder_size,
+                                                                  random_state=seed)
+
+    # compute fraction of remainder that is test
+    test_size = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
+
+    # split remainder into val and test
+    X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
+                                                    test_size=test_size,
+                                                    random_state=seed)
+
+    return X_train, y_train, X_val, y_val, X_test, y_test

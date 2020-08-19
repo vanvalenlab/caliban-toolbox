@@ -264,3 +264,34 @@ def test_combine_npz_files():
         _, _ = build.combine_npz_files(npz_list=npz_resize_list,
                                        resize_ratios=resize_ratios,
                                        final_size=final_size)
+
+
+def test_train_val_test_split():
+    X_data = np.zeros((100, 5, 5, 3))
+    y_data = np.zeros((100, 5, 5, 1))
+
+    train_ratio, val_ratio, test_ratio = 0.7, 0.2, 0.1
+
+    X_train, y_train, X_val, y_val, X_test, y_test, = \
+        build.train_val_test_split(X_data=X_data,
+                                   y_data=y_data,
+                                   data_split=[train_ratio, val_ratio, test_ratio])
+
+    assert X_train.shape[0] == 100 * train_ratio
+    assert y_train.shape[0] == 100 * train_ratio
+
+    assert X_val.shape[0] == 100 * val_ratio
+    assert y_val.shape[0] == 100 * val_ratio
+
+    assert X_test.shape[0] == 100 * test_ratio
+    assert y_test.shape[0] == 100 * test_ratio
+
+    with pytest.raises(ValueError):
+        _ = build.train_val_test_split(X_data=X_data, y_data=y_data, data_split=[0, 0.5, 0.5])
+
+    with pytest.raises(ValueError):
+        _ = build.train_val_test_split(X_data=X_data, y_data=y_data, data_split=[0.5, 0.5, 0.5])
+
+    with pytest.raises(ValueError):
+        _ = build.train_val_test_split(X_data=X_data[:5], y_data=y_data,
+                                       data_split=[0.5, 0.5, 0.5])
