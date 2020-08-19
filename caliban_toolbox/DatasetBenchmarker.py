@@ -35,8 +35,8 @@ class DatasetBenchmarker(object):
     Args:
         y_true: true labels
         y_pred: predicted labels
-        tissue_ids: list of tissue ids for each image
-        platform_ids: list of platform ids for each image
+        tissue_list: list of tissue names for each image
+        platform_list: list of platform names for each image
         model_name: name of the model used to generate the predictions
         metrics_kwargs: arguments to be passed to metrics package
 
@@ -48,8 +48,8 @@ class DatasetBenchmarker(object):
     def __init__(self,
                  y_true,
                  y_pred,
-                 tissue_ids,
-                 platform_ids,
+                 tissue_list,
+                 platform_list,
                  model_name,
                  metrics_kwargs={}):
         if y_true.shape != y_pred.shape:
@@ -62,11 +62,11 @@ class DatasetBenchmarker(object):
         self.y_true = y_true
         self.y_pred = y_pred
 
-        if len({y_true.shape[0], len(tissue_ids), len(platform_ids)}) != 1:
-            raise ValueError('Tissue_ids and platform_ids must have same length as labels')
+        if len({y_true.shape[0], len(tissue_list), len(platform_list)}) != 1:
+            raise ValueError('Tissue_list and platform_list must have same length as labels')
 
-        self.tissue_ids = tissue_ids
-        self.platform_ids = platform_ids
+        self.tissue_list = tissue_list
+        self.platform_list = platform_list
         self.model_name = model_name
         self.metrics = Metrics(model_name, **metrics_kwargs)
 
@@ -111,8 +111,8 @@ class DatasetBenchmarker(object):
     def benchmark(self):
         self.metrics.calc_object_stats(self.y_true, self.y_pred)
 
-        tissue_stats = self._benchmark_category(category_ids=self.tissue_ids)
-        platform_stats = self._benchmark_category(category_ids=self.platform_ids)
-        all_stats = self._benchmark_category(category_ids=['all'] * len(self.tissue_ids))
+        tissue_stats = self._benchmark_category(category_ids=self.tissue_list)
+        platform_stats = self._benchmark_category(category_ids=self.platform_list)
+        all_stats = self._benchmark_category(category_ids=['all'] * len(self.tissue_list))
 
         return tissue_stats, platform_stats, all_stats

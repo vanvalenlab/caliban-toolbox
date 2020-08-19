@@ -47,26 +47,26 @@ def _create_labels(offset=0):
 
 def test__init__():
     y_true, y_pred = _create_labels(), _create_labels()
-    tissue_ids = ['tissue{}'.format(i) for i in range(5)]
-    platform_ids = ['platform{}'.format(i) for i in range(5)]
-    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_ids=tissue_ids,
-                            platform_ids=platform_ids, model_name='test')
+    tissue_list = ['tissue{}'.format(i) for i in range(5)]
+    platform_list = ['platform{}'.format(i) for i in range(5)]
+    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list,
+                            platform_list=platform_list, model_name='test')
 
     with pytest.raises(ValueError, match='Shape mismatch'):
-        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred[0], tissue_ids=tissue_ids,
-                               platform_ids=platform_ids, model_name='test')
+        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred[0], tissue_list=tissue_list,
+                               platform_list=platform_list, model_name='test')
 
     with pytest.raises(ValueError, match='Data must be 4D'):
-        _ = DatasetBenchmarker(y_true=y_true[0], y_pred=y_pred[0], tissue_ids=tissue_ids,
-                               platform_ids=platform_ids, model_name='test')
+        _ = DatasetBenchmarker(y_true=y_true[0], y_pred=y_pred[0], tissue_list=tissue_list,
+                               platform_list=platform_list, model_name='test')
 
-    with pytest.raises(ValueError, match='Tissue_ids and platform_ids'):
-        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_ids=tissue_ids[1:],
-                               platform_ids=platform_ids, model_name='test')
+    with pytest.raises(ValueError, match='Tissue_list and platform_list'):
+        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list[1:],
+                               platform_list=platform_list, model_name='test')
 
-    with pytest.raises(ValueError, match='Tissue_ids and platform_ids'):
-        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_ids=tissue_ids,
-                               platform_ids=platform_ids[1:], model_name='test')
+    with pytest.raises(ValueError, match='Tissue_list and platform_list'):
+        _ = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list,
+                               platform_list=platform_list[1:], model_name='test')
 
 
 def test__benchmark_category():
@@ -81,16 +81,16 @@ def test__benchmark_category():
 
     y_true = np.concatenate((y_true_category_1, y_true_category_2, y_true_category_3))
     y_pred = np.concatenate((y_pred_category_1, y_pred_category_2, y_pred_category_3))
-    tissue_ids = ['tissue1'] * 5 + ['tissue2'] * 5 + ['tissue3'] * 5
-    platform_ids = ['platform1'] * 15
+    tissue_list = ['tissue1'] * 5 + ['tissue2'] * 5 + ['tissue3'] * 5
+    platform_list = ['platform1'] * 15
 
     # initialize
-    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_ids=tissue_ids,
-                            platform_ids=platform_ids, model_name='test')
+    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list,
+                            platform_list=platform_list, model_name='test')
     db.metrics.calc_object_stats(y_true, y_pred)
 
     # compute across tissues
-    stats_dict = db._benchmark_category(category_ids=tissue_ids)
+    stats_dict = db._benchmark_category(category_ids=tissue_list)
 
     assert stats_dict['tissue1']['recall'] == 1
     assert stats_dict['tissue1']['jaccard'] == 1
@@ -101,14 +101,14 @@ def test__benchmark_category():
 
 def test_benchmark():
     y_true, y_pred = _create_labels(), _create_labels(offset=1)
-    tissue_ids = ['tissue1'] * 2 + ['tissue2'] * 3
-    platform_ids = ['platform1'] * 3 + ['platform2'] * 2
+    tissue_list = ['tissue1'] * 2 + ['tissue2'] * 3
+    platform_list = ['platform1'] * 3 + ['platform2'] * 2
 
-    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_ids=tissue_ids,
-                            platform_ids=platform_ids, model_name='test')
+    db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list,
+                            platform_list=platform_list, model_name='test')
 
     tissue_stats, platform_stats, all_stats = db.benchmark()
 
-    assert set(tissue_stats.keys()) == set(tissue_ids)
-    assert set(platform_stats.keys()) == set(platform_ids)
+    assert set(tissue_stats.keys()) == set(tissue_list)
+    assert set(platform_stats.keys()) == set(platform_list)
     assert set(all_stats.keys()) == {'all'}
