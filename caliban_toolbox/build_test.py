@@ -82,18 +82,18 @@ def test_compute_cell_size():
         _ = build.compute_cell_size(npz_file={'y': labels[0]}, method='bad_method', by_image=True)
 
 
-def test_reshape_training_image():
+def test_reshape_training_data():
     # test without resizing or cropping
     X_data, y_data = np.zeros((5, 40, 40, 3)), np.zeros((5, 40, 40, 2))
     resize_ratio = 1
     final_size = (40, 40)
     stride_ratio = 1
 
-    reshaped_X, reshaped_y = build.reshape_training_image(X_data=X_data,
-                                                          y_data=y_data,
-                                                          resize_ratio=resize_ratio,
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio)
     assert reshaped_X.shape == X_data.shape
     assert reshaped_y.shape == y_data.shape
 
@@ -103,25 +103,25 @@ def test_reshape_training_image():
     final_size = (40, 40)
     stride_ratio = 1
 
-    reshaped_X, reshaped_y = build.reshape_training_image(X_data=X_data,
-                                                          y_data=y_data,
-                                                          resize_ratio=resize_ratio,
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio)
     assert list(reshaped_X.shape) == [X_data.shape[0] * 2] + list(final_size) + [X_data.shape[-1]]
     assert list(reshaped_y.shape) == [y_data.shape[0] * 2] + list(final_size) + [y_data.shape[-1]]
 
     # test with just resizing
     X_data, y_data = np.zeros((5, 40, 40, 3)), np.zeros((5, 40, 40, 2))
-    resize_ratio = 1
+    resize_ratio = 2
     final_size = (80, 80)
-    stride_ratio = 2
+    stride_ratio = 1
 
-    reshaped_X, reshaped_y = build.reshape_training_image(X_data=X_data,
-                                                          y_data=y_data,
-                                                          resize_ratio=resize_ratio,
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio)
     assert list(reshaped_X.shape) == [X_data.shape[0]] + list(final_size) + [X_data.shape[-1]]
     assert list(reshaped_y.shape) == [y_data.shape[0]] + list(final_size) + [y_data.shape[-1]]
 
@@ -129,15 +129,47 @@ def test_reshape_training_image():
     X_data, y_data = np.zeros((5, 40, 40, 3)), np.zeros((5, 40, 40, 2))
     resize_ratio = 2
     final_size = (40, 40)
-    stride_ratio = 2
+    stride_ratio = 1
 
-    reshaped_X, reshaped_y = build.reshape_training_image(X_data=X_data,
-                                                          y_data=y_data,
-                                                          resize_ratio=resize_ratio,
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio)
     assert list(reshaped_X.shape) == [X_data.shape[0] * 4] + list(X_data.shape[1:])
     assert list(reshaped_y.shape) == [y_data.shape[0] * 4] + list(y_data.shape[1:])
+
+    # test with resizing below threshold for increase
+    X_data, y_data = np.zeros((5, 40, 40, 3)), np.zeros((5, 40, 40, 2))
+    resize_ratio = 1.5
+    resize_tolerance = 2
+    final_size = (40, 40)
+    stride_ratio = 1
+
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio,
+                                                         tolerance=resize_tolerance)
+    assert reshaped_X.shape == X_data.shape
+    assert reshaped_y.shape == y_data.shape
+
+    # test with resizing below threshold for decrease
+    X_data, y_data = np.zeros((5, 40, 40, 3)), np.zeros((5, 40, 40, 2))
+    resize_ratio = 0.65
+    resize_tolerance = 2
+    final_size = (40, 40)
+    stride_ratio = 1
+
+    reshaped_X, reshaped_y = build.reshape_training_data(X_data=X_data,
+                                                         y_data=y_data,
+                                                         resize_ratio=resize_ratio,
+                                                         final_size=final_size,
+                                                         stride_ratio=stride_ratio,
+                                                         tolerance=resize_tolerance)
+    assert reshaped_X.shape == X_data.shape
+    assert reshaped_y.shape == y_data.shape
 
 
 def test_pad_image_stack():
@@ -165,105 +197,6 @@ def test_pad_image_stack():
     padded_stack = build.pad_image_stack(images=input_stack, crop_size=crop_size)
     assert padded_stack.shape == input_stack.shape
     assert np.all(padded_stack[:, 0, 0, 0] == tags)
-
-
-def test_combine_npz_files():
-    # NPZ files are appropriate size and resolution
-    num_images = [2, 2]
-    sizes = [(256, 256), (256, 256)]
-    npz_list = _make_npzs(sizes=sizes, num_images=num_images)
-    resize_ratios = [[1], [1]]
-    final_size = (256, 256)
-
-    combined_x, combined_y = build.combine_npz_files(npz_list=npz_list,
-                                                     resize_ratios=resize_ratios,
-                                                     final_size=final_size)
-
-    # check that correct number of NPZs present
-    assert combined_x.shape[0] == np.sum(num_images)
-
-    # check correct size of NPZs
-    assert combined_x.shape[1:3] == final_size
-
-    # NPZ files need to be cropped
-    num_images = [2, 2]
-    sizes = [(512, 512), (512, 512)]
-    npz_crop_list = _make_npzs(sizes=sizes, num_images=num_images)
-    resize_ratios = [[1], [1]]
-    final_size = (256, 256)
-
-    combined_x, combined_y = build.combine_npz_files(npz_list=npz_crop_list,
-                                                     resize_ratios=resize_ratios,
-                                                     final_size=final_size)
-
-    # check that correct number of NPZs present
-    assert combined_x.shape[0] == np.sum(num_images) * 4
-
-    # check correct size of NPZs
-    assert combined_x.shape[1:3] == final_size
-
-    # NPZ files need to be resized
-    num_images = [2, 2]
-    sizes = [(128, 128), (128, 128)]
-    npz_resize_list = _make_npzs(sizes=sizes, num_images=num_images)
-    resize_ratios = [[2], [2]]
-    final_size = (256, 256)
-
-    combined_x, combined_y = build.combine_npz_files(npz_list=npz_resize_list,
-                                                     resize_ratios=resize_ratios,
-                                                     final_size=final_size)
-
-    # check that correct number of NPZs present
-    assert combined_x.shape[0] == np.sum(num_images)
-
-    # check correct size of NPZs
-    assert combined_x.shape[1:3] == final_size
-
-    # some need to be cropped, some need to be resized
-    npz_list = npz_crop_list + npz_resize_list
-    resize_ratios = [[1], [1], [2], [2]]
-    final_size = (256, 256)
-
-    combined_npz = build.combine_npz_files(npz_list=npz_list, resize_ratios=resize_ratios,
-                                           final_size=final_size)
-
-    combined_x, combined_y = combined_npz
-
-    # check that correct number of NPZs present
-    assert combined_x.shape[0] == (np.sum(num_images) + np.sum(num_images) * 4)
-
-    # check correct size of NPZs
-    assert combined_x.shape[1:3] == final_size
-
-    # different resizing for each image in the NPZ
-    num_images = [2, 2]
-    sizes = [(256, 256), (256, 256)]
-    npz_resize_list = _make_npzs(sizes=sizes, num_images=num_images)
-    resize_ratios = [[1], [1, 2]]
-    final_size = (256, 256)
-
-    combined_x, combined_y = build.combine_npz_files(npz_list=npz_resize_list,
-                                                     resize_ratios=resize_ratios,
-                                                     final_size=final_size)
-
-    # check that correct number of NPZs present
-    assert combined_x.shape[0] == np.sum(2 + 1 + 4)
-
-    # check correct size of NPZs
-    assert combined_x.shape[1:3] == final_size
-
-    # mismatch between resize_ratios and npz size
-    with pytest.raises(ValueError):
-        # different resizing for each image in the NPZ
-        num_images = [4, 2]
-        sizes = [(256, 256), (256, 256)]
-        npz_resize_list = _make_npzs(sizes=sizes, num_images=num_images)
-        resize_ratios = [[1, 1, 1], [1, 2]]
-        final_size = (256, 256)
-
-        _, _ = build.combine_npz_files(npz_list=npz_resize_list,
-                                       resize_ratios=resize_ratios,
-                                       final_size=final_size)
 
 
 def test_train_val_test_split():

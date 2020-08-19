@@ -75,6 +75,32 @@ def _create_test_dataset(path, experiments, tissues, platforms, npz_num):
                              constant_value=i)
 
 
+def _create_test_dict(tissues, platforms):
+    data = []
+    for i in range(len(tissues)):
+        current_data = np.full((5, 40, 40, 3), i)
+        data.append(current_data)
+
+    data = np.concatenate(data, axis=0)
+    X_data = data
+    y_data = data[..., :1]
+
+    tissue_list = [tissues[i] for i in range(len(tissues)) for _ in range(5)]
+    platform_list = [platforms[i] for i in range(len(platforms)) for _ in range(5)]
+
+    return {'X': X_data, 'y': y_data, 'tissue_list': tissue_list, 'platform_list': platform_list}
+
+
+def mocked_compute_cell_size(data_dict):
+    """Mocks compute cell size so we don't need to create synthetic data with correct cell size"""
+    X = data_dict['X']
+    constant_val = X[0, 0, 0, 0]
+
+    multiplier = 400 + (400 * constant_val)
+
+    return multiplier
+
+
 def test__init__(tmp_path):
     # no folders in dataset
     with pytest.raises(ValueError):
@@ -251,6 +277,86 @@ def test__subset_data_dict(tmp_path):
         _ = db._subset_data_dict(data_dict=data_dict, tissues=tissues, platforms=platforms)
 
 
+def test__reshape_dict_no_resize(tmp_path):
+    # workaround so that __init__ doesn't throw an error
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    db = DatasetBuilder(tmp_path)
+
+    # create dict
+    tissues = ['tissue1', 'tissue2', 'tissue3']
+    platforms = ['platform1', 'platform2', 'platform3']
+    data_dict = _create_test_dict(tissues=tissues, platforms=platforms)
+
+    # this is 1/2 the size on each dimension as original, so we expect 4x more crops
+    output_shape = (20, 20)
+
+    reshaped_dict = db._reshape_dict(dict=data_dict, resize=False, output_shape=output_shape)
+    X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
+    assert X_reshaped.shape[1:3] == output_shape
+
+    # make sure that for each tissue, the arrays with correct value have correct tissue label
+    for constant_val, tissue in enumerate(tissues):
+        tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
+        tissue_labels = np.array(tissue_list_reshaped)[tissue_idx]
+        assert np.all(tissue_labels == tissue)
+
+
+def test__reshape_dict_by_tissue(tmp_path, mocker):
+    mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
+    # workaround so that __init__ doesn't throw an error
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    db = DatasetBuilder(tmp_path)
+
+    # create dict
+    tissues = ['tissue1', 'tissue2', 'tissue3']
+    platforms = ['platform1', 'platform2', 'platform3']
+    data_dict = _create_test_dict(tissues=tissues, platforms=platforms)
+
+    # same size as input data
+    output_shape = (40, 40)
+
+    reshaped_dict = db._reshape_dict(dict=data_dict, resize='by_tissue', output_shape=output_shape)
+    X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
+    assert X_reshaped.shape[1:3] == output_shape
+
+    # make sure that for each tissue, the arrays with correct value have correct tissue label
+    for constant_val, tissue in enumerate(tissues):
+        tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
+        tissue_labels = np.array(tissue_list_reshaped)[tissue_idx]
+        assert np.all(tissue_labels == tissue)
+
+        # Each tissue type starts with length 5, and is resized according to its constant value
+        assert len(tissue_labels) == 5 * ((constant_val + 1) ** 2)
+
+
+def test__reshape_dict_by_image(tmp_path, mocker):
+    mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
+    # workaround so that __init__ doesn't throw an error
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    db = DatasetBuilder(tmp_path)
+
+    # create dict
+    tissues = ['tissue1', 'tissue2', 'tissue3']
+    platforms = ['platform1', 'platform2', 'platform3']
+    data_dict = _create_test_dict(tissues=tissues, platforms=platforms)
+
+    # same size as input data
+    output_shape = (40, 40)
+
+    reshaped_dict = db._reshape_dict(dict=data_dict, resize='by_image', output_shape=output_shape)
+    X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
+    assert X_reshaped.shape[1:3] == output_shape
+
+    # make sure that for each tissue, the arrays with correct value have correct tissue label
+    for constant_val, tissue in enumerate(tissues):
+        tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
+        tissue_labels = np.array(tissue_list_reshaped)[tissue_idx]
+        assert np.all(tissue_labels == tissue)
+
+        # Each tissue type starts with length 5, and is resized according to its constant value
+        assert len(tissue_labels) == 5 * ((constant_val + 1) ** 2)
+
+
 def test_build_dataset(tmp_path):
     # create dataset
     experiments = ['exp{}'.format(i) for i in range(5)]
@@ -263,7 +369,7 @@ def test_build_dataset(tmp_path):
     db = DatasetBuilder(tmp_path)
 
     # dataset with all data included
-    output_dicts = db.build_dataset(tissues=tissues, platforms=platforms)
+    output_dicts = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(20, 20))
 
     for dict in output_dicts:
         # make sure correct tissues and platforms loaded
@@ -274,7 +380,7 @@ def test_build_dataset(tmp_path):
 
     # dataset with only a subset included
     tissues, platforms = tissues[:3], platforms[:3]
-    output_dicts = db.build_dataset(tissues=tissues, platforms=platforms)
+    output_dicts = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(20, 20))
 
     for dict in output_dicts:
         # make sure correct tissues and platforms loaded
@@ -282,3 +388,11 @@ def test_build_dataset(tmp_path):
         current_platforms = dict['platform_list']
         assert set(current_tissues) == set(tissues)
         assert set(current_platforms) == set(platforms)
+
+    # cropping to 1/2 the size, there should be 4x more crops
+    output_dicts_crop = db.build_dataset(tissues=tissues, platforms=platforms,
+                                         output_shape=(10, 10))
+
+    for base_dict, crop_dict in zip(output_dicts, output_dicts_crop):
+        X_base, X_crop = base_dict['X'], crop_dict['X']
+        assert X_base.shape[0] * 4 == X_crop.shape[0]

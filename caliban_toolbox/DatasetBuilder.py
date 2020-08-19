@@ -32,7 +32,7 @@ from skimage.segmentation import relabel_sequential
 from skimage.measure import label
 
 from caliban_toolbox.utils.misc_utils import list_npzs_folder, list_folders
-from caliban_toolbox.build import train_val_test_split
+from caliban_toolbox.build import train_val_test_split, reshape_training_data, compute_cell_size
 
 
 class DatasetBuilder(object):
@@ -258,7 +258,116 @@ class DatasetBuilder(object):
                        'platform_list': list(platform_list)}
         return subset_dict
 
-    def build_dataset(self, tissues='all', platforms='all', shape=(512, 512),
+    def _reshape_dict(self, dict, resize=False, output_shape=(512, 512), resize_target=400,
+                      resize_tolerance=1.5):
+        """Takes a dictionary of training data and reshapes it to appropriate size
+
+        dict: dictionary of training data
+        resize: flag to control resizing of the data.
+            Valid arguments:
+                    - False. No resizing
+                    - by_tissue. Resizes by median cell size within each tissue type
+                    - by_image. Resizes by median cell size within each image
+        output_shape: output shape for image data
+        resize_target: desired median cell size after resizing
+        resize_tolerance: sets maximum allowable ratio between resize_target and
+            median cell size before resizing occurs
+        """
+        X, y = dict['X'], dict['y']
+        tissue_list, platform_list = np.array(dict['tissue_list']), np.array(dict['platform_list'])
+
+        if not resize:
+            # no resizing
+            X_new, y_new = reshape_training_data(X_data=X, y_data=y, resize_ratio=1,
+                                                 final_size=output_shape, stride_ratio=1)
+
+            # to preserve category labels, we need to figure out how much the array grew by
+            multiplier = int(X_new.shape[0] / X.shape[0])
+
+            # then we duplicate the labels in place to match expanded array size
+            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
+            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
+
+        elif resize == 'by_tissue':
+            X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
+            unique_tissues = np.unique(tissue_list)
+
+            # loop through each unique tissue and resize images by tissue median
+            for uid in unique_tissues:
+                # subset lists to include only current tissue
+                uid_idx = np.isin(tissue_list, uid)
+                X_uid, y_uid = X[uid_idx], y[uid_idx]
+                tissue_list_uid, platform_list_uid = tissue_list[uid_idx], platform_list[uid_idx]
+
+                # compute appropriate resize ratio
+                median_cell_size = compute_cell_size({'X': X_uid, 'y': y_uid})
+                resize_ratio = median_cell_size / resize_target
+
+                # resize the data
+                X_uid_resized, y_uid_resized = reshape_training_data(X_data=X_uid, y_data=y_uid,
+                                                                     resize_ratio=resize_ratio,
+                                                                     final_size=output_shape,
+                                                                     tolerance=resize_tolerance)
+
+                # to preserve category labels, we need to figure out how much the array grew by
+                multiplier = int(X_uid_resized.shape[0] / X_uid.shape[0])
+                # then we duplicate the labels in place to match expanded array size
+                tissue_list_uid = [item for item in tissue_list_uid for _ in range(multiplier)]
+                platform_list_uid = [item for item in platform_list_uid for _ in range(multiplier)]
+
+                # add each batch onto main list
+                X_new.append(X_uid_resized)
+                y_new.append(y_uid_resized)
+                tissue_list_new.append(tissue_list_uid)
+                platform_list_new.append(platform_list_uid)
+
+            X_new = np.concatenate(X_new, axis=0)
+            y_new = np.concatenate(y_new, axis=0)
+            tissue_list_new = np.concatenate(tissue_list_new, axis=0)
+            platform_list_new = np.concatenate(platform_list_new, axis=0)
+        else:
+            # resize each image individually
+            X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
+
+            # loop through each unique tissue and resize images by tissue median
+            for img in range(X.shape[0]):
+                # subset lists to include only current tissue
+                X_batch, y_batch = X[img:(img + 1)], y[img:(img + 1)]
+                tissue_list_batch = tissue_list[img:(img + 1)]
+                platform_list_batch = platform_list[img:(img + 1)]
+
+                # compute appropriate resize ratio
+                median_cell_size = compute_cell_size({'X': X_batch, 'y': y_batch})
+                resize_ratio = median_cell_size / resize_target
+
+                # resize the data
+                X_batch_resized, y_batch_resized = \
+                    reshape_training_data(X_data=X_batch, y_data=y_batch, resize_ratio=resize_ratio,
+                                          final_size=output_shape, tolerance=resize_tolerance)
+
+                # to preserve category labels, we need to figure out how much the array grew by
+                multiplier = int(X_batch_resized.shape[0] / X_batch.shape[0])
+
+                # then we duplicate the labels in place to match expanded array size
+                tissue_list_batch = [item for item in tissue_list_batch for _ in range(multiplier)]
+                platform_list_batch = \
+                    [item for item in platform_list_batch for _ in range(multiplier)]
+
+                # add each batch onto main list
+                X_new.append(X_batch_resized)
+                y_new.append(y_batch_resized)
+                tissue_list_new.append(tissue_list_batch)
+                platform_list_new.append(platform_list_batch)
+
+            X_new = np.concatenate(X_new, axis=0)
+            y_new = np.concatenate(y_new, axis=0)
+            tissue_list_new = np.concatenate(tissue_list_new, axis=0)
+            platform_list_new = np.concatenate(platform_list_new, axis=0)
+
+        return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
+                'platform_list': platform_list_new}
+
+    def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
                       data_split=(0.8, 0.1, 0.1), seed=0):
         """Construct a dataset for model training and evaluation
 
@@ -267,7 +376,7 @@ class DatasetBuilder(object):
                 a single tissue type, or 'all'
             platforms: which platforms to include. Must be either a list of platform types,
                 a single platform type, or 'all'
-            shape: output shape for dataset
+            output_shape: output shape for dataset
             resize: flag to control resizing the input data.
                 Valid arguments:
                     - False. No resizing
@@ -313,21 +422,32 @@ class DatasetBuilder(object):
                 'platforms should be "all", one of {}, or a list of acceptable '
                 'platform types'.format(self.all_platforms))
 
+        valid_resize = [False, 'by_tissue', 'by_image']
+        if resize not in valid_resize:
+            raise ValueError('resize must be one of {}'.format(valid_resize))
+
         # if any of the split parameters are different we need to reload the dataset
         if self.seed != seed or self.data_split != data_split:
             self._load_all_experiments(data_split=data_split, seed=seed)
 
-        # TODO resize data
-        # if shape ! shape
+        # subset dicts to include requested tissues and platforms
+        train_dict, val_dict, test_dict = self.train_dict, self.val_dict, self.test_dict
+        train_dict = self._subset_data_dict(data_dict=train_dict, tissues=tissues,
+                                            platforms=platforms)
 
-        train_dict_subset = self._subset_data_dict(data_dict=self.train_dict, tissues=tissues,
-                                                   platforms=platforms)
+        val_dict = self._subset_data_dict(data_dict=val_dict, tissues=tissues,
+                                          platforms=platforms)
 
-        val_dict_subset = self._subset_data_dict(data_dict=self.val_dict, tissues=tissues,
-                                                 platforms=platforms)
+        test_dict = self._subset_data_dict(data_dict=test_dict, tissues=tissues,
+                                           platforms=platforms)
 
-        test_dict_subset = self._subset_data_dict(data_dict=self.test_dict, tissues=tissues,
-                                                  platforms=platforms)
+        # if necessary, reshape and resize data to be of correct output size
+        if train_dict['X'].shape[1:3] != output_shape or resize is not False:
+            train_dict = self._reshape_dict(dict=train_dict, resize=resize,
+                                            output_shape=output_shape)
+            val_dict = self._reshape_dict(dict=val_dict, resize=resize,
+                                          output_shape=output_shape)
+            test_dict = self._reshape_dict(dict=test_dict, resize=resize,
+                                           output_shape=output_shape)
 
-        return train_dict_subset, val_dict_subset, test_dict_subset
-
+        return train_dict, val_dict, test_dict

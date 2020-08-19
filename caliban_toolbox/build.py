@@ -51,8 +51,9 @@ def compute_cell_size(npz_file, method='median', by_image=True):
     Raises: ValueError if data does have len(shape) of 4
     """
 
-    valid_methods = set(['median', 'mean'])
-    if method.lower() not in valid_methods:
+    valid_methods = {'median', 'mean'}
+    method = method.lower()
+    if method not in valid_methods:
         raise ValueError('Invalid method supplied: got {}, '
                          'method must be one of {}'.format(method, valid_methods))
 
@@ -82,16 +83,16 @@ def compute_cell_size(npz_file, method='median', by_image=True):
     else:
         all_cell_sizes = np.concatenate(cell_sizes)
         if method == 'mean':
-            average_cell_sizes = [np.mean(all_cell_sizes)]
+            average_cell_sizes = np.mean(all_cell_sizes)
         elif method == 'median':
-            average_cell_sizes = [np.median(all_cell_sizes)]
+            average_cell_sizes = np.median(all_cell_sizes)
         else:
             raise ValueError('Invalid method supplied')
 
     return average_cell_sizes
 
 
-def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_ratio):
+def reshape_training_data(X_data, y_data, resize_ratio, final_size, stride_ratio=1, tolerance=1.5):
     """Takes a stack of X and y data and reshapes and crops them to match output dimensions
 
     Args:
@@ -100,14 +101,14 @@ def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_rati
         resize_ratio: resize ratio for the images
         final_size: the desired shape of the output image
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
+        tolerance: ratio that determines when resizing occurs
 
     Returns:
         reshaped_X, reshaped_y: resized and cropped version of input images
     """
 
     # resize if needed
-    # TODO: Add tolerance to control when resizing happens
-    if resize_ratio != 1:
+    if resize_ratio > tolerance or resize_ratio < (1 / tolerance):
         new_shape = (int(X_data.shape[1] * resize_ratio),
                      int(X_data.shape[2] * resize_ratio))
 
@@ -154,73 +155,6 @@ def pad_image_stack(images, crop_size):
         new_images = np.zeros((images.shape[0], new_row_len, new_col_len, images.shape[3]))
         new_images[:, :row_len, :col_len, :] = images
         return new_images
-
-
-def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 256)):
-    """Take a series of NPZ files and combine together into single training NPZ
-
-    Args:
-        npz_list: list of NPZ files to combine. Currently only works on 2D static data
-        resize_ratios: ratio used to resize each NPZ if data is of different resolutions. Must
-            be either 1 for each NPZ file, or 1 for each image within the NPZ file
-        stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
-        final_size: size of the final crops to be produced
-
-    Returns:
-        np.array: array containing resized and cropped data from all input NPZs
-
-    Raises:
-        ValueError: If mismatch between number of resize ratios and number of images
-    """
-    combined_x = []
-    combined_y = []
-
-    for idx, npz in enumerate(npz_list):
-        current_x = npz['X']
-        current_y = npz['y']
-        current_resize = resize_ratios[idx]
-
-        # same resize value for entire NPZ file
-        if len(current_resize) == 1:
-            current_x, current_y = reshape_training_image(X_data=current_x,
-                                                          y_data=current_y,
-                                                          resize_ratio=current_resize[0],
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
-            combined_x.append(current_x)
-            combined_y.append(current_y)
-
-        # different resize value for each image within the NPZ file
-        else:
-            unique_x, unique_y = [], []
-            if len(current_resize) != current_x.shape[0]:
-                raise ValueError('Resize ratios must have same length as image data.'
-                                 'Provided resize ratios has length {} '
-                                 'and image data has shape {}'.format(len(resize_ratios),
-                                                                      current_x.shape))
-            # loop over each image and resize + crop appropriately
-            for img in range(current_x.shape[0]):
-                x_batch, y_batch = reshape_training_image(X_data=current_x[img:(img + 1)],
-                                                          y_data=current_y[img:(img + 1)],
-                                                          resize_ratio=current_resize[img],
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
-                unique_x.append(x_batch)
-                unique_y.append(y_batch)
-
-            # combine all images from this NPZ together
-            current_x = np.concatenate(unique_x, axis=0)
-            current_y = np.concatenate(unique_y, axis=0)
-
-            # add combined images from this NPZ onto main accumulator list
-            combined_x.append(current_x)
-            combined_y.append(current_y)
-
-    # combine all images from all NPZs together
-    combined_x = np.concatenate(combined_x, axis=0)
-    combined_y = np.concatenate(combined_y, axis=0)
-
-    return combined_x, combined_y
 
 
 def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
