@@ -91,7 +91,7 @@ def _create_test_dict(tissues, platforms):
     return {'X': X_data, 'y': y_data, 'tissue_list': tissue_list, 'platform_list': platform_list}
 
 
-def mocked_compute_cell_size(data_dict):
+def mocked_compute_cell_size(data_dict, by_image):
     """Mocks compute cell size so we don't need to create synthetic data with correct cell size"""
     X = data_dict['X']
     constant_val = X[0, 0, 0, 0]
