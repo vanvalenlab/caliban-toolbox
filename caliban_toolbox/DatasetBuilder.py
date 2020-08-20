@@ -145,7 +145,6 @@ class DatasetBuilder(object):
 
         # loop through all experiments
         for folder in self.experiment_folders:
-
             # Get all NPZ files from each experiment
             folder_path = os.path.join(self.dataset_path, folder)
             X, y, tissue, platform = self._load_experiment(folder_path)
@@ -301,7 +300,8 @@ class DatasetBuilder(object):
                 tissue_list_uid, platform_list_uid = tissue_list[uid_idx], platform_list[uid_idx]
 
                 # compute appropriate resize ratio
-                median_cell_size = compute_cell_size({'X': X_uid, 'y': y_uid})
+                median_cell_size = compute_cell_size({'X': X_uid, 'y': y_uid},
+                                                     by_image=False)
                 resize_ratio = median_cell_size / resize_target
 
                 # resize the data
@@ -338,7 +338,8 @@ class DatasetBuilder(object):
                 platform_list_batch = platform_list[img:(img + 1)]
 
                 # compute appropriate resize ratio
-                median_cell_size = compute_cell_size({'X': X_batch, 'y': y_batch})
+                median_cell_size = compute_cell_size({'X': X_batch, 'y': y_batch}, by_image=False)
+
                 resize_ratio = median_cell_size / resize_target
 
                 # resize the data
@@ -404,7 +405,7 @@ class DatasetBuilder(object):
         return cleaned_y
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
-                      data_split=(0.8, 0.1, 0.1), seed=0):
+                      data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
         """Construct a dataset for model training and evaluation
 
         Args:
@@ -420,6 +421,7 @@ class DatasetBuilder(object):
                     - by_image. REsizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
             seed: seed for reproducible splitting of dataset
+            **kwargs: other arguments to be passed to helper functions
 
         Returns:
             list of dicts containing the split dataset
@@ -476,10 +478,19 @@ class DatasetBuilder(object):
 
             # if necessary, reshape and resize data to be of correct output size
             if current_dict['X'].shape[1:3] != output_shape or resize is not False:
+                resize_target = kwargs.get('resize_target', 400)
+                resize_tolerance = kwargs.get('resize_tolerance', 1.5)
                 current_dict = self._reshape_dict(dict=current_dict, resize=resize,
-                                                  output_shape=output_shape)
+                                                  output_shape=output_shape,
+                                                  resize_target=resize_target,
+                                                  resize_tolerance=resize_tolerance)
             # clean labels
-            cleaned_labels = self._clean_labels(current_dict['y'])
+            relabel_hard = kwargs.get('relabel_hard', False)
+            small_object_threshold = kwargs.get('small_object_threshold', 0)
+            min_objects = kwargs.get('min_objects', 0)
+            cleaned_labels = self._clean_labels(y=current_dict['y'], relabel_hard=relabel_hard,
+                                                small_object_threshold=small_object_threshold,
+                                                min_objects=min_objects)
             current_dict['y'] = cleaned_labels
 
             dicts[idx] = current_dict
