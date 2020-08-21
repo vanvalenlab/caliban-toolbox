@@ -45,7 +45,7 @@ def compute_cell_size(npz_file, method='median', by_image=True):
             the cell size across the entire npz is returned
 
     Returns:
-        average_sizes: list of typical cell size in NPZ
+        average_sizes: list of typical cell size in NPZ. If no cells, returns None
 
     Raises: ValueError if invalid method supplied
     Raises: ValueError if data does have len(shape) of 4
@@ -66,9 +66,15 @@ def compute_cell_size(npz_file, method='median', by_image=True):
 
     for i in range(labels.shape[0]):
         current_label = labels[i, :, :, 0]
-        area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
 
-        cell_sizes.append(area)
+        # check to make sure array contains cells
+        if len(np.unique(current_label)) > 1:
+            area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
+            cell_sizes.append(area)
+
+    # if all images were empty, return NA
+    if cell_sizes == []:
+        return None
 
     # compute for each list corresponding to each image
     if by_image:

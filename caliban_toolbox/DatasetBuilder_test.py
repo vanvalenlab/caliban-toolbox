@@ -370,21 +370,33 @@ def test__clean_labels(tmp_path):
     test_labels = np.zeros((2, 50, 50, 1))
     test_labels[0, ..., 0] = test_label
 
+    test_X = np.zeros_like(test_labels)
+    test_tissue = ['tissue1', 'tissue2']
+    test_platform = ['platform2', 'platform3']
+
+    test_dict = {'X': test_X, 'y': test_labels, 'tissue_list': test_tissue,
+                 'platform_list': test_platform}
+
     # relabel sequential
-    new_y = db._clean_labels(y=test_labels, relabel_hard=False)
-    assert len(np.unique(new_y)) == 2 + 1
+    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=False)
+    assert len(np.unique(cleaned_dict['y'])) == 2 + 1
 
     # true relabel
-    new_y = db._clean_labels(y=test_labels, relabel_hard=True)
-    assert len(np.unique(new_y)) == 3 + 1
+    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True)
+    assert len(np.unique(cleaned_dict['y'])) == 3 + 1
 
     # remove small objects
-    new_y = db._clean_labels(y=test_labels, relabel_hard=True, small_object_threshold=15)
-    assert len(np.unique(new_y)) == 2 + 1
+    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True, small_object_threshold=15)
+    assert len(np.unique(cleaned_dict['y'])) == 2 + 1
 
     # remove sparse images
-    new_y = db._clean_labels(y=test_labels, relabel_hard=True, min_objects=1)
-    assert new_y.shape[0] == 1
+    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True, min_objects=1)
+    assert cleaned_dict['y'].shape[0] == 1
+    assert cleaned_dict['X'].shape[0] == 1
+    assert len(cleaned_dict['tissue_list']) == 1
+    assert cleaned_dict['tissue_list'][0] == 'tissue1'
+    assert len(cleaned_dict['platform_list']) == 1
+    assert cleaned_dict['platform_list'][0] == 'platform2'
 
 
 def test_build_dataset(tmp_path):
@@ -430,3 +442,7 @@ def test_build_dataset(tmp_path):
     # check that NPZs have been relabeled
     for current_dict in output_dicts:
         assert len(np.unique(current_dict['y'])) == 2
+
+    # full runthrough with default options changed
+    _ = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(10, 10),
+                         relabel_hard=True, resize='by_image', small_object_threshold=5)

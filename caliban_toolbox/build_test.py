@@ -73,6 +73,19 @@ def test_compute_cell_size():
     cell_sizes = build.compute_cell_size(npz_file=example_npz, method='mean', by_image=False)
     assert np.round(cell_sizes, 2) == [37.14]  # mean across all images
 
+    # adding blank images shouldn't change the value returned
+    labels_blank = np.zeros((5, 40, 40, 1))
+    labels_blank[1:4, ...] = labels
+
+    cell_sizes = build.compute_cell_size(npz_file={'y': labels_blank}, method='mean',
+                                         by_image=False)
+    assert np.round(cell_sizes, 2) == [37.14]  # mean across all images
+
+    # completely blank image should return None
+    cell_sizes = build.compute_cell_size(npz_file={'y': np.zeros((3, 40, 40, 1))}, method='mean',
+                                         by_image=False)
+    assert cell_sizes is None
+
     # incorrect method
     with pytest.raises(ValueError):
         _ = build.compute_cell_size(npz_file=example_npz, method='bad_method', by_image=True)

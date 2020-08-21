@@ -302,7 +302,12 @@ class DatasetBuilder(object):
                 # compute appropriate resize ratio
                 median_cell_size = compute_cell_size({'X': X_uid, 'y': y_uid},
                                                      by_image=False)
-                resize_ratio = median_cell_size / resize_target
+
+                # check for empty images
+                if median_cell_size is not None:
+                    resize_ratio = median_cell_size / resize_target
+                else:
+                    resize_ratio = 1
 
                 # resize the data
                 X_uid_resized, y_uid_resized = reshape_training_data(X_data=X_uid, y_data=y_uid,
@@ -340,7 +345,11 @@ class DatasetBuilder(object):
                 # compute appropriate resize ratio
                 median_cell_size = compute_cell_size({'X': X_batch, 'y': y_batch}, by_image=False)
 
-                resize_ratio = median_cell_size / resize_target
+                # check for empty images
+                if median_cell_size is not None:
+                    resize_ratio = median_cell_size / resize_target
+                else:
+                    resize_ratio = 1
 
                 # resize the data
                 X_batch_resized, y_batch_resized = \
@@ -370,19 +379,21 @@ class DatasetBuilder(object):
         return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
                 'platform_list': platform_list_new}
 
-    def _clean_labels(self, y, relabel_hard=False, small_object_threshold=0, min_objects=0):
+    def _clean_labels(self, dict, relabel_hard=False, small_object_threshold=0, min_objects=0):
         """Cleans labels prior to creating final dict
 
         Args:
+            dict: dictionary of training data
             relabel_hard: if True, relabels image with label. Otherwise,
                 uses relabel_sequential.
             small_object_threshold: threshold for removing small objects
             min_objects: minimum number of objects per image
 
         Returns:
-            cleaned_y: labels with relevant transformations applied
+            cleaned_dict: dictionary with cleaned labels
         """
-
+        X, y = dict['X'], dict['y']
+        tissue_list, platform_list = np.array(dict['tissue_list']), np.array(dict['platform_list'])
         keep_idx = np.repeat(True, y.shape[0])
         cleaned_y = np.zeros_like(y)
 
@@ -400,9 +411,16 @@ class DatasetBuilder(object):
 
             cleaned_y[i, :, :, 0] = y_new
 
+        # subset all dict members to include only relevant images
         cleaned_y = cleaned_y[keep_idx]
+        cleaned_X = X[keep_idx]
+        cleaned_tissue = tissue_list[keep_idx]
+        cleaned_platform = platform_list[keep_idx]
 
-        return cleaned_y
+        cleaned_dict = {'X': cleaned_X, 'y': cleaned_y, 'tissue_list': list(cleaned_tissue),
+                        'platform_list': list(cleaned_platform)}
+
+        return cleaned_dict
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
                       data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
@@ -488,11 +506,9 @@ class DatasetBuilder(object):
             relabel_hard = kwargs.get('relabel_hard', False)
             small_object_threshold = kwargs.get('small_object_threshold', 0)
             min_objects = kwargs.get('min_objects', 0)
-            cleaned_labels = self._clean_labels(y=current_dict['y'], relabel_hard=relabel_hard,
-                                                small_object_threshold=small_object_threshold,
-                                                min_objects=min_objects)
-            current_dict['y'] = cleaned_labels
-
+            current_dict = self._clean_labels(dict=current_dict, relabel_hard=relabel_hard,
+                                              small_object_threshold=small_object_threshold,
+                                              min_objects=min_objects)
             dicts[idx] = current_dict
 
         return dicts
