@@ -96,9 +96,16 @@ def mocked_compute_cell_size(data_dict, by_image):
     X = data_dict['X']
     constant_val = X[0, 0, 0, 0]
 
-    multiplier = 400 + (400 * constant_val)
+    # The default resize is 400. We want to create median cell sizes that divide evenly
+    # into that number when computing the desired resize ratio
 
-    return multiplier
+    # even constant_vals will return a median cell size 1/4 the size of the target, odds 4x
+    if constant_val % 2 == 0:
+        cell_size = 100
+    else:
+        cell_size = 1600
+
+    return cell_size
 
 
 def test__init__(tmp_path):
@@ -294,6 +301,8 @@ def test__reshape_dict_no_resize(tmp_path):
     X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
     assert X_reshaped.shape[1:3] == output_shape
 
+    assert X_reshaped.shape[0] == 4 * data_dict['X'].shape[0]
+
     # make sure that for each tissue, the arrays with correct value have correct tissue label
     for constant_val, tissue in enumerate(tissues):
         tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
@@ -321,14 +330,24 @@ def test__reshape_dict_by_tissue(tmp_path, mocker):
 
     # make sure that for each tissue, the arrays with correct value have correct tissue label
     for constant_val, tissue in enumerate(tissues):
-        tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
+        # each image was tagged with a different, compute that here
+        image_val = np.max(X_reshaped, axis=(1, 2, 3))
+
+        tissue_idx = image_val == constant_val
         tissue_labels = np.array(tissue_list_reshaped)[tissue_idx]
         assert np.all(tissue_labels == tissue)
 
-        # Each tissue type starts with length 5, and is resized according to its constant value
-        assert len(tissue_labels) == 5 * ((constant_val + 1) ** 2)
+        # There were originally 5 images of each tissue type. Tissue types with even values
+        # are resized to be 2x larger on each dimension, and should have 4x more images
+        if constant_val % 2 == 0:
+            assert len(tissue_labels) == 5 * 4
+        # tissue types with odd values are resized to be smaller, which leads to same number
+        # of unique images due to padding
+        else:
+            assert len(tissue_labels) == 5
 
 
+# TODO: Is there a way to check the resize value of each unique image?
 def test__reshape_dict_by_image(tmp_path, mocker):
     mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
     # workaround so that __init__ doesn't throw an error
@@ -349,12 +368,21 @@ def test__reshape_dict_by_image(tmp_path, mocker):
 
     # make sure that for each tissue, the arrays with correct value have correct tissue label
     for constant_val, tissue in enumerate(tissues):
-        tissue_idx = X_reshaped[:, 0, 0, 0] == constant_val
+        # each image was tagged with a different, compute that here
+        image_val = np.max(X_reshaped, axis=(1, 2, 3))
+
+        tissue_idx = image_val == constant_val
         tissue_labels = np.array(tissue_list_reshaped)[tissue_idx]
         assert np.all(tissue_labels == tissue)
 
-        # Each tissue type starts with length 5, and is resized according to its constant value
-        assert len(tissue_labels) == 5 * ((constant_val + 1) ** 2)
+        # There were originally 5 images of each tissue type. Tissue types with even values
+        # are resized to be 2x larger on each dimension, and should have 4x more images
+        if constant_val % 2 == 0:
+            assert len(tissue_labels) == 5 * 4
+        # tissue types with odd values are resized to be smaller, which leads to same number
+        # of unique images due to padding
+        else:
+            assert len(tissue_labels) == 5
 
 
 def test__clean_labels(tmp_path):

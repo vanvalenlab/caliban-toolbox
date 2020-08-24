@@ -305,7 +305,7 @@ class DatasetBuilder(object):
 
                 # check for empty images
                 if median_cell_size is not None:
-                    resize_ratio = median_cell_size / resize_target
+                    resize_ratio = np.sqrt(resize_target / median_cell_size)
                 else:
                     resize_ratio = 1
 
@@ -347,7 +347,7 @@ class DatasetBuilder(object):
 
                 # check for empty images
                 if median_cell_size is not None:
-                    resize_ratio = median_cell_size / resize_target
+                    resize_ratio = np.sqrt(resize_target / median_cell_size)
                 else:
                     resize_ratio = 1
 
