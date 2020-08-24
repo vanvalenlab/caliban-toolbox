@@ -173,7 +173,8 @@ def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
         seed: random seed for reproducible splits
 
     Returns:
-        list of X and y data split appropriately
+        list of X and y data split appropriately. If dataset is too small for all splits,
+            returns None for remaining splits
 
     Raises:
         ValueError: if ratios do not sum to 1
@@ -195,20 +196,44 @@ def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
 
     train_ratio, val_ratio, test_ratio = data_split
 
+    # 1 image, train split only
+    if X_data.shape[0] == 1:
+        return X_data, y_data, None, None, None, None
+
+    # 2 images, train and val split only
+    if X_data.shape[0] == 2:
+        return X_data[:1, ...], y_data[:1, ...], X_data[1:, ...], y_data[1:, ...], None, None
+
     # compute fraction not in train
-    remainder_size = np.round(1 - train_ratio, decimals=2)
+    val_remainder_ratio = np.round(1 - train_ratio, decimals=2)
+    val_remainder_count = X_data.shape[0] * val_remainder_ratio
+    # not enough data for val split, put minimum (1) in each split
+    if val_remainder_count < 1:
+        X_train, y_train = X_data[:-2], y_data[:-2]
+        X_val, y_val = X_data[-1:], y_data[-1:]
+        X_test, y_test = X_data[-2:-1], y_data[-2:-1]
+        return X_train, y_train, X_val, y_val, X_test, y_test
 
     # split dataset into train and remainder
     X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
-                                                                  test_size=remainder_size,
+                                                                  test_size=val_remainder_ratio,
                                                                   random_state=seed)
 
     # compute fraction of remainder that is test
-    test_size = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
+    test_remainder_ratio = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
+    test_remainder_count = X_remainder.shape[0] * test_remainder_ratio
+
+    # not enough data for test split, put minimum (1) in test split
+    if test_remainder_count < 1:
+        X_test, y_test = X_train[-1:], y_train[-1:]
+        X_val, y_val = X_remainder, y_remainder
+        X_train, y_train = X_train[:-1], y_train[:-1]
+
+        return X_train, y_train, X_val, y_val, X_test, y_test
 
     # split remainder into val and test
     X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
-                                                    test_size=test_size,
+                                                    test_size=test_remainder_ratio,
                                                     random_state=seed)
 
     return X_train, y_train, X_val, y_val, X_test, y_test

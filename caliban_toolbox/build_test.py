@@ -43,6 +43,18 @@ def _make_npzs(sizes, num_images):
     return npz_list
 
 
+def _all_unique_vals(arrays):
+    unique_vals = []
+    for array in arrays:
+        unique_vals.append(np.unique(array))
+
+    unique_vals = np.concatenate(unique_vals, axis=0)
+
+    unique_in_all = np.unique(unique_vals)
+
+    return len(unique_vals) == len(unique_in_all)
+
+
 def test_compute_cell_size():
     labels = np.zeros((3, 40, 40, 1), dtype='int')
 
@@ -216,6 +228,11 @@ def test_train_val_test_split():
     X_data = np.zeros((100, 5, 5, 3))
     y_data = np.zeros((100, 5, 5, 1))
 
+    unique_vals = np.arange(100)
+    for val in unique_vals:
+        X_data[val, ...] = val + 1
+        y_data[val, ...] = -(val + 1)
+
     train_ratio, val_ratio, test_ratio = 0.7, 0.2, 0.1
 
     X_train, y_train, X_val, y_val, X_test, y_test, = \
@@ -232,12 +249,52 @@ def test_train_val_test_split():
     assert X_test.shape[0] == 100 * test_ratio
     assert y_test.shape[0] == 100 * test_ratio
 
+    assert _all_unique_vals((X_train, y_train, X_val, y_val, X_test, y_test))
+
+    # ensure that None is returned for val and test when data is not large enough to be split
+    X_train, y_train, X_val, y_val, X_test, y_test, = \
+        build.train_val_test_split(X_data=X_data[:1],
+                                   y_data=y_data[:1],
+                                   data_split=[train_ratio, val_ratio, test_ratio])
+    assert X_train.shape[0] == y_train.shape[0] == 1
+    assert np.all([val is None for val in [X_val, y_val, X_test, y_test]])
+
+    # ensure that None is returned for test when data is not large enough to be split
+    X_train, y_train, X_val, y_val, X_test, y_test, = \
+        build.train_val_test_split(X_data=X_data[:2],
+                                   y_data=y_data[:2],
+                                   data_split=[train_ratio, val_ratio, test_ratio])
+    assert np.all([val.shape[0] == 1 for val in [X_train, y_train, X_val, y_val]])
+    assert np.all([val is None for val in [X_test, y_test]])
+    assert _all_unique_vals((X_train, y_train, X_val, y_val))
+
+    # Adjust data appropriately when split sizes will result in zero values for val and test
+    X_train, y_train, X_val, y_val, X_test, y_test, = \
+        build.train_val_test_split(X_data=X_data[:5],
+                                   y_data=y_data[:5],
+                                   data_split=[0.8, 0.1, 0.1])
+    assert X_train.shape[0] == y_train.shape[0] == 3
+    assert np.all([val.shape[0] == 1 for val in [X_val, y_val, X_test, y_test]])
+    assert _all_unique_vals((X_train, y_train, X_val, y_val, X_test, y_test))
+
+    # Adjust data appropriately when split sizes will result in zero values for test
+    X_train, y_train, X_val, y_val, X_test, y_test, = \
+        build.train_val_test_split(X_data=X_data[:9],
+                                   y_data=y_data[:9],
+                                   data_split=[0.8, 0.1, 0.1])
+    assert X_train.shape[0] == y_train.shape[0] == 7
+    assert np.all([val.shape[0] == 1 for val in [X_val, y_val, X_test, y_test]])
+    assert _all_unique_vals((X_train, y_train, X_val, y_val, X_test, y_test))
+
+    # data split includes 0 for one of splits
     with pytest.raises(ValueError):
         _ = build.train_val_test_split(X_data=X_data, y_data=y_data, data_split=[0, 0.5, 0.5])
 
+    # data split sums to more than 1
     with pytest.raises(ValueError):
         _ = build.train_val_test_split(X_data=X_data, y_data=y_data, data_split=[0.5, 0.5, 0.5])
 
+    # different sizes for X and y
     with pytest.raises(ValueError):
         _ = build.train_val_test_split(X_data=X_data[:5], y_data=y_data,
                                        data_split=[0.5, 0.5, 0.5])
