@@ -28,15 +28,24 @@ import json
 import pytest
 
 import numpy as np
+from pathlib import Path
 
 
-from caliban_toolbox.DatasetBuilder import train_val_test_split, DatasetBuilder
+from caliban_toolbox.DatasetBuilder import DatasetBuilder
 
 
 def _create_test_npz(path, constant_value=1, X_shape=(10, 20, 20, 3), y_shape=(10, 20, 20, 1)):
     X_data = np.full(X_shape, constant_value)
     y_data = np.full(y_shape, constant_value)
     np.savez(path, X=X_data, y=y_data)
+
+
+def _create_minimal_dataset(path):
+    """Creates a minimal dataset so that __init__ checks pass"""
+    exp_path = os.path.join(path, 'example_exp1')
+    os.makedirs(exp_path)
+    Path(os.path.join(exp_path, 'metadata.json')).touch()
+    Path(os.path.join(exp_path, 'example_data.npz')).touch()
 
 
 def _create_test_dataset(path, experiments, tissues, platforms, npz_num):
@@ -109,19 +118,60 @@ def mocked_compute_cell_size(data_dict, by_image):
 
 
 def test__init__(tmp_path):
-    # no folders in dataset
-    with pytest.raises(ValueError):
-        _ = DatasetBuilder(dataset_path=tmp_path)
-
-    # single folder
-    os.makedirs(os.path.join(tmp_path, 'example_folder'))
-    db = DatasetBuilder(dataset_path=tmp_path)
+    _create_minimal_dataset(tmp_path)
+    db = DatasetBuilder(tmp_path)
 
     assert db.dataset_path == tmp_path
 
     # bad path
     with pytest.raises(ValueError):
         _ = DatasetBuilder(dataset_path='bad_path')
+
+
+def test__validate_dataset(tmp_path):
+    _create_minimal_dataset(tmp_path)
+    db = DatasetBuilder(dataset_path=tmp_path)
+
+    # bad path
+    with pytest.raises(ValueError):
+        db._validate_dataset('bad_path')
+
+    dataset_path = os.path.join(tmp_path, 'example_dataset')
+    os.makedirs(dataset_path)
+
+    # no folders in supplied dataset
+    with pytest.raises(ValueError):
+        db._validate_dataset(dataset_path)
+
+    os.makedirs(os.path.join(dataset_path, 'experiment_1'))
+    Path(os.path.join(dataset_path, 'experiment_1', 'example_file.npz')).touch()
+
+    # supplied experiment has an NPZ and no metadata file
+    with pytest.raises(ValueError):
+        db._validate_dataset(tmp_path)
+
+    # directory has a metadata file and no NPZ
+    os.remove(os.path.join(dataset_path, 'experiment_1', 'example_file.npz'))
+    Path(os.path.join(dataset_path, 'experiment_1', 'metadata.json')).touch()
+
+    with pytest.raises(ValueError):
+        db._validate_dataset(os.path.join(tmp_path))
+
+
+def test__get_metadata(tmp_path):
+    tissues = ['tissue1', 'tissue2']
+    platforms = ['platform1', 'platform2']
+    experiments = ['exp1', 'exp2']
+    npzs = [1, 1]
+
+    _create_test_dataset(path=tmp_path, experiments=experiments, platforms=platforms,
+                         tissues=tissues, npz_num=npzs)
+
+    db = DatasetBuilder(tmp_path)
+    for i in range(len(experiments)):
+        metadata = db._get_metadata(os.path.join(tmp_path, experiments[i]))
+        assert metadata['tissue'] == tissues[i]
+        assert metadata['platform'] == platforms[i]
 
 
 def test__identify_tissue_and_platform_types(tmp_path):
@@ -237,8 +287,7 @@ def test__load_all_experiments(tmp_path):
 
 
 def test__subset_data_dict(tmp_path):
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
 
     X = np.arange(100)
     y = np.arange(100)
@@ -285,8 +334,7 @@ def test__subset_data_dict(tmp_path):
 
 
 def test__reshape_dict_no_resize(tmp_path):
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
     # create dict
@@ -312,8 +360,7 @@ def test__reshape_dict_no_resize(tmp_path):
 
 def test__reshape_dict_by_tissue(tmp_path, mocker):
     mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
     # create dict
@@ -350,8 +397,7 @@ def test__reshape_dict_by_tissue(tmp_path, mocker):
 # TODO: Is there a way to check the resize value of each unique image?
 def test__reshape_dict_by_image(tmp_path, mocker):
     mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
     # create dict
@@ -386,8 +432,7 @@ def test__reshape_dict_by_image(tmp_path, mocker):
 
 
 def test__clean_labels(tmp_path):
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
     test_label = np.zeros((50, 50))
@@ -477,8 +522,7 @@ def test_build_dataset(tmp_path):
 
 
 def test_summarize_dataset(tmp_path):
-    # workaround so that __init__ doesn't throw an error
-    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
     # create dict

@@ -23,7 +23,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import warnings
 import math
 
 import numpy as np
@@ -198,20 +198,28 @@ def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
 
     # 1 image, train split only
     if X_data.shape[0] == 1:
+        warnings.warn('Only one image in current NPZ, returning training split only')
         return X_data, y_data, None, None, None, None
 
     # 2 images, train and val split only
     if X_data.shape[0] == 2:
+        warnings.warn('Only two images in current NPZ, returning training and val split only')
         return X_data[:1, ...], y_data[:1, ...], X_data[1:, ...], y_data[1:, ...], None, None
 
     # compute fraction not in train
     val_remainder_ratio = np.round(1 - train_ratio, decimals=2)
     val_remainder_count = X_data.shape[0] * val_remainder_ratio
+
     # not enough data for val split, put minimum (1) in each split
     if val_remainder_count < 1:
-        X_train, y_train = X_data[:-2], y_data[:-2]
-        X_val, y_val = X_data[-1:], y_data[-1:]
-        X_test, y_test = X_data[-2:-1], y_data[-2:-1]
+        warnings.warn('Not enough data in current NPZ for specified data split.'
+                      'Returning modified data split')
+        X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
+                                                                      test_size=2,
+                                                                      random_state=seed)
+        X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
+                                                        test_size=1,
+                                                        random_state=seed)
         return X_train, y_train, X_val, y_val, X_test, y_test
 
     # split dataset into train and remainder
@@ -223,11 +231,14 @@ def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
     test_remainder_ratio = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
     test_remainder_count = X_remainder.shape[0] * test_remainder_ratio
 
-    # not enough data for test split, put minimum (1) in test split
+    # not enough data in remainder for test split, put minimum (1) in test split from train split
     if test_remainder_count < 1:
-        X_test, y_test = X_train[-1:], y_train[-1:]
+        warnings.warn('Not enough data in current NPZ for specified data split.'
+                      'Returning modified data split')
+        X_train, X_test, y_train, y_test = train_test_split(X_train, y_train,
+                                                            test_size=1,
+                                                            random_state=seed)
         X_val, y_val = X_remainder, y_remainder
-        X_train, y_train = X_train[:-1], y_train[:-1]
 
         return X_train, y_train, X_val, y_val, X_test, y_test
 

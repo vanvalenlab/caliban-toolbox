@@ -42,22 +42,13 @@ class DatasetBuilder(object):
     Args:
         dataset_path: path to dataset. Within the dataset, each unique experiment
             has its own folder with a dedicated metadata file
-
-    Raises:
-        ValueError: if invalid dataset_path
-        ValueError: if no folders in dataset_path
     """
-    def __init__(self,
-                 dataset_path):
+    def __init__(self, dataset_path):
 
-        self.dataset_path = dataset_path
-
-        if not os.path.exists(dataset_path):
-            raise ValueError('Invalid dataset path supplied')
+        self._validate_dataset(dataset_path)
 
         experiment_folders = list_folders(dataset_path)
-        if experiment_folders == []:
-            raise ValueError('No experiment folders found in dataset')
+        self.dataset_path = dataset_path
         self.experiment_folders = experiment_folders
 
         self.all_tissues = []
@@ -72,20 +63,62 @@ class DatasetBuilder(object):
         self.data_split = None
         self.seed = None
 
+    def _validate_dataset(self, dataset_path):
+        """Check to make sure that supplied dataset is formatted appropriately
+
+        Args:
+            dataset_path: path to dataset
+
+        Raises:
+            ValueError: If dataset_path doesn't exist
+            ValueError: If dataset_path doesn't contain any folders
+            ValueError: If dataset_path has any folders without an NPZ file
+            ValueError: If dataset_path has any folders without a metadata file
+        """
+
+        if not os.path.isdir(dataset_path):
+            raise ValueError('Invalid dataset_path, must be a directory')
+        experiment_folders = list_folders(dataset_path)
+
+        if experiment_folders == []:
+            raise ValueError('dataset_path must include at least one folder')
+
+        for folder in experiment_folders:
+            if not os.path.exists(os.path.join(dataset_path, folder, 'metadata.json')):
+                raise ValueError('No metadata file found in {}'.format(folder))
+            npz_files = list_npzs_folder(os.path.join(dataset_path, folder))
+
+            if len(npz_files) == 0:
+                raise ValueError('No NPZ files found in {}'.format(folder))
+
+    def _get_metadata(self, experiment_folder):
+        """Get the metadata associated with a specific experiment
+
+        Args:
+            experiment_folder: folder to get metadata from
+
+        Returns:
+            dictionary containing relevant metadata"""
+
+        metadata_file = os.path.join(self.dataset_path, experiment_folder, 'metadata.json')
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+
+        return metadata
+
     def _identify_tissue_and_platform_types(self):
         """Identify all of the unique tissues and platforms in the dataset"""
 
         tissues = []
         platforms = []
         for folder in self.experiment_folders:
-            file_path = os.path.join(self.dataset_path, folder, 'metadata.json')
-            with open(file_path) as f:
-                metadata = json.load(f)
+            metadata = self._get_metadata(experiment_folder=folder)
+
             tissues.append(metadata['tissue'])
             platforms.append(metadata['platform'])
 
-        self.all_tissues = list(set(tissues))
-        self.all_platforms = list(set(platforms))
+        self.all_tissues.extend(tissues)
+        self.all_platforms.extend(platforms)
 
     def _load_experiment(self, experiment_path):
         """Load the NPZ files present in a single experiment folder
@@ -115,9 +148,7 @@ class DatasetBuilder(object):
             y_list.append(y)
 
         # get associated metadata
-        metadata_path = os.path.join(experiment_path, 'metadata.json')
-        with open(metadata_path) as f:
-            metadata = json.load(f)
+        metadata = self._get_metadata(experiment_folder=experiment_path)
 
         # combine all NPZ files together
         X = np.concatenate(X_list, axis=0)
@@ -285,59 +316,28 @@ class DatasetBuilder(object):
             tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
             platform_list_new = [item for item in platform_list for _ in range(multiplier)]
 
-        elif resize == 'by_tissue':
-            X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
-            unique_tissues = np.unique(tissue_list)
-
-            # loop through each unique tissue and resize images by tissue median
-            for uid in unique_tissues:
-                # subset lists to include only current tissue
-                uid_idx = np.isin(tissue_list, uid)
-                X_uid, y_uid = X[uid_idx], y[uid_idx]
-                tissue_list_uid, platform_list_uid = tissue_list[uid_idx], platform_list[uid_idx]
-
-                # compute appropriate resize ratio
-                median_cell_size = compute_cell_size({'X': X_uid, 'y': y_uid},
-                                                     by_image=False)
-
-                # check for empty images
-                if median_cell_size is not None:
-                    resize_ratio = np.sqrt(resize_target / median_cell_size)
-                else:
-                    resize_ratio = 1
-
-                # resize the data
-                X_uid_resized, y_uid_resized = reshape_training_data(X_data=X_uid, y_data=y_uid,
-                                                                     resize_ratio=resize_ratio,
-                                                                     final_size=output_shape,
-                                                                     tolerance=resize_tolerance)
-
-                # to preserve category labels, we need to figure out how much the array grew by
-                multiplier = int(X_uid_resized.shape[0] / X_uid.shape[0])
-                # then we duplicate the labels in place to match expanded array size
-                tissue_list_uid = [item for item in tissue_list_uid for _ in range(multiplier)]
-                platform_list_uid = [item for item in platform_list_uid for _ in range(multiplier)]
-
-                # add each batch onto main list
-                X_new.append(X_uid_resized)
-                y_new.append(y_uid_resized)
-                tissue_list_new.append(tissue_list_uid)
-                platform_list_new.append(platform_list_uid)
-
-            X_new = np.concatenate(X_new, axis=0)
-            y_new = np.concatenate(y_new, axis=0)
-            tissue_list_new = np.concatenate(tissue_list_new, axis=0)
-            platform_list_new = np.concatenate(platform_list_new, axis=0)
         else:
-            # resize each image individually
             X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
 
-            # loop through each unique tissue and resize images by tissue median
-            for img in range(X.shape[0]):
-                # subset lists to include only current tissue
-                X_batch, y_batch = X[img:(img + 1)], y[img:(img + 1)]
-                tissue_list_batch = tissue_list[img:(img + 1)]
-                platform_list_batch = platform_list[img:(img + 1)]
+            if resize == 'by_tissue':
+                batch_ids = np.unique(tissue_list)
+            else:
+                batch_ids = np.arange(0, X.shape[0])
+
+            # loop over each batch
+            for batch_id in batch_ids:
+
+                # get tissue types that match current tissue type
+                if isinstance(batch_id, str):
+                    batch_idx = np.isin(tissue_list, batch_id)
+
+                # get boolean index for current image
+                else:
+                    batch_idx = np.arange(X.shape[0]) == batch_id
+
+                X_batch, y_batch = X[batch_idx], y[batch_idx]
+                tissue_list_batch = tissue_list[batch_idx]
+                platform_list_batch = platform_list[batch_idx]
 
                 # compute appropriate resize ratio
                 median_cell_size = compute_cell_size({'X': X_batch, 'y': y_batch}, by_image=False)
