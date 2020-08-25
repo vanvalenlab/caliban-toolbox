@@ -31,7 +31,7 @@ import numpy as np
 from pathlib import Path
 
 
-from caliban_toolbox.DatasetBuilder import DatasetBuilder
+from caliban_toolbox.dataset_builder import DatasetBuilder
 
 
 def _create_test_npz(path, constant_value=1, X_shape=(10, 20, 20, 3), y_shape=(10, 20, 20, 1)):
@@ -359,7 +359,7 @@ def test__reshape_dict_no_resize(tmp_path):
 
 
 def test__reshape_dict_by_tissue(tmp_path, mocker):
-    mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
+    mocker.patch('caliban_toolbox.dataset_builder.compute_cell_size', mocked_compute_cell_size)
     _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
@@ -397,7 +397,7 @@ def test__reshape_dict_by_tissue(tmp_path, mocker):
 
 # TODO: Is there a way to check the resize value of each unique image?
 def test__reshape_dict_by_image(tmp_path, mocker):
-    mocker.patch('caliban_toolbox.DatasetBuilder.compute_cell_size', mocked_compute_cell_size)
+    mocker.patch('caliban_toolbox.dataset_builder.compute_cell_size', mocked_compute_cell_size)
     _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
