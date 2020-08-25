@@ -345,7 +345,7 @@ def test__reshape_dict_no_resize(tmp_path):
     # this is 1/2 the size on each dimension as original, so we expect 4x more crops
     output_shape = (20, 20)
 
-    reshaped_dict = db._reshape_dict(dict=data_dict, resize=False, output_shape=output_shape)
+    reshaped_dict = db._reshape_dict(data_dict=data_dict, resize=False, output_shape=output_shape)
     X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
     assert X_reshaped.shape[1:3] == output_shape
 
@@ -371,7 +371,8 @@ def test__reshape_dict_by_tissue(tmp_path, mocker):
     # same size as input data
     output_shape = (40, 40)
 
-    reshaped_dict = db._reshape_dict(dict=data_dict, resize='by_tissue', output_shape=output_shape)
+    reshaped_dict = db._reshape_dict(data_dict=data_dict, resize='by_tissue',
+                                     output_shape=output_shape)
     X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
     assert X_reshaped.shape[1:3] == output_shape
 
@@ -408,7 +409,8 @@ def test__reshape_dict_by_image(tmp_path, mocker):
     # same size as input data
     output_shape = (40, 40)
 
-    reshaped_dict = db._reshape_dict(dict=data_dict, resize='by_image', output_shape=output_shape)
+    reshaped_dict = db._reshape_dict(data_dict=data_dict, resize='by_image',
+                                     output_shape=output_shape)
     X_reshaped, tissue_list_reshaped = reshaped_dict['X'], reshaped_dict['tissue_list']
     assert X_reshaped.shape[1:3] == output_shape
 
@@ -451,19 +453,20 @@ def test__clean_labels(tmp_path):
                  'platform_list': test_platform}
 
     # relabel sequential
-    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=False)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=False)
     assert len(np.unique(cleaned_dict['y'])) == 2 + 1
 
     # true relabel
-    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True)
     assert len(np.unique(cleaned_dict['y'])) == 3 + 1
 
     # remove small objects
-    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True, small_object_threshold=15)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True,
+                                    small_object_threshold=15)
     assert len(np.unique(cleaned_dict['y'])) == 2 + 1
 
     # remove sparse images
-    cleaned_dict = db._clean_labels(dict=test_dict, relabel_hard=True, min_objects=1)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True, min_objects=1)
     assert cleaned_dict['y'].shape[0] == 1
     assert cleaned_dict['X'].shape[0] == 1
     assert len(cleaned_dict['tissue_list']) == 1

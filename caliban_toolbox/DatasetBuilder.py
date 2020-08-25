@@ -286,11 +286,11 @@ class DatasetBuilder(object):
                        'platform_list': list(platform_list)}
         return subset_dict
 
-    def _reshape_dict(self, dict, resize=False, output_shape=(512, 512), resize_target=400,
+    def _reshape_dict(self, data_dict, resize=False, output_shape=(512, 512), resize_target=400,
                       resize_tolerance=1.5):
         """Takes a dictionary of training data and reshapes it to appropriate size
 
-        dict: dictionary of training data
+        data_dict: dictionary of training data
         resize: flag to control resizing of the data.
             Valid arguments:
                     - False. No resizing
@@ -301,8 +301,9 @@ class DatasetBuilder(object):
         resize_tolerance: sets maximum allowable ratio between resize_target and
             median cell size before resizing occurs
         """
-        X, y = dict['X'], dict['y']
-        tissue_list, platform_list = np.array(dict['tissue_list']), np.array(dict['platform_list'])
+        X, y = data_dict['X'], data_dict['y']
+        tissue_list = np.array(data_dict['tissue_list'])
+        platform_list = np.array(data_dict['platform_list'])
 
         if not resize:
             # no resizing
@@ -376,7 +377,8 @@ class DatasetBuilder(object):
         return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
                 'platform_list': platform_list_new}
 
-    def _clean_labels(self, data_dict, relabel_hard=False, small_object_threshold=0, min_objects=0):
+    def _clean_labels(self, data_dict, relabel_hard=False, small_object_threshold=0,
+                      min_objects=0):
         """Cleans labels prior to creating final dict
 
         Args:
@@ -497,7 +499,7 @@ class DatasetBuilder(object):
             if current_dict['X'].shape[1:3] != output_shape or resize is not False:
                 resize_target = kwargs.get('resize_target', 400)
                 resize_tolerance = kwargs.get('resize_tolerance', 1.5)
-                current_dict = self._reshape_dict(dict=current_dict, resize=resize,
+                current_dict = self._reshape_dict(data_dict=current_dict, resize=resize,
                                                   output_shape=output_shape,
                                                   resize_target=resize_target,
                                                   resize_tolerance=resize_tolerance)
@@ -505,7 +507,7 @@ class DatasetBuilder(object):
             relabel_hard = kwargs.get('relabel_hard', False)
             small_object_threshold = kwargs.get('small_object_threshold', 0)
             min_objects = kwargs.get('min_objects', 0)
-            current_dict = self._clean_labels(dict=current_dict, relabel_hard=relabel_hard,
+            current_dict = self._clean_labels(data_dict=current_dict, relabel_hard=relabel_hard,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
             dicts[idx] = current_dict
