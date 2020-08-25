@@ -376,11 +376,11 @@ class DatasetBuilder(object):
         return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
                 'platform_list': platform_list_new}
 
-    def _clean_labels(self, dict, relabel_hard=False, small_object_threshold=0, min_objects=0):
+    def _clean_labels(self, data_dict, relabel_hard=False, small_object_threshold=0, min_objects=0):
         """Cleans labels prior to creating final dict
 
         Args:
-            dict: dictionary of training data
+            data_dict: dictionary of training data
             relabel_hard: if True, relabels image with label. Otherwise,
                 uses relabel_sequential.
             small_object_threshold: threshold for removing small objects
@@ -389,11 +389,13 @@ class DatasetBuilder(object):
         Returns:
             cleaned_dict: dictionary with cleaned labels
         """
-        X, y = dict['X'], dict['y']
-        tissue_list, platform_list = np.array(dict['tissue_list']), np.array(dict['platform_list'])
+        X, y = data_dict['X'], data_dict['y']
+        tissue_list = np.array(data_dict['tissue_list'])
+        platform_list = np.array(data_dict['platform_list'])
         keep_idx = np.repeat(True, y.shape[0])
         cleaned_y = np.zeros_like(y)
 
+        # TODO: remove one data QC happens in main toolbox pipeline
         for i in range(y.shape[0]):
             if relabel_hard:
                 y_new = label(y[i, :, :, 0])
