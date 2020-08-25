@@ -156,29 +156,26 @@ class DatasetBuilder(object):
             # construct list for each split
             tissue_list_train_batch = [tissue] * X_train_batch.shape[0]
             platform_list_train_batch = [platform] * X_train_batch.shape[0]
-
-            tissue_list_val_batch = [tissue] * X_val_batch.shape[0]
-            platform_list_val_batch = [platform] * X_val_batch.shape[0]
-
-            tissue_list_test_batch = [tissue] * X_test_batch.shape[0]
-            platform_list_test_batch = [platform] * X_test_batch.shape[0]
-
-            # append batch to main list
             X_train.append(X_train_batch)
-            X_val.append(X_val_batch)
-            X_test.append(X_test_batch)
-
             y_train.append(y_train_batch)
-            y_val.append(y_val_batch)
-            y_test.append(y_test_batch)
-
             tissue_list_train.append(tissue_list_train_batch)
-            tissue_list_val.append(tissue_list_val_batch)
-            tissue_list_test.append(tissue_list_test_batch)
-
             platform_list_train.append(platform_list_train_batch)
-            platform_list_val.append(platform_list_val_batch)
-            platform_list_test.append(platform_list_test_batch)
+
+            if X_val_batch is not None:
+                tissue_list_val_batch = [tissue] * X_val_batch.shape[0]
+                platform_list_val_batch = [platform] * X_val_batch.shape[0]
+                X_val.append(X_val_batch)
+                y_val.append(y_val_batch)
+                tissue_list_val.append(tissue_list_val_batch)
+                platform_list_val.append(platform_list_val_batch)
+
+            if X_test_batch is not None:
+                tissue_list_test_batch = [tissue] * X_test_batch.shape[0]
+                platform_list_test_batch = [platform] * X_test_batch.shape[0]
+                X_test.append(X_test_batch)
+                y_test.append(y_test_batch)
+                tissue_list_test.append(tissue_list_test_batch)
+                platform_list_test.append(platform_list_test_batch)
 
         # make sure that all data has same shape
         first_shape = X_train[0].shape
