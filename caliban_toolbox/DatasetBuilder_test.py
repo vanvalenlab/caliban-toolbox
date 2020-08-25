@@ -474,3 +474,42 @@ def test_build_dataset(tmp_path):
     # full runthrough with default options changed
     _ = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(10, 10),
                          relabel_hard=True, resize='by_image', small_object_threshold=5)
+
+
+def test_summarize_dataset(tmp_path):
+    # workaround so that __init__ doesn't throw an error
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    db = DatasetBuilder(tmp_path)
+
+    # create dict
+    tissues = ['tissue1', 'tissue2', 'tissue3']
+    platforms = ['platform1', 'platform2', 'platform3']
+    train_dict = _create_test_dict(tissues=tissues, platforms=platforms)
+    val_dict = _create_test_dict(tissues=tissues[1:], platforms=platforms[1:])
+    test_dict = _create_test_dict(tissues=tissues[:-1], platforms=platforms[:-1])
+
+    # make sure each dict has a single cell in every image for counting purposes
+    for current_dict in [train_dict, val_dict, test_dict]:
+        current_labels = current_dict['y']
+        current_labels[:, 0, 0, 0] = 5
+        current_dict['y'] = current_labels
+
+    db.train_dict = train_dict
+    db.val_dict = val_dict
+    db.test_dict = test_dict
+
+    tissue_dict, platform_dict = db.summarize_dataset()
+
+    for dict in [tissue_dict, platform_dict]:
+        for key in list(dict.keys()):
+
+            # each image has only a single cell, so num cells == num images
+            cell_num = dict[key]['cell_num']
+            image_num = dict[key]['image_num']
+            assert cell_num == image_num
+
+            # middle categories are present in all three dicts, and hence have 15
+            if key in ['tissue2', 'platform2']:
+                assert image_num == 15
+            else:
+                assert image_num == 10

@@ -509,3 +509,46 @@ class DatasetBuilder(object):
             dicts[idx] = current_dict
 
         return dicts
+
+    def summarize_dataset(self):
+        """Computes summary statistics for the images in the dataset
+
+        Returns:
+            dict of cell counts and image counts by tissue
+            dict of cell counts and image counts by platform
+        """
+        all_y = np.concatenate((self.train_dict['y'],
+                                self.val_dict['y'],
+                                self.test_dict['y']),
+                               axis=0)
+        all_tissue = np.concatenate((self.train_dict['tissue_list'],
+                                     self.val_dict['tissue_list'],
+                                     self.test_dict['tissue_list']),
+                                    axis=0)
+
+        all_platform = np.concatenate((self.train_dict['platform_list'],
+                                       self.val_dict['platform_list'],
+                                       self.test_dict['platform_list']),
+                                      axis=0)
+        all_counts = np.zeros(all_y.shape[0])
+        for i in range(all_y.shape[0]):
+            unique_counts = len(np.unique(all_y[i, :, :, 0])) - 1
+            all_counts[i] = unique_counts
+
+        tissue_dict = {}
+        for tissue in np.unique(all_tissue):
+            tissue_idx = np.isin(all_tissue, tissue)
+            tissue_counts = np.sum(all_counts[tissue_idx])
+            tissue_unique = np.sum(tissue_idx)
+            tissue_dict['tissue'] = {'cell_num': tissue_counts,
+                                     'image_num': tissue_unique}
+
+        platform_dict = {}
+        for platform in np.unique(all_platform):
+            platform_idx = np.isin(all_platform, platform)
+            platform_counts = np.sum(all_counts[platform_idx])
+            platform_unique = np.sum(platform_idx)
+            platform_dict['platform'] = {'cell_num': platform_counts,
+                                         'image_num': platform_unique}
+
+        return tissue_dict, platform_dict
