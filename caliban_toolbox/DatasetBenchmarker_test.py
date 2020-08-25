@@ -107,8 +107,7 @@ def test_benchmark():
     db = DatasetBenchmarker(y_true=y_true, y_pred=y_pred, tissue_list=tissue_list,
                             platform_list=platform_list, model_name='test')
 
-    tissue_stats, platform_stats, all_stats = db.benchmark()
+    tissue_stats, platform_stats = db.benchmark()
 
-    assert set(tissue_stats.keys()) == set(tissue_list)
-    assert set(platform_stats.keys()) == set(platform_list)
-    assert set(all_stats.keys()) == {'all'}
+    assert set(tissue_stats.keys()) == set(tissue_list + ['all'])
+    assert set(platform_stats.keys()) == set(platform_list + ['all'])
