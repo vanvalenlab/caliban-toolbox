@@ -27,6 +27,8 @@
 import os
 import re
 
+import pandas as pd
+
 from urllib.parse import urlencode
 
 from caliban_toolbox.utils.misc_utils import list_npzs_folder
@@ -103,3 +105,47 @@ def create_job_urls(crop_dir, aws_folder, stage, pixel_only, label_only, rgb_mod
 
     # TODO: think about better way to structure than many lists
     return npz_paths, npz_keys, url_paths, npzs_to_upload
+
+
+def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, log_name, job_id=None,
+                      pixel_only=False, label_only=False, rgb_mode=False, separate_urls=False):
+    """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
+
+    Args:
+        base_dir: full path to directory where job results will be stored
+        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
+        aws_folder: folder in aws bucket where files be stored
+        filenames: list of all files to be uploaded
+        filepaths: list of complete urls to images in Amazon S3 bucket
+        log_name: name for log file
+        job_id: job_id for Figure8 jobs
+        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
+        label_only: flag specifying whether annotators will be restricted to label edit mode
+        rgb_mode: flag specifying whether annotators will view images in RGB mode
+        separate_urls: if True save a separate CSV containing just the URLs
+    """
+
+    data = {'project_url': filepaths,
+            'filename': filenames,
+            'stage': stage,
+            'aws_folder': aws_folder,
+            'pixel_only': pixel_only,
+            'label_only': label_only,
+            'rgb_mode': rgb_mode}
+    dataframe = pd.DataFrame(data=data, index=range(len(filepaths)))
+
+    if job_id is not None:
+        dataframe['job_id'] = job_id
+
+    # create file location, name file
+    log_dir = os.path.join(base_dir, 'logs')
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+
+    # save csv file
+    dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
+
+    # create csv containing only URLs
+    if separate_urls:
+        url_df = pd.DataFrame({'project_url': filepaths})
+        url_df.to_csv(os.path.join(log_dir, 'url_only_' + log_name))

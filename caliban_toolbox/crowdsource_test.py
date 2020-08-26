@@ -24,6 +24,10 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import tempfile
+
+import numpy as np
+import pandas as pd
 
 from pathlib import Path
 
@@ -82,3 +86,43 @@ def test_create_job_urls(tmp_path):
     #                                                               pixel_only=pixel_only,
     #                                                               label_only=label_only,
     #                                                               rgb_mode=rgb_mode)
+
+
+def test_create_upload_log():
+    filepaths = ['file_path_' + str(x) for x in range(10)]
+    filenames = ['file_name_' + str(x) for x in range(10)]
+    stage = 'all_the_world_is_a_stage'
+    aws_folder = 'aws_folder_path'
+    job_id = 7
+
+    # figure8 upload configuration
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_name = 'test_log.csv'
+        crowdsource.create_upload_log(base_dir=temp_dir, stage=stage,
+                                      aws_folder=aws_folder,
+                                      filenames=filenames, filepaths=filepaths,
+                                      job_id=job_id,
+                                      pixel_only=False, rgb_mode=True, label_only=True,
+                                      log_name=log_name)
+
+        log_file = pd.read_csv(os.path.join(temp_dir, 'logs', log_name))
+
+        assert np.all(log_file['filename'] == filenames)
+        assert np.all(log_file['job_id'] == job_id)
+
+    # anolytics upload: separate CSV file with just URLs
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_name = 'test_log.csv'
+        crowdsource.create_upload_log(base_dir=temp_dir, stage=stage,
+                                      aws_folder=aws_folder,
+                                      filenames=filenames, filepaths=filepaths,
+                                      pixel_only=False, rgb_mode=True, label_only=True,
+                                      log_name=log_name, separate_urls=True)
+
+        log_file = pd.read_csv(os.path.join(temp_dir, 'logs', log_name))
+
+        assert np.all(log_file['filename'] == filenames)
+        assert 'job_id' not in log_file.columns
+
+        url_file = pd.read_csv(os.path.join(temp_dir, 'logs', 'url_only_' + log_name))
+        assert np.all(url_file['project_url'] == filepaths)

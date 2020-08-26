@@ -32,44 +32,6 @@ from caliban_toolbox.utils.misc_utils import list_npzs_folder
 from caliban_toolbox.aws_functions import aws_upload_files, aws_download_files
 
 
-def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, log_name,
-                      pixel_only=False, label_only=False, rgb_mode=False):
-    """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
-
-    Args:
-        base_dir: full path to directory where job results will be stored
-        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
-        aws_folder: folder in aws bucket where files be stored
-        filenames: list of all files to be uploaded
-        filepaths: list of complete urls to images in Amazon S3 bucket
-        log_name: name for log file
-        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
-        label_only: flag specifying whether annotators will be restricted to label edit mode
-        rgb_mode: flag specifying whether annotators will view images in RGB mode
-    """
-
-    data = {'project_url': filepaths,
-            'filename': filenames,
-            'stage': stage,
-            'aws_folder': aws_folder,
-            'pixel_only': pixel_only,
-            'label_only': label_only,
-            'rgb_mode': rgb_mode}
-    dataframe = pd.DataFrame(data=data, index=range(len(filepaths)))
-
-    # create file location, name file
-    log_dir = os.path.join(base_dir, 'logs')
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
-
-    # save csv file
-    dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
-
-    # create csv containing only URLs to upload to anolytics website
-    small_df = pd.DataFrame({'project_url': filepaths})
-    small_df.to_csv(os.path.join(log_dir, 'small_' + log_name))
-
-
 def create_anolytics_job(base_dir, aws_folder, stage, rgb_mode=False, label_only=False,
                          pixel_only=False):
     """Create a log file and upload NPZs to aws for an anolytics job.
@@ -113,10 +75,10 @@ def create_anolytics_job(base_dir, aws_folder, stage, rgb_mode=False, label_only
     log_name = 'stage_0_{}_upload_log.csv'.format(stage)
 
     # Generate log file for current job
-    create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
-                      filenames=npzs, filepaths=url_paths,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
-                      log_name=log_name)
+    crowdsource.create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
+                                  filenames=npzs, filepaths=url_paths,
+                                  pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                                  log_name=log_name, separate_urls=True)
 
 
 def download_anolytics_output(base_dir):

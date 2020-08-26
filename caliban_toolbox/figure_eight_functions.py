@@ -79,46 +79,6 @@ def rename_job(job_id, key, name):
     response = requests.put(url, json=payload)
 
 
-def create_upload_log(base_dir, stage, aws_folder, filenames, filepaths, job_id, log_name,
-                      pixel_only=False, label_only=False, rgb_mode=False):
-    """Generates a csv log of parameters used during job creation for subsequent use in pipeline.
-
-    Args:
-        base_dir: full path to directory where job results will be stored
-        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
-        aws_folder: folder in aws bucket where files be stored
-        filenames: list of all files to be uploaded
-        filepaths: list of complete urls to images in Amazon S3 bucket
-        job_id: internal Figure Eight id for job
-        log_name: name for log file
-        pixel_only: flag specifying whether annotators will be restricted to pixel edit mode
-        label_only: flag specifying whether annotators will be restricted to label edit mode
-        rgb_mode: flag specifying whether annotators will view images in RGB mode
-    """
-
-    data = {'project_url': filepaths,
-            'filename': filenames,
-            'stage': stage,
-            'aws_folder': aws_folder,
-            'job_id': job_id,
-            'pixel_only': pixel_only,
-            'label_only': label_only,
-            'rgb_mode': rgb_mode}
-    dataframe = pd.DataFrame(data=data, index=range(len(filepaths)))
-
-    # create file location, name file
-    log_dir = os.path.join(base_dir, 'logs')
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
-
-        # add folder modification permissions to deal with files from file explorer
-        mode = stat.S_IRWXO | stat.S_IRWXU | stat.S_IRWXG
-        os.chmod(log_dir, mode)
-
-    # save csv file
-    dataframe.to_csv(os.path.join(log_dir, log_name), index=False)
-
-
 def upload_log_file(log_file, job_id, key):
     """Upload log file to populate a job for Figure8
 
@@ -201,10 +161,10 @@ def create_figure_eight_job(base_dir, job_id_to_copy, aws_folder, stage, job_nam
     log_name = 'stage_0_{}_upload_log.csv'.format(stage)
 
     # Generate log file for current job
-    create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
-                      filenames=npzs, filepaths=url_paths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
-                      log_name=log_name)
+    crowdsource.create_upload_log(base_dir=base_dir, stage=stage, aws_folder=aws_folder,
+                                  filenames=npzs, filepaths=url_paths, job_id=new_job_id,
+                                  pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                                  log_name=log_name)
 
     log_path = open(os.path.join(base_dir, 'logs', log_name), 'r')
     log_file = log_path.read()
@@ -262,10 +222,10 @@ def transfer_figure_eight_job(base_dir, job_id_to_copy, new_stage, job_name,
                                                      rgb_mode=rgb_mode)
 
     # Generate log file for current job
-    create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
-                      filenames=filenames, filepaths=filepaths, job_id=new_job_id,
-                      pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
-                      log_name=new_log_name)
+    crowdsource.create_upload_log(base_dir=base_dir, stage=new_stage, aws_folder=aws_folder,
+                                  filenames=filenames, filepaths=filepaths, job_id=new_job_id,
+                                  pixel_only=pixel_only, rgb_mode=rgb_mode, label_only=label_only,
+                                  log_name=new_log_name)
 
     log_path = open(os.path.join(base_dir, 'logs', new_log_name), 'r')
     log_file = log_path.read()
