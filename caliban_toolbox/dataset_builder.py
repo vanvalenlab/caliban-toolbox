@@ -544,15 +544,15 @@ class DatasetBuilder(object):
             tissue_idx = np.isin(all_tissue, tissue)
             tissue_counts = np.sum(all_counts[tissue_idx])
             tissue_unique = np.sum(tissue_idx)
-            tissue_dict['tissue'] = {'cell_num': tissue_counts,
-                                     'image_num': tissue_unique}
+            tissue_dict[tissue] = {'cell_num': tissue_counts,
+                                   'image_num': tissue_unique}
 
         platform_dict = {}
         for platform in np.unique(all_platform):
             platform_idx = np.isin(all_platform, platform)
             platform_counts = np.sum(all_counts[platform_idx])
             platform_unique = np.sum(platform_idx)
-            platform_dict['platform'] = {'cell_num': platform_counts,
-                                         'image_num': platform_unique}
+            platform_dict[platform] = {'cell_num': platform_counts,
+                                       'image_num': platform_unique}
 
         return tissue_dict, platform_dict

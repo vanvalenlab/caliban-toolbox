@@ -535,10 +535,12 @@ def test_summarize_dataset(tmp_path):
     val_dict = _create_test_dict(tissues=tissues[1:], platforms=platforms[1:])
     test_dict = _create_test_dict(tissues=tissues[:-1], platforms=platforms[:-1])
 
-    # make sure each dict has a single cell in every image for counting purposes
+    # make sure each dict has 2 cells in every image for counting purposes
     for current_dict in [train_dict, val_dict, test_dict]:
         current_labels = current_dict['y']
         current_labels[:, 0, 0, 0] = 5
+        current_labels[:, 10, 0, 0] = 12
+
         current_dict['y'] = current_labels
 
     db.train_dict = train_dict
@@ -547,13 +549,19 @@ def test_summarize_dataset(tmp_path):
 
     tissue_dict, platform_dict = db.summarize_dataset()
 
+    # check that all tissues and platforms are present
+    for i in range(len(tissues)):
+        assert tissues[i] in tissue_dict
+        assert platforms[i] in platform_dict
+
+    # Check that math is computed correctly
     for dict in [tissue_dict, platform_dict]:
         for key in list(dict.keys()):
 
-            # each image has only a single cell, so num cells == num images
+            # each image has only two cells
             cell_num = dict[key]['cell_num']
             image_num = dict[key]['image_num']
-            assert cell_num == image_num
+            assert cell_num == image_num * 2
 
             # middle categories are present in all three dicts, and hence have 15
             if key in ['tissue2', 'platform2']:
