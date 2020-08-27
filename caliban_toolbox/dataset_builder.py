@@ -432,7 +432,8 @@ class DatasetBuilder(object):
                 a single tissue type, or 'all'
             platforms: which platforms to include. Must be either a list of platform types,
                 a single platform type, or 'all'
-            output_shape: output shape for dataset
+            output_shape: output shape for dataset. Either a single tuple, in which case
+                train/va/test will all have same size, or a list of three tuples
             resize: flag to control resizing the input data.
                 Valid arguments:
                     - False. No resizing
@@ -483,6 +484,17 @@ class DatasetBuilder(object):
         if resize not in valid_resize:
             raise ValueError('resize must be one of {}'.format(valid_resize))
 
+        if not isinstance(output_shape, (list, tuple)):
+            raise ValueError('output_shape must be either a list of tuples or a tuple')
+
+        # convert from single tuple to list of tuples for each split
+        if isinstance(output_shape, tuple):
+            output_shape = [output_shape, output_shape, output_shape]
+
+        for tup in output_shape:
+            if len(tup) != 2:
+                raise ValueError('Each output_shape must be len(2) tuple, got {}'.format(tup))
+
         # if any of the split parameters are different we need to reload the dataset
         if self.seed != seed or self.data_split != data_split:
             self._load_all_experiments(data_split=data_split, seed=seed)
@@ -494,13 +506,14 @@ class DatasetBuilder(object):
             # subset dict to include only relevant tissues and platforms
             current_dict = self._subset_data_dict(data_dict=current_dict, tissues=tissues,
                                                   platforms=platforms)
+            current_shape = output_shape[idx]
 
             # if necessary, reshape and resize data to be of correct output size
-            if current_dict['X'].shape[1:3] != output_shape or resize is not False:
+            if current_dict['X'].shape[1:3] != current_shape or resize is not False:
                 resize_target = kwargs.get('resize_target', 400)
                 resize_tolerance = kwargs.get('resize_tolerance', 1.5)
                 current_dict = self._reshape_dict(data_dict=current_dict, resize=resize,
-                                                  output_shape=output_shape,
+                                                  output_shape=current_shape,
                                                   resize_target=resize_target,
                                                   resize_tolerance=resize_tolerance)
             # clean labels

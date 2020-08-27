@@ -519,6 +519,14 @@ def test_build_dataset(tmp_path):
     for current_dict in output_dicts:
         assert len(np.unique(current_dict['y'])) == 2
 
+    # different sizes for different splits
+    output_dicts_diff_sizes = db.build_dataset(tissues=tissues, platforms=platforms,
+                                               output_shape=[(10, 10), (15, 15), (20, 20)])
+
+    assert output_dicts_diff_sizes[0]['X'].shape[1:3] == (10, 10)
+    assert output_dicts_diff_sizes[1]['X'].shape[1:3] == (15, 15)
+    assert output_dicts_diff_sizes[2]['X'].shape[1:3] == (20, 20)
+
     # full runthrough with default options changed
     _ = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(10, 10),
                          relabel_hard=True, resize='by_image', small_object_threshold=5)
