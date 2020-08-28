@@ -400,9 +400,9 @@ class DatasetBuilder(object):
         # TODO: remove one data QC happens in main toolbox pipeline
         for i in range(y.shape[0]):
             if relabel_hard:
-                y_new = label(y[i, :, :, 0])
+                y_new = label(y[i, ..., 0])
             else:
-                y_new, _, _ = relabel_sequential(y[i, :, :, 0])
+                y_new, _, _ = relabel_sequential(y[i, ..., 0])
 
             y_new = remove_small_objects(y_new, min_size=small_object_threshold)
 
@@ -410,7 +410,7 @@ class DatasetBuilder(object):
             if unique_objects < min_objects:
                 keep_idx[i] = False
 
-            cleaned_y[i, :, :, 0] = y_new
+            cleaned_y[i, ..., 0] = y_new
 
         # subset all dict members to include only relevant images
         cleaned_y = cleaned_y[keep_idx]
@@ -549,7 +549,7 @@ class DatasetBuilder(object):
                                       axis=0)
         all_counts = np.zeros(all_y.shape[0])
         for i in range(all_y.shape[0]):
-            unique_counts = len(np.unique(all_y[i, :, :, 0])) - 1
+            unique_counts = len(np.unique(all_y[i, ..., 0])) - 1
             all_counts[i] = unique_counts
 
         tissue_dict = {}

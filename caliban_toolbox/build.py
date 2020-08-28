@@ -111,7 +111,13 @@ def reshape_training_data(X_data, y_data, resize_ratio, final_size, stride_ratio
 
     Returns:
         reshaped_X, reshaped_y: resized and cropped version of input images
+
+    Raises:
+        ValueError: If image data is not 4D
     """
+
+    if len(X_data.shape) != 4:
+        raise ValueError('Image data must be 4D')
 
     # resize if needed
     if resize_ratio > tolerance or resize_ratio < (1 / tolerance):
@@ -144,7 +150,13 @@ def pad_image_stack(images, crop_size):
 
     Returns:
         np.array: padded image stack
+
+    Raises:
+        ValueError: If images are not 4D
     """
+
+    if len(images.shape) != 4:
+        raise ValueError('Image data must be 4D')
 
     row_len, col_len = images.shape[1:3]
     row_crop, col_crop = crop_size
