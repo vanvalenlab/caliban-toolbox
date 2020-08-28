@@ -77,34 +77,35 @@ class DatasetBenchmarker(object):
             category_ids: list specifying which category each image belongs to
 
         Returns:
-            stats_dict: dictionary of benchmarking results
+            dict: benchmarking results across each category
         """
 
-        unique_ids = np.unique(category_ids)
+        unique_categories = np.unique(category_ids)
 
         # create dict to hold stats across each category
         stats_dict = {}
-        for uid in unique_ids:
-            stats_dict[uid] = {}
-            category_idx = np.isin(category_ids, uid)
+        for cat in unique_categories:
+            # cat the index of metrics corresponding to current category
+            cat_idx = np.isin(unique_categories, cat)
+            cat_dict = {}
 
-            # sum metrics across individual images
+            # sum metrics across individual images within current category
             for key in self.metrics.stats:
-                stats_dict[uid][key] = self.metrics.stats[key][category_idx].sum()
+                cat_dict[key] = self.metrics.stats[key][cat_idx].sum()
 
             # compute additional metrics not produced by Metrics class
-            stats_dict[uid]['recall'] = \
-                stats_dict[uid]['correct_detections'] / stats_dict[uid]['n_true']
+            cat_dict['recall'] = cat_dict['correct_detections'] / cat_dict['n_true']
 
-            stats_dict[uid]['precision'] = \
-                stats_dict[uid]['correct_detections'] / stats_dict[uid]['n_pred']
+            cat_dict['precision'] = cat_dict['correct_detections'] / stats_dict['n_pred']
 
-            stats_dict[uid]['f1'] = \
-                hmean([stats_dict[uid]['recall'], stats_dict[uid]['precision']])
+            cat_dict['f1'] = hmean([cat_dict['recall'], cat_dict['precision']])
 
-            pixel_stats = stats_pixelbased(self.y_true[category_idx] != 0,
-                                           self.y_pred[category_idx] != 0)
-            stats_dict[uid]['jaccard'] = pixel_stats['jaccard']
+            pixel_stats = stats_pixelbased(self.y_true[cat_idx] != 0,
+                                           self.y_pred[cat_idx] != 0)
+            cat_dict['jaccard'] = pixel_stats['jaccard']
+
+            # save current category dict to overall dict
+            stats_dict[cat] = cat_dict
 
         return stats_dict
 
