@@ -36,7 +36,7 @@ from caliban_toolbox.dataset_builder import DatasetBuilder
 
 def _create_test_npz(path, constant_value=1, X_shape=(10, 20, 20, 3), y_shape=(10, 20, 20, 1)):
     X_data = np.full(X_shape, constant_value)
-    y_data = np.full(y_shape, constant_value, dtype='int16')
+    y_data = np.full(y_shape, constant_value * 2, dtype='int16')
     np.savez(path, X=X_data, y=y_data)
 
 
@@ -553,7 +553,7 @@ def test_build_dataset(tmp_path):
         assert X_base.shape[0] * 4 == X_crop.shape[0]
 
     # check that NPZs have been relabeled
-    for current_dict in output_dicts:
+    for current_dict in output_dicts_crop:
         assert len(np.unique(current_dict['y'])) == 2
 
     # different sizes for different splits

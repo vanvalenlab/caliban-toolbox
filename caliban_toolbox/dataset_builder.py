@@ -535,6 +535,7 @@ class DatasetBuilder(object):
             current_dict = self._clean_labels(data_dict=current_dict, relabel=relabel,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
+            print("index is {}, unique is {}".format(idx, np.unique(current_dict['y'])))
             dicts[idx] = current_dict
 
         return dicts

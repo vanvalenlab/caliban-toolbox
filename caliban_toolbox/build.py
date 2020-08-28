@@ -170,7 +170,8 @@ def pad_image_stack(images, crop_size):
         # don't need to pad
         return images
     else:
-        new_images = np.zeros((images.shape[0], new_row_len, new_col_len, images.shape[3]))
+        new_images = np.zeros((images.shape[0], new_row_len, new_col_len, images.shape[3]),
+                              dtype=images.dtype)
         new_images[:, :row_len, :col_len, :] = images
         return new_images
 

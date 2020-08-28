@@ -86,7 +86,7 @@ class DatasetBenchmarker(object):
         stats_dict = {}
         for cat in unique_categories:
             # cat the index of metrics corresponding to current category
-            cat_idx = np.isin(unique_categories, cat)
+            cat_idx = np.isin(category_ids, cat)
             cat_dict = {}
 
             # sum metrics across individual images within current category
@@ -96,7 +96,7 @@ class DatasetBenchmarker(object):
             # compute additional metrics not produced by Metrics class
             cat_dict['recall'] = cat_dict['correct_detections'] / cat_dict['n_true']
 
-            cat_dict['precision'] = cat_dict['correct_detections'] / stats_dict['n_pred']
+            cat_dict['precision'] = cat_dict['correct_detections'] / cat_dict['n_pred']
 
             cat_dict['f1'] = hmean([cat_dict['recall'], cat_dict['precision']])
 
