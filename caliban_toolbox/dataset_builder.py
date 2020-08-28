@@ -354,10 +354,10 @@ class DatasetBuilder(object):
                     resize_ratio = 1
 
                 # resize the data
-                X_batch_resized, y_batch_resized = \
-                    reshape_training_data(X_data=X_batch, y_data=y_batch,
-                                          resize_ratio=resize_ratio, final_size=output_shape,
-                                          tolerance=resize_tolerance)
+                X_batch_resized, y_batch_resized = reshape_training_data(
+                    X_data=X_batch, y_data=y_batch,
+                    resize_ratio=resize_ratio, final_size=output_shape,
+                    tolerance=resize_tolerance)
 
                 # to preserve category labels, we need to figure out how much the array grew by
                 multiplier = int(X_batch_resized.shape[0] / X_batch.shape[0])
