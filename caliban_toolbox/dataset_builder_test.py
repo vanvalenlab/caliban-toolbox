@@ -36,7 +36,7 @@ from caliban_toolbox.dataset_builder import DatasetBuilder
 
 def _create_test_npz(path, constant_value=1, X_shape=(10, 20, 20, 3), y_shape=(10, 20, 20, 1)):
     X_data = np.full(X_shape, constant_value)
-    y_data = np.full(y_shape, constant_value)
+    y_data = np.full(y_shape, constant_value, dtype='int16')
     np.savez(path, X=X_data, y=y_data)
 
 
@@ -92,7 +92,7 @@ def _create_test_dict(tissues, platforms):
 
     data = np.concatenate(data, axis=0)
     X_data = data
-    y_data = data[..., :1]
+    y_data = data[..., :1].astype('int16')
 
     tissue_list = [tissues[i] for i in range(len(tissues)) for _ in range(5)]
     platform_list = [platforms[i] for i in range(len(platforms)) for _ in range(5)]
@@ -437,12 +437,12 @@ def test__clean_labels(tmp_path):
     _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
 
-    test_label = np.zeros((50, 50))
+    test_label = np.zeros((50, 50), dtype='int')
     test_label[:10, :10] = 2
     test_label[12:17, 12:17] = 2
     test_label[20:22, 22:23] = 3
 
-    test_labels = np.zeros((2, 50, 50, 1))
+    test_labels = np.zeros((2, 50, 50, 1), dtype='int')
     test_labels[0, ..., 0] = test_label
 
     test_X = np.zeros_like(test_labels)
@@ -453,26 +453,63 @@ def test__clean_labels(tmp_path):
                  'platform_list': test_platform}
 
     # relabel sequential
-    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=False)
-    assert len(np.unique(cleaned_dict['y'])) == 2 + 1
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel=False)
+    assert len(np.unique(cleaned_dict['y'])) == 2 + 1  # 0 for background
 
     # true relabel
-    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel=True)
     assert len(np.unique(cleaned_dict['y'])) == 3 + 1
 
     # remove small objects
-    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True,
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel=True,
                                     small_object_threshold=15)
     assert len(np.unique(cleaned_dict['y'])) == 2 + 1
 
     # remove sparse images
-    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel_hard=True, min_objects=1)
+    cleaned_dict = db._clean_labels(data_dict=test_dict, relabel=True, min_objects=1)
     assert cleaned_dict['y'].shape[0] == 1
     assert cleaned_dict['X'].shape[0] == 1
     assert len(cleaned_dict['tissue_list']) == 1
     assert cleaned_dict['tissue_list'][0] == 'tissue1'
     assert len(cleaned_dict['platform_list']) == 1
     assert cleaned_dict['platform_list'][0] == 'platform2'
+
+
+def test__validate_categories(tmp_path):
+    _create_minimal_dataset(tmp_path)
+    db = DatasetBuilder(tmp_path)
+
+    category_list = ['cat1', 'cat2', 'cat3']
+
+    # convert single category to list
+    supplied_categories = 'cat1'
+    validated = db._validate_categories(category_list=category_list,
+                                        supplied_categories=supplied_categories)
+    assert validated == [supplied_categories]
+
+    # convert 'all' to list of all categories
+    supplied_categories = 'all'
+    validated = db._validate_categories(category_list=category_list,
+                                        supplied_categories=supplied_categories)
+    assert np.all(validated == category_list)
+
+    # convert 'all' to list of all categories
+    supplied_categories = ['cat1', 'cat3']
+    validated = db._validate_categories(category_list=category_list,
+                                        supplied_categories=supplied_categories)
+    assert np.all(validated == supplied_categories)
+
+    # invalid string
+    supplied_categories = 'cat4'
+    with pytest.raises(ValueError):
+        _ = db._validate_categories(category_list=category_list,
+                                    supplied_categories=supplied_categories)
+
+    # invalid list
+    supplied_categories = ['cat4', 'cat1']
+    with pytest.raises(ValueError):
+        _ = db._validate_categories(category_list=category_list,
+                                    supplied_categories=supplied_categories)
 
 
 def test_build_dataset(tmp_path):
@@ -509,7 +546,7 @@ def test_build_dataset(tmp_path):
 
     # cropping to 1/2 the size, there should be 4x more crops
     output_dicts_crop = db.build_dataset(tissues=tissues, platforms=platforms,
-                                         output_shape=(10, 10))
+                                         output_shape=(10, 10), relabel=True)
 
     for base_dict, crop_dict in zip(output_dicts, output_dicts_crop):
         X_base, X_crop = base_dict['X'], crop_dict['X']
@@ -528,7 +565,7 @@ def test_build_dataset(tmp_path):
     assert output_dicts_diff_sizes[2]['X'].shape[1:3] == (20, 20)
 
     # full runthrough with default options changed
-    _ = db.build_dataset(tissues=tissues, platforms=platforms, output_shape=(10, 10),
+    _ = db.build_dataset(tissues='all', platforms=platforms, output_shape=(10, 10),
                          relabel_hard=True, resize='by_image', small_object_threshold=5)
 
 

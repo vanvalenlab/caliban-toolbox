@@ -23,12 +23,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 import os
 import json
+import warnings
+
 import numpy as np
 
-from skimage.segmentation import relabel_sequential
 from skimage.measure import label
 from skimage.morphology import remove_small_objects
 
@@ -153,6 +153,10 @@ class DatasetBuilder(object):
         # combine all NPZ files together
         X = np.concatenate(X_list, axis=0)
         y = np.concatenate(y_list, axis=0)
+
+        if isinstance(y.dtype, np.floating):
+            warnings.warn('Converting float labels to integers')
+            y = y.astype('int64')
 
         tissue = metadata['tissue']
         platform = metadata['platform']
@@ -377,14 +381,13 @@ class DatasetBuilder(object):
         return {'X': X_new, 'y': y_new, 'tissue_list': tissue_list_new,
                 'platform_list': platform_list_new}
 
-    def _clean_labels(self, data_dict, relabel_hard=False, small_object_threshold=0,
+    def _clean_labels(self, data_dict, relabel=False, small_object_threshold=0,
                       min_objects=0):
         """Cleans labels prior to creating final dict
 
         Args:
             data_dict: dictionary of training data
-            relabel_hard: if True, relabels image with label. Otherwise,
-                uses relabel_sequential.
+            relabel: if True, relabels the image with new labels
             small_object_threshold: threshold for removing small objects
             min_objects: minimum number of objects per image
 
@@ -399,18 +402,17 @@ class DatasetBuilder(object):
 
         # TODO: remove one data QC happens in main toolbox pipeline
         for i in range(y.shape[0]):
-            if relabel_hard:
-                y_new = label(y[i, ..., 0])
-            else:
-                y_new, _, _ = relabel_sequential(y[i, ..., 0])
+            y_current = y[i, ..., 0]
+            if relabel:
+                y_current = label(y_current)
 
-            y_new = remove_small_objects(y_new, min_size=small_object_threshold)
+            y_current = remove_small_objects(y_current, min_size=small_object_threshold)
 
-            unique_objects = len(np.unique(y_new)) - 1
+            unique_objects = len(np.unique(y_current)) - 1
             if unique_objects < min_objects:
                 keep_idx[i] = False
 
-            cleaned_y[i, ..., 0] = y_new
+            cleaned_y[i, ..., 0] = y_current
 
         # subset all dict members to include only relevant images
         cleaned_y = cleaned_y[keep_idx]
@@ -422,6 +424,36 @@ class DatasetBuilder(object):
                         'platform_list': list(cleaned_platform)}
 
         return cleaned_dict
+
+    def _validate_categories(self, category_list, supplied_categories):
+        """Check that an appropriate subset of a list of categories was supplied
+
+        Args:
+            category_list: list of all categories
+            supplied_categories: specified categories provided by user. Must be either
+                - a list containing the desired category members
+                - a string of a single category name
+                - a string of 'all', in which case all will be used
+
+        Returns:
+            list: a properly formatted sub_category list
+
+        Raises:
+            ValueError: if invalid supplied_categories argument
+            """
+        if isinstance(supplied_categories, list):
+            for cat in supplied_categories:
+                if cat not in category_list:
+                    raise ValueError('{} is not one of {}'.format(cat, category_list))
+            return supplied_categories
+        elif supplied_categories == 'all':
+            return category_list
+        elif supplied_categories in category_list:
+            return [supplied_categories]
+        else:
+            raise ValueError(
+                'Specified categories should be "all", one of {}, or a list '
+                'of acceptable tissue types'.format(category_list))
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
                       data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
@@ -447,38 +479,17 @@ class DatasetBuilder(object):
             list of dicts containing the split dataset
 
         Raises:
-            ValueError: If invalid tissues argument specified
-            ValueError: If invalid platforms argument specified
+            ValueError: If invalid resize parameter supplied
+            ValueError: If invalid output_shape parameter supplied
         """
         if self.all_tissues == []:
             self._identify_tissue_and_platform_types()
 
         # validate inputs
-        if isinstance(tissues, list):
-            for tissue in tissues:
-                if tissue not in self.all_tissues:
-                    raise ValueError('{} is not one of {}'.format(tissue, self.all_tissues))
-        elif tissues == 'all':
-            tissues = self.all_tissues
-        elif tissues in self.all_tissues:
-            tissues = [tissues]
-        else:
-            raise ValueError(
-                'tissues should be "all", one of {}, or a list '
-                'of acceptable tissue types'.format(self.all_tissues))
-
-        if isinstance(platforms, list):
-            for platform in platforms:
-                if platform not in self.all_platforms:
-                    raise ValueError('{} is not one of {}'.format(platform, self.all_platforms))
-        elif platforms == 'all':
-            platforms = self.all_platforms
-        elif platforms in self.all_platforms:
-            platforms = [platforms]
-        else:
-            raise ValueError(
-                'platforms should be "all", one of {}, or a list of acceptable '
-                'platform types'.format(self.all_platforms))
+        tissues = self._validate_categories(category_list=self.all_tissues,
+                                            supplied_categories=tissues)
+        platforms = self._validate_categories(category_list=self.all_platforms,
+                                              supplied_categories=platforms)
 
         valid_resize = [False, 'by_tissue', 'by_image']
         if resize not in valid_resize:
@@ -517,10 +528,11 @@ class DatasetBuilder(object):
                                                   resize_target=resize_target,
                                                   resize_tolerance=resize_tolerance)
             # clean labels
-            relabel_hard = kwargs.get('relabel_hard', False)
+            relabel = kwargs.get('relabel', False)
+            print('relabel arg is {}'.format(relabel))
             small_object_threshold = kwargs.get('small_object_threshold', 0)
             min_objects = kwargs.get('min_objects', 0)
-            current_dict = self._clean_labels(data_dict=current_dict, relabel_hard=relabel_hard,
+            current_dict = self._clean_labels(data_dict=current_dict, relabel=relabel,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
             dicts[idx] = current_dict

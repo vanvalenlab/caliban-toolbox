@@ -28,7 +28,7 @@ import pytest
 
 import numpy as np
 
-from caliban_toolbox.DatasetBenchmarker import DatasetBenchmarker
+from caliban_toolbox.dataset_benchmarker import DatasetBenchmarker
 
 
 def _create_labels(offset=0):
