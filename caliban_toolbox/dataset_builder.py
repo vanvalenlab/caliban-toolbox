@@ -153,8 +153,7 @@ class DatasetBuilder(object):
         # combine all NPZ files together
         X = np.concatenate(X_list, axis=0)
         y = np.concatenate(y_list, axis=0)
-
-        if isinstance(y.dtype, np.floating):
+        if np.issubdtype(y.dtype, np.floating):
             warnings.warn('Converting float labels to integers')
             y = y.astype('int64')
 
@@ -298,6 +297,7 @@ class DatasetBuilder(object):
         resize: flag to control resizing of the data.
             Valid arguments:
                     - False. No resizing
+                    - int/float: resizes by given ratio for all images
                     - by_tissue. Resizes by median cell size within each tissue type
                     - by_image. Resizes by median cell size within each image
         output_shape: output shape for image data
@@ -321,6 +321,18 @@ class DatasetBuilder(object):
             tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
             platform_list_new = [item for item in platform_list for _ in range(multiplier)]
 
+        elif isinstance(resize, (float, int)):
+            # resized based on supplied value
+            X_new, y_new = reshape_training_data(X_data=X, y_data=y, resize_ratio=resize,
+                                                 final_size=output_shape, stride_ratio=1,
+                                                 tolerance=resize_tolerance)
+
+            # to preserve category labels, we need to figure out how much the array grew by
+            multiplier = int(X_new.shape[0] / X.shape[0])
+
+            # then we duplicate the labels in place to match expanded array size
+            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
+            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
         else:
             X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
 
@@ -469,6 +481,7 @@ class DatasetBuilder(object):
             resize: flag to control resizing the input data.
                 Valid arguments:
                     - False. No resizing
+                    - float/int: Resizes all images by supplied value
                     - by_tissue. Resizes by median cell size within each tissue type
                     - by_image. REsizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
@@ -491,9 +504,15 @@ class DatasetBuilder(object):
         platforms = self._validate_categories(category_list=self.all_platforms,
                                               supplied_categories=platforms)
 
+        # TODO: Is there a better way to check this?
         valid_resize = [False, 'by_tissue', 'by_image']
-        if resize not in valid_resize:
-            raise ValueError('resize must be one of {}'.format(valid_resize))
+        if resize in valid_resize:
+            pass
+        elif isinstance(resize, (float, int)):
+            if resize <= 0:
+                raise ValueError('Resize values must be greater than 0')
+        else:
+            raise ValueError('resize must be one of {}, or an integer value'.format(valid_resize))
 
         if not isinstance(output_shape, (list, tuple)):
             raise ValueError('output_shape must be either a list of tuples or a tuple')
@@ -511,7 +530,6 @@ class DatasetBuilder(object):
             self._load_all_experiments(data_split=data_split, seed=seed)
 
         dicts = [self.train_dict, self.val_dict, self.test_dict]
-
         # process each dict
         for idx, current_dict in enumerate(dicts):
             # subset dict to include only relevant tissues and platforms
@@ -527,17 +545,15 @@ class DatasetBuilder(object):
                                                   output_shape=current_shape,
                                                   resize_target=resize_target,
                                                   resize_tolerance=resize_tolerance)
+
             # clean labels
             relabel = kwargs.get('relabel', False)
-            print('relabel arg is {}'.format(relabel))
             small_object_threshold = kwargs.get('small_object_threshold', 0)
             min_objects = kwargs.get('min_objects', 0)
             current_dict = self._clean_labels(data_dict=current_dict, relabel=relabel,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
-            print("index is {}, unique is {}".format(idx, np.unique(current_dict['y'])))
             dicts[idx] = current_dict
-
         return dicts
 
     def summarize_dataset(self):
