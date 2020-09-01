@@ -235,10 +235,11 @@ def test_train_val_test_split():
 
     train_ratio, val_ratio, test_ratio = 0.7, 0.2, 0.1
 
-    X_train, y_train, X_val, y_val, X_test, y_test, = \
+    X_train, y_train, X_val, y_val, X_test, y_test = \
         build.train_val_test_split(X_data=X_data,
                                    y_data=y_data,
-                                   data_split=[train_ratio, val_ratio, test_ratio])
+                                   data_split=[train_ratio, val_ratio, test_ratio],
+                                   seed=1337)
 
     assert X_train.shape[0] == 100 * train_ratio
     assert y_train.shape[0] == 100 * train_ratio
@@ -250,6 +251,24 @@ def test_train_val_test_split():
     assert y_test.shape[0] == 100 * test_ratio
 
     assert _all_unique_vals((X_train, y_train, X_val, y_val, X_test, y_test))
+
+    # rerun split with same seed
+    rerun = build.train_val_test_split(X_data=X_data, y_data=y_data,
+                                       data_split=[train_ratio, val_ratio, test_ratio],
+                                       seed=1337)
+
+    # make sure identical data with same seed
+    for version1, version2 in zip((X_train, y_train, X_val, y_val, X_test, y_test), rerun):
+        assert np.array_equal(version1, version2)
+
+    # rerun split with different seed
+    rerun = build.train_val_test_split(X_data=X_data, y_data=y_data,
+                                       data_split=[train_ratio, val_ratio, test_ratio],
+                                       seed=666)
+
+    # make sure different data with different seed
+    for version1, version2 in zip((X_train, y_train, X_val, y_val, X_test, y_test), rerun):
+        assert not np.array_equal(version1, version2)
 
     # ensure that None is returned for val and test when data is not large enough to be split
     X_train, y_train, X_val, y_val, X_test, y_test, = \
