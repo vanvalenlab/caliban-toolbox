@@ -45,14 +45,14 @@ def compute_cell_size(npz_file, method='median', by_image=True):
             the cell size across the entire npz is returned
 
     Returns:
-        average_sizes: list of typical cell size in NPZ. If no cells, returns None
+        list: list of typical cell size in NPZ. If no cells, returns None.
 
     Raises: ValueError if invalid method supplied
     Raises: ValueError if data does have len(shape) of 4
     """
 
     valid_methods = {'median', 'mean'}
-    method = method.lower()
+    method = str(method).lower()
     if method not in valid_methods:
         raise ValueError('Invalid method supplied: got {}, '
                          'method must be one of {}'.format(method, valid_methods))
