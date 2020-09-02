@@ -561,6 +561,37 @@ def test__validate_categories(tmp_path):
                                     supplied_categories=supplied_categories)
 
 
+def test__validate_output_shape(tmp_path):
+    _create_minimal_dataset(tmp_path)
+    db = DatasetBuilder(tmp_path)
+
+    # make sure list or tuple is converted
+    output_shapes = [[222, 333], (222, 333)]
+    for output_shape in output_shapes:
+        validated_shape = db._validate_output_shape(output_shape)
+        assert validated_shape == [output_shape, output_shape, output_shape]
+
+    # not all splits specified
+    output_shape = [(123, 456), (789, 1011)]
+    with pytest.raises(ValueError):
+        _ = db._validate_output_shape(output_shape=output_shape)
+
+    # not all splits have 2 entries
+    output_shape = [(12, 34), (56, 78), (910, 1112, 1314)]
+    with pytest.raises(ValueError):
+        _ = db._validate_output_shape(output_shape=output_shape)
+
+    # too many splits
+    output_shape = [(12, 34), (56, 78), (910, 1112), (1314, )]
+    with pytest.raises(ValueError):
+        _ = db._validate_output_shape(output_shape=output_shape)
+
+    # not a list/tuple
+    output_shape = 56
+    with pytest.raises(ValueError):
+        _ = db._validate_output_shape(output_shape=output_shape)
+
+
 def test_build_dataset(tmp_path):
     # create dataset
     experiments = ['exp{}'.format(i) for i in range(5)]

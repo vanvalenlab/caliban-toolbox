@@ -467,6 +467,44 @@ class DatasetBuilder(object):
                 'Specified categories should be "all", one of {}, or a list '
                 'of acceptable tissue types'.format(category_list))
 
+    def _validate_output_shape(self, output_shape):
+        """Check that appropriate values were provided for output_shape
+
+        Args:
+            output_shape: output_shape supplied by the user
+
+        Returns:
+            list: a properly formatted output_shape
+
+        Raises:
+            ValueError: If invalid output_shape provided
+        """
+        if not isinstance(output_shape, (list, tuple)):
+            raise ValueError('output_shape must be either a list of tuples or a tuple')
+
+        if len(output_shape) == 2:
+            for val in output_shape:
+                if not isinstance(val, int):
+                    raise ValueError('A list of length two was supplied, but not all '
+                                     'list items were ints, got {}'.format(val))
+            # convert to list with same shape for each split
+            output_shape = [output_shape, output_shape, output_shape]
+            return output_shape
+        elif len(output_shape) == 3:
+            for sub_shape in output_shape:
+                if not len(sub_shape) == 2:
+                    raise ValueError('A list of length three was supplied, bu not all '
+                                     'of the sublists had len 2, got {}'.format(sub_shape))
+                for val in sub_shape:
+                    if not isinstance(val, int):
+                        raise ValueError('A list of lists was supplied, but not all '
+                                         'sub_list items were ints, got {}'.format(val))
+
+            return output_shape
+        else:
+            raise ValueError('output_shape must be a list of length 2 '
+                             'or length 3, got {}'.format(output_shape))
+
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
                       data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
         """Construct a dataset for model training and evaluation
@@ -493,7 +531,6 @@ class DatasetBuilder(object):
 
         Raises:
             ValueError: If invalid resize parameter supplied
-            ValueError: If invalid output_shape parameter supplied
         """
         if self.all_tissues == []:
             self._identify_tissue_and_platform_types()
@@ -504,9 +541,8 @@ class DatasetBuilder(object):
         platforms = self._validate_categories(category_list=self.all_platforms,
                                               supplied_categories=platforms)
 
-        # TODO: Is there a better way to check this?
-        valid_resize = [False, 'by_tissue', 'by_image']
-        if resize in valid_resize:
+        valid_resize = ['by_tissue', 'by_image']
+        if resize in valid_resize or not resize:
             pass
         elif isinstance(resize, (float, int)):
             if resize <= 0:
@@ -514,16 +550,7 @@ class DatasetBuilder(object):
         else:
             raise ValueError('resize must be one of {}, or an integer value'.format(valid_resize))
 
-        if not isinstance(output_shape, (list, tuple)):
-            raise ValueError('output_shape must be either a list of tuples or a tuple')
-
-        # convert from single tuple to list of tuples for each split
-        if isinstance(output_shape, tuple):
-            output_shape = [output_shape, output_shape, output_shape]
-
-        for tup in output_shape:
-            if len(tup) != 2:
-                raise ValueError('Each output_shape must be len(2) tuple, got {}'.format(tup))
+        output_shape = self._validate_output_shape(output_shape=output_shape)
 
         # if any of the split parameters are different we need to reload the dataset
         if self.seed != seed or self.data_split != data_split:
