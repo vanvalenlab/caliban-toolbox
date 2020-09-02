@@ -70,7 +70,7 @@ class DatasetSplitter(object):
         split_dict = {}
         for split in self.splits:
             new_train_dict = {}
-            train_size = int(split*N_batches)
+            train_size = int(split * N_batches)
             split_idx = permuted_index[0:train_size]
             new_train_dict['X'] = X[split_idx]
             new_train_dict['y'] = y[split_idx]
