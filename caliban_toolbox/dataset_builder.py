@@ -338,8 +338,10 @@ class DatasetBuilder(object):
 
             if resize == 'by_tissue':
                 batch_ids = np.unique(tissue_list)
-            else:
+            elif resize == 'by_image':
                 batch_ids = np.arange(0, X.shape[0])
+            else:
+                raise ValueError('Invalid `resize` value: {}'.format(resize))
 
             # loop over each batch
             for batch_id in batch_ids:
@@ -521,7 +523,7 @@ class DatasetBuilder(object):
                     - False. No resizing
                     - float/int: Resizes all images by supplied value
                     - by_tissue. Resizes by median cell size within each tissue type
-                    - by_image. REsizes by median cell size within each image
+                    - by_image. Resizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
             seed: seed for reproducible splitting of dataset
             **kwargs: other arguments to be passed to helper functions
