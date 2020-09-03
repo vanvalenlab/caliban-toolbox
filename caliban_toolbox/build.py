@@ -23,12 +23,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import warnings
 import math
 
 import numpy as np
 
 from skimage.measure import regionprops_table
+from sklearn.model_selection import train_test_split
+
 
 from deepcell_toolbox.utils import resize, tile_image
 
@@ -43,14 +45,15 @@ def compute_cell_size(npz_file, method='median', by_image=True):
             the cell size across the entire npz is returned
 
     Returns:
-        average_sizes: list of typical cell size in NPZ
+        list: list of typical cell size in NPZ. If no cells, returns None.
 
     Raises: ValueError if invalid method supplied
     Raises: ValueError if data does have len(shape) of 4
     """
 
-    valid_methods = set(['median', 'mean'])
-    if method.lower() not in valid_methods:
+    valid_methods = {'median', 'mean'}
+    method = str(method).lower()
+    if method not in valid_methods:
         raise ValueError('Invalid method supplied: got {}, '
                          'method must be one of {}'.format(method, valid_methods))
 
@@ -63,9 +66,15 @@ def compute_cell_size(npz_file, method='median', by_image=True):
 
     for i in range(labels.shape[0]):
         current_label = labels[i, :, :, 0]
-        area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
 
-        cell_sizes.append(area)
+        # check to make sure array contains cells
+        if len(np.unique(current_label)) > 1:
+            area = regionprops_table(current_label.astype('int'), properties=['area'])['area']
+            cell_sizes.append(area)
+
+    # if all images were empty, return NA
+    if cell_sizes == []:
+        return None
 
     # compute for each list corresponding to each image
     if by_image:
@@ -80,16 +89,16 @@ def compute_cell_size(npz_file, method='median', by_image=True):
     else:
         all_cell_sizes = np.concatenate(cell_sizes)
         if method == 'mean':
-            average_cell_sizes = [np.mean(all_cell_sizes)]
+            average_cell_sizes = np.mean(all_cell_sizes)
         elif method == 'median':
-            average_cell_sizes = [np.median(all_cell_sizes)]
+            average_cell_sizes = np.median(all_cell_sizes)
         else:
             raise ValueError('Invalid method supplied')
 
     return average_cell_sizes
 
 
-def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_ratio):
+def reshape_training_data(X_data, y_data, resize_ratio, final_size, stride_ratio=1, tolerance=1.5):
     """Takes a stack of X and y data and reshapes and crops them to match output dimensions
 
     Args:
@@ -98,14 +107,20 @@ def reshape_training_image(X_data, y_data, resize_ratio, final_size, stride_rati
         resize_ratio: resize ratio for the images
         final_size: the desired shape of the output image
         stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
+        tolerance: ratio that determines when resizing occurs
 
     Returns:
         reshaped_X, reshaped_y: resized and cropped version of input images
+
+    Raises:
+        ValueError: If image data is not 4D
     """
 
+    if len(X_data.shape) != 4:
+        raise ValueError('Image data must be 4D')
+
     # resize if needed
-    # TODO: Add tolerance to control when resizing happens
-    if resize_ratio != 1:
+    if resize_ratio > tolerance or resize_ratio < (1 / tolerance):
         new_shape = (int(X_data.shape[1] * resize_ratio),
                      int(X_data.shape[2] * resize_ratio))
 
@@ -135,7 +150,13 @@ def pad_image_stack(images, crop_size):
 
     Returns:
         np.array: padded image stack
+
+    Raises:
+        ValueError: If images are not 4D
     """
+
+    if len(images.shape) != 4:
+        raise ValueError('Image data must be 4D')
 
     row_len, col_len = images.shape[1:3]
     row_crop, col_crop = crop_size
@@ -149,73 +170,94 @@ def pad_image_stack(images, crop_size):
         # don't need to pad
         return images
     else:
-        new_images = np.zeros((images.shape[0], new_row_len, new_col_len, images.shape[3]))
+        new_images = np.zeros((images.shape[0], new_row_len, new_col_len, images.shape[3]),
+                              dtype=images.dtype)
         new_images[:, :row_len, :col_len, :] = images
         return new_images
 
 
-def combine_npz_files(npz_list, resize_ratios, stride_ratio=1, final_size=(256, 256)):
-    """Take a series of NPZ files and combine together into single training NPZ
+def train_val_test_split(X_data, y_data, data_split=(0.8, 0.1, 0.1), seed=None):
+    """Randomly splits supplied data into specified sizes for model assessment
 
     Args:
-        npz_list: list of NPZ files to combine. Currently only works on 2D static data
-        resize_ratios: ratio used to resize each NPZ if data is of different resolutions. Must
-            be either 1 for each NPZ file, or 1 for each image within the NPZ file
-        stride_ratio: amount of overlap between crops (1 is no overlap, 0.5 is half crop size)
-        final_size: size of the final crops to be produced
+        X_data: array of X data
+        y_data: array of y_data
+        data_split: tuple specifying the fraction of the dataset for train/val/test
+        seed: random seed for reproducible splits
 
     Returns:
-        np.array: array containing resized and cropped data from all input NPZs
+        list of X and y data split appropriately. If dataset is too small for all splits,
+            returns None for remaining splits
 
     Raises:
-        ValueError: If mismatch between number of resize ratios and number of images
+        ValueError: if ratios do not sum to 1
+        ValueError: if any of the splits are 0
+        ValueError: If length of X and y data is not equal
     """
-    combined_x = []
-    combined_y = []
 
-    for idx, npz in enumerate(npz_list):
-        current_x = npz['X']
-        current_y = npz['y']
-        current_resize = resize_ratios[idx]
+    total = np.round(np.sum(data_split), decimals=2)
+    if total != 1:
+        raise ValueError('Data splits must sum to 1, supplied splits sum to {}'.format(total))
 
-        # same resize value for entire NPZ file
-        if len(current_resize) == 1:
-            current_x, current_y = reshape_training_image(X_data=current_x,
-                                                          y_data=current_y,
-                                                          resize_ratio=current_resize[0],
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
-            combined_x.append(current_x)
-            combined_y.append(current_y)
+    if 0 in data_split:
+        raise ValueError('All splits must be non-zero')
 
-        # different resize value for each image within the NPZ file
-        else:
-            unique_x, unique_y = [], []
-            if len(current_resize) != current_x.shape[0]:
-                raise ValueError('Resize ratios must have same length as image data.'
-                                 'Provided resize ratios has length {} '
-                                 'and image data has shape {}'.format(len(resize_ratios),
-                                                                      current_x.shape))
-            # loop over each image and resize + crop appropriately
-            for img in range(current_x.shape[0]):
-                x_batch, y_batch = reshape_training_image(X_data=current_x[img:(img + 1)],
-                                                          y_data=current_y[img:(img + 1)],
-                                                          resize_ratio=current_resize[img],
-                                                          final_size=final_size,
-                                                          stride_ratio=stride_ratio)
-                unique_x.append(x_batch)
-                unique_y.append(y_batch)
+    if X_data.shape[0] != y_data.shape[0]:
+        raise ValueError('Supplied X and y data do not have the same '
+                         'length over batches dimension. '
+                         'X.shape: {}, y.shape: {}'.format(X_data.shape, y_data.shape))
 
-            # combine all images from this NPZ together
-            current_x = np.concatenate(unique_x, axis=0)
-            current_y = np.concatenate(unique_y, axis=0)
+    train_ratio, val_ratio, test_ratio = data_split
 
-            # add combined images from this NPZ onto main accumulator list
-            combined_x.append(current_x)
-            combined_y.append(current_y)
+    # 1 image, train split only
+    if X_data.shape[0] == 1:
+        warnings.warn('Only one image in current NPZ, returning training split only')
+        return X_data, y_data, None, None, None, None
 
-    # combine all images from all NPZs together
-    combined_x = np.concatenate(combined_x, axis=0)
-    combined_y = np.concatenate(combined_y, axis=0)
+    # 2 images, train and val split only
+    if X_data.shape[0] == 2:
+        warnings.warn('Only two images in current NPZ, returning training and val split only')
+        return X_data[:1, ...], y_data[:1, ...], X_data[1:, ...], y_data[1:, ...], None, None
 
-    return combined_x, combined_y
+    # compute fraction not in train
+    val_remainder_ratio = np.round(1 - train_ratio, decimals=2)
+    val_remainder_count = X_data.shape[0] * val_remainder_ratio
+
+    # not enough data for val split, put minimum (1) in each split
+    if val_remainder_count < 1:
+        warnings.warn('Not enough data in current NPZ for specified data split.'
+                      'Returning modified data split')
+        X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
+                                                                      test_size=2,
+                                                                      random_state=seed)
+        X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
+                                                        test_size=1,
+                                                        random_state=seed)
+        return X_train, y_train, X_val, y_val, X_test, y_test
+
+    # split dataset into train and remainder
+    X_train, X_remainder, y_train, y_remainder = train_test_split(X_data, y_data,
+                                                                  test_size=val_remainder_ratio,
+                                                                  random_state=seed)
+
+    # compute fraction of remainder that is test
+    test_remainder_ratio = np.round(test_ratio / (val_ratio + test_ratio), decimals=2)
+    test_remainder_count = X_remainder.shape[0] * test_remainder_ratio
+
+    # not enough data in remainder for test split, put minimum (1) in test split from train split
+    if test_remainder_count < 1:
+        warnings.warn('Not enough data in current NPZ for specified data split.'
+                      'Returning modified data split')
+        X_train, X_test, y_train, y_test = train_test_split(X_train, y_train,
+                                                            test_size=1,
+                                                            random_state=seed)
+        X_val, y_val = X_remainder, y_remainder
+
+        return X_train, y_train, X_val, y_val, X_test, y_test
+
+    # split remainder into val and test
+    X_val, X_test, y_val, y_test = train_test_split(X_remainder, y_remainder,
+                                                    test_size=test_remainder_ratio,
+                                                    random_state=seed)
+
+    return X_train, y_train, X_val, y_val, X_test, y_test

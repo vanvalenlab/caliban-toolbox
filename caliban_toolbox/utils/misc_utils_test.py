@@ -27,6 +27,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 
 import numpy as np
 from caliban_toolbox.utils import misc_utils
@@ -41,3 +42,17 @@ def test_sorted_nicely():
     expected = ['test_0_0', 'test_1_0', 'test_1_1']
     unsorted = ['test_1_1', 'test_0_0', 'test_1_0']
     assert(np.array_equal(expected, misc_utils.sorted_nicely(unsorted)))
+
+
+def test_list_folders(tmp_path):
+    # test with no folders
+    empty_dir = misc_utils.list_folders(tmp_path)
+
+    assert empty_dir == []
+
+    os.makedirs(os.path.join(tmp_path, 'folder1'))
+    os.makedirs(os.path.join(tmp_path, 'folder2'))
+
+    folders = misc_utils.list_folders((tmp_path))
+
+    assert set(folders) == {'folder1', 'folder2'}

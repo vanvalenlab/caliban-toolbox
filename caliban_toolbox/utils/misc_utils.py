@@ -119,3 +119,19 @@ def list_npzs_folder(npz_dir):
     npz_list = sorted_nicely(npz_list)
 
     return npz_list
+
+
+def list_folders(base_dir):
+    """Lists all folders in current directory
+
+    Args:
+        base_dir: directory with folders
+
+    Returns:
+        list of folders in base_dir, empty if None
+    """
+
+    files = os.listdir(base_dir)
+    folders = [file for file in files if os.path.isdir(os.path.join(base_dir, file))]
+
+    return folders
