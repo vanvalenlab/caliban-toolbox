@@ -51,8 +51,8 @@ class DatasetBuilder(object):
         self.dataset_path = dataset_path
         self.experiment_folders = experiment_folders
 
-        self.all_tissues = []
-        self.all_platforms = []
+        self.all_tissues = None
+        self.all_platforms = None
 
         # dicts to hold aggregated data
         self.train_dict = {}
@@ -117,8 +117,8 @@ class DatasetBuilder(object):
             tissues.append(metadata['tissue'])
             platforms.append(metadata['platform'])
 
-        self.all_tissues.extend(tissues)
-        self.all_platforms.extend(platforms)
+        self.all_tissues = np.array(tissues)
+        self.all_platforms = np.array(platforms)
 
     def _load_experiment(self, experiment_path):
         """Load the NPZ files present in a single experiment folder
@@ -282,11 +282,11 @@ class DatasetBuilder(object):
             raise ValueError('No matching data for specified parameters')
 
         X, y = X[combined_idx], y[combined_idx]
-        tissue_list = np.array(tissue_list)[combined_idx]
-        platform_list = np.array(platform_list)[combined_idx]
+        tissue_list = tissue_list[combined_idx]
+        platform_list = platform_list[combined_idx]
 
-        subset_dict = {'X': X, 'y': y, 'tissue_list': list(tissue_list),
-                       'platform_list': list(platform_list)}
+        subset_dict = {'X': X, 'y': y, 'tissue_list': tissue_list,
+                       'platform_list': platform_list}
         return subset_dict
 
     def _reshape_dict(self, data_dict, resize=False, output_shape=(512, 512), resize_target=400,
@@ -306,8 +306,8 @@ class DatasetBuilder(object):
             median cell size before resizing occurs
         """
         X, y = data_dict['X'], data_dict['y']
-        tissue_list = np.array(data_dict['tissue_list'])
-        platform_list = np.array(data_dict['platform_list'])
+        tissue_list = data_dict['tissue_list']
+        platform_list = data_dict['platform_list']
 
         if not resize:
             # no resizing
@@ -318,8 +318,8 @@ class DatasetBuilder(object):
             multiplier = int(X_new.shape[0] / X.shape[0])
 
             # then we duplicate the labels in place to match expanded array size
-            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
-            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
+            tissue_list_new = np.repeat(tissue_list, multiplier)
+            platform_list_new = np.repeat(platform_list, multiplier)
 
         elif isinstance(resize, (float, int)):
             # resized based on supplied value
@@ -331,8 +331,8 @@ class DatasetBuilder(object):
             multiplier = int(X_new.shape[0] / X.shape[0])
 
             # then we duplicate the labels in place to match expanded array size
-            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
-            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
+            tissue_list_new = np.repeat(tissue_list, multiplier)
+            platform_list_new = np.repeat(platform_list, multiplier)
         else:
             X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
 
@@ -377,9 +377,8 @@ class DatasetBuilder(object):
                 multiplier = int(X_batch_resized.shape[0] / X_batch.shape[0])
 
                 # then we duplicate the labels in place to match expanded array size
-                tissue_list_batch = [item for item in tissue_list_batch for _ in range(multiplier)]
-                platform_list_batch = \
-                    [item for item in platform_list_batch for _ in range(multiplier)]
+                tissue_list_batch = np.repeat(tissue_list_batch, multiplier)
+                platform_list_batch = np.repeat(platform_list_batch, multiplier)
 
                 # add each batch onto main list
                 X_new.append(X_batch_resized)
@@ -409,8 +408,8 @@ class DatasetBuilder(object):
             cleaned_dict: dictionary with cleaned labels
         """
         X, y = data_dict['X'], data_dict['y']
-        tissue_list = np.array(data_dict['tissue_list'])
-        platform_list = np.array(data_dict['platform_list'])
+        tissue_list = data_dict['tissue_list']
+        platform_list = data_dict['platform_list']
         keep_idx = np.repeat(True, y.shape[0])
         cleaned_y = np.zeros_like(y)
 
@@ -434,8 +433,8 @@ class DatasetBuilder(object):
         cleaned_tissue = tissue_list[keep_idx]
         cleaned_platform = platform_list[keep_idx]
 
-        cleaned_dict = {'X': cleaned_X, 'y': cleaned_y, 'tissue_list': list(cleaned_tissue),
-                        'platform_list': list(cleaned_platform)}
+        cleaned_dict = {'X': cleaned_X, 'y': cleaned_y, 'tissue_list': cleaned_tissue,
+                        'platform_list': cleaned_platform}
 
         return cleaned_dict
 
@@ -452,7 +451,7 @@ class DatasetBuilder(object):
         """
 
         np.random.seed(seed)
-        category_list = np.array(data_dict[category])
+        category_list = data_dict[category]
 
         unique_categories, unique_counts = np.unique(category_list, return_counts=True)
         max_counts = np.max(unique_counts)
@@ -593,7 +592,7 @@ class DatasetBuilder(object):
         Raises:
             ValueError: If invalid resize parameter supplied
         """
-        if self.all_tissues == []:
+        if self.all_tissues is None:
             self._identify_tissue_and_platform_types()
 
         # validate inputs

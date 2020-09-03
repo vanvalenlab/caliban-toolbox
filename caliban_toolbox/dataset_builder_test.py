@@ -93,8 +93,8 @@ def _create_test_dict(tissues, platforms):
     X_data = data
     y_data = data[..., :1].astype('int16')
 
-    tissue_list = [tissues[i] for i in range(len(tissues)) for _ in range(5)]
-    platform_list = [platforms[i] for i in range(len(platforms)) for _ in range(5)]
+    tissue_list = np.repeat(tissues, 5)
+    platform_list = np.repeat(platforms, 5)
 
     return {'X': X_data, 'y': y_data, 'tissue_list': tissue_list, 'platform_list': platform_list}
 
@@ -290,8 +290,8 @@ def test__subset_data_dict(tmp_path):
 
     X = np.arange(100)
     y = np.arange(100)
-    tissue_list = ['tissue1'] * 10 + ['tissue2'] * 50 + ['tissue3'] * 40
-    platform_list = ['platform1'] * 20 + ['platform2'] * 40 + ['platform3'] * 40
+    tissue_list = np.array(['tissue1'] * 10 + ['tissue2'] * 50 + ['tissue3'] * 40)
+    platform_list = np.array(['platform1'] * 20 + ['platform2'] * 40 + ['platform3'] * 40)
     data_dict = {'X': X, 'y': y, 'tissue_list': tissue_list, 'platform_list': platform_list}
 
     db = DatasetBuilder(tmp_path)
@@ -306,8 +306,8 @@ def test__subset_data_dict(tmp_path):
     assert np.all(X_subset == X[keep_idx])
 
     # all platforms, one tissue
-    tissues = ['tissue2']
-    platforms = ['platform1', 'platform2', 'platform3']
+    tissues = np.array(['tissue2'])
+    platforms = np.array(['platform1', 'platform2', 'platform3'])
     subset_dict = db._subset_data_dict(data_dict=data_dict, tissues=tissues, platforms=platforms)
     X_subset = subset_dict['X']
     keep_idx = np.isin(tissue_list, tissues)
@@ -315,8 +315,8 @@ def test__subset_data_dict(tmp_path):
     assert np.all(X_subset == X[keep_idx])
 
     # drop tissue 1 and platform 3
-    tissues = ['tissue2', 'tissue3']
-    platforms = ['platform1', 'platform2']
+    tissues = np.array(['tissue2', 'tissue3'])
+    platforms = np.array(['platform1', 'platform2'])
     subset_dict = db._subset_data_dict(data_dict=data_dict, tissues=tissues, platforms=platforms)
     X_subset = subset_dict['X']
     platform_keep_idx = np.isin(platform_list, platforms)
@@ -326,8 +326,8 @@ def test__subset_data_dict(tmp_path):
     assert np.all(X_subset == X[keep_idx])
 
     # tissue/platform combination that doesn't exist
-    tissues = ['tissue1']
-    platforms = ['platform3']
+    tissues = np.array(['tissue1'])
+    platforms = np.array(['platform3'])
     with pytest.raises(ValueError):
         _ = db._subset_data_dict(data_dict=data_dict, tissues=tissues, platforms=platforms)
 
@@ -495,8 +495,8 @@ def test__clean_labels(tmp_path):
     test_labels[0, ..., 0] = test_label
 
     test_X = np.zeros_like(test_labels)
-    test_tissue = ['tissue1', 'tissue2']
-    test_platform = ['platform2', 'platform3']
+    test_tissue = np.array(['tissue1', 'tissue2'])
+    test_platform = np.array(['platform2', 'platform3'])
 
     test_dict = {'X': test_X, 'y': test_labels, 'tissue_list': test_tissue,
                  'platform_list': test_platform}
