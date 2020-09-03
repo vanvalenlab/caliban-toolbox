@@ -439,6 +439,63 @@ class DatasetBuilder(object):
 
         return cleaned_dict
 
+    def _balance_dict(self, data_dict, seed, category):
+        """Balance a dictionary of training data so that each category is equally represented
+
+        Args:
+            data_dict: dictionary of training data
+            seed: seed for random duplication of less-represented classes
+            category: name of the key in the dictionary to use for balancing
+
+        Returns:
+            dict: training data that has been balanced
+        """
+
+        np.random.seed(seed)
+        category_list = np.array(data_dict[category])
+
+        unique_categories, unique_counts = np.unique(category_list, return_counts=True)
+        max_counts = np.max(unique_counts)
+
+        # original variables
+        X_unbalanced, y_unbalanced = data_dict['X'], data_dict['y']
+        tissue_unbalanced = np.array(data_dict['tissue_list'])
+        platform_unbalanced = np.array(data_dict['platform_list'])
+
+        # create list to hold balanced versions
+        X_balanced, y_balanced, tissue_balanced, platform_balanced = [], [], [], []
+        for category in unique_categories:
+            cat_idx = category == category_list
+            X_cat, y_cat = X_unbalanced[cat_idx], y_unbalanced[cat_idx]
+            tissue_cat, platform_cat = tissue_unbalanced[cat_idx], platform_unbalanced[cat_idx]
+
+            category_counts = X_cat.shape[0]
+            if category_counts == max_counts:
+                # we don't need to balance, as this category already has max number of examples
+                X_balanced.append(X_cat)
+                y_balanced.append(y_cat)
+                tissue_balanced.append(tissue_cat)
+                platform_balanced.append(platform_cat)
+            else:
+                # randomly select max_counts number of indices to upsample data
+                balance_idx = np.random.choice(range(category_counts), size=max_counts,
+                                               replace=True)
+
+                # index into each array using random index to generate randomly upsampled version
+                X_balanced.append(X_cat[balance_idx])
+                y_balanced.append(y_cat[balance_idx])
+                tissue_balanced.append(tissue_cat[balance_idx])
+                platform_balanced.append(platform_cat[balance_idx])
+
+        # combine balanced versions of each category into single array
+        X_balanced = np.concatenate(X_balanced, axis=0)
+        y_balanced = np.concatenate(y_balanced, axis=0)
+        tissue_balanced = np.concatenate(tissue_balanced, axis=0)
+        platform_balanced = np.concatenate(platform_balanced, axis=0)
+
+        return {'X': X_balanced, 'y': y_balanced, 'tissue_list': tissue_balanced,
+                'platform_list': platform_balanced}
+
     def _validate_categories(self, category_list, supplied_categories):
         """Check that an appropriate subset of a list of categories was supplied
 
@@ -508,7 +565,7 @@ class DatasetBuilder(object):
                              'or length 3, got {}'.format(output_shape))
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
-                      data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
+                      data_split=(0.8, 0.1, 0.1), seed=0, balance_dataset=False, **kwargs):
         """Construct a dataset for model training and evaluation
 
         Args:
@@ -526,6 +583,8 @@ class DatasetBuilder(object):
                     - by_image. Resizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
             seed: seed for reproducible splitting of dataset
+            balance_dataset: if true, randomly duplicate less-represented tissue types
+                in train and val splits so that there are the same number of images of each type
             **kwargs: other arguments to be passed to helper functions
 
         Returns:
@@ -582,6 +641,11 @@ class DatasetBuilder(object):
             current_dict = self._clean_labels(data_dict=current_dict, relabel=relabel,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
+
+            # don't balance test split
+            if balance_dataset and idx != 2:
+                current_dict = self._balance_dict(current_dict, seed=seed, category='tissue_list')
+
             dicts[idx] = current_dict
         return dicts
 

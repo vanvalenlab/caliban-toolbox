@@ -524,6 +524,67 @@ def test__clean_labels(tmp_path):
     assert cleaned_dict['platform_list'][0] == 'platform2'
 
 
+def test__balance_dict(tmp_path):
+    _create_minimal_dataset(tmp_path)
+    db = DatasetBuilder(tmp_path)
+
+    X_data = np.random.rand(9, 10, 10, 3)
+    y_data = np.random.rand(9, 10, 10, 1)
+    tissue_list = np.array(['tissue1'] * 3 + ['tissue2'] * 3 + ['tissue3'] * 3)
+    platform_list = np.array(['platform1'] * 3 + ['platform2'] * 3 + ['platform3'] * 3)
+
+    balanced_dict = {'X': X_data, 'y': y_data, 'tissue_list': tissue_list,
+                     'platform_list': platform_list}
+    output_dict = db._balance_dict(data_dict=balanced_dict, seed=0, category='tissue_list')
+
+    # data is already balanced, all items should be identical
+    for key in output_dict:
+        assert np.all(output_dict[key] == balanced_dict[key])
+
+    # tissue 3 has most, others need to be upsampled
+    tissue_list = np.array(['tissue1'] * 1 + ['tissue2'] * 2 + ['tissue3'] * 6)
+    unbalanced_dict = {'X': X_data, 'y': y_data, 'tissue_list': tissue_list,
+                       'platform_list': platform_list}
+    output_dict = db._balance_dict(data_dict=unbalanced_dict, seed=0, category='tissue_list')
+
+    # tissue 3 is unchanged
+    for key in output_dict:
+        assert np.all(output_dict[key][-6:] == unbalanced_dict[key][-6:])
+
+    # tissue 1 only has a single example, all copies should be equal
+    tissue1_idx = np.where(output_dict['tissue_list'] == 'tissue1')[0]
+    for key in output_dict:
+        vals = output_dict[key]
+        for idx in tissue1_idx:
+            new_val = vals[idx]
+            old_val = unbalanced_dict[key][0]
+            assert np.all(new_val == old_val)
+
+    # tissue 2 has 2 examples, all copies should be equal to one of those values
+    tissue2_idx = np.where(output_dict['tissue_list'] == 'tissue2')[0]
+    for key in output_dict:
+        vals = output_dict[key]
+        for idx in tissue2_idx:
+            new_val = vals[idx]
+            old_val1 = unbalanced_dict[key][1]
+            old_val2 = unbalanced_dict[key][2]
+            assert np.all(new_val == old_val1) or np.all(new_val == old_val2)
+
+    # check with same seed
+    output_dict_same_seed = db._balance_dict(data_dict=unbalanced_dict, seed=0,
+                                             category='tissue_list')
+
+    for key in output_dict_same_seed:
+        assert np.all(output_dict_same_seed[key] == output_dict[key])
+
+    # check with different seed
+    output_dict_diff_seed = db._balance_dict(data_dict=unbalanced_dict, seed=1,
+                                             category='tissue_list')
+
+    for key in ['X', 'y']:
+        assert not np.all(output_dict_diff_seed[key] == output_dict[key])
+
+
 def test__validate_categories(tmp_path):
     _create_minimal_dataset(tmp_path)
     db = DatasetBuilder(tmp_path)
@@ -646,7 +707,8 @@ def test_build_dataset(tmp_path):
 
     # full runthrough with default options changed
     _ = db.build_dataset(tissues='all', platforms=platforms, output_shape=(10, 10),
-                         relabel_hard=True, resize='by_image', small_object_threshold=5)
+                         relabel_hard=True, resize='by_image', small_object_threshold=5,
+                         balance_dataset=True)
 
 
 def test_summarize_dataset(tmp_path):
