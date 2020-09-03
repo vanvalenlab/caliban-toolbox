@@ -414,7 +414,7 @@ class DatasetBuilder(object):
         keep_idx = np.repeat(True, y.shape[0])
         cleaned_y = np.zeros_like(y)
 
-        # TODO: remove one data QC happens in main toolbox pipeline
+        # TODO: remove once data QC happens in main toolbox pipeline
         for i in range(y.shape[0]):
             y_current = y[i, ..., 0]
             if relabel:
