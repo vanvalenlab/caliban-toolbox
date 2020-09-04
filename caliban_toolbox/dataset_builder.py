@@ -51,8 +51,8 @@ class DatasetBuilder(object):
         self.dataset_path = dataset_path
         self.experiment_folders = experiment_folders
 
-        self.all_tissues = []
-        self.all_platforms = []
+        self.all_tissues = None
+        self.all_platforms = None
 
         # dicts to hold aggregated data
         self.train_dict = {}
@@ -117,8 +117,8 @@ class DatasetBuilder(object):
             tissues.append(metadata['tissue'])
             platforms.append(metadata['platform'])
 
-        self.all_tissues.extend(tissues)
-        self.all_platforms.extend(platforms)
+        self.all_tissues = np.array(tissues)
+        self.all_platforms = np.array(platforms)
 
     def _load_experiment(self, experiment_path):
         """Load the NPZ files present in a single experiment folder
@@ -282,11 +282,11 @@ class DatasetBuilder(object):
             raise ValueError('No matching data for specified parameters')
 
         X, y = X[combined_idx], y[combined_idx]
-        tissue_list = np.array(tissue_list)[combined_idx]
-        platform_list = np.array(platform_list)[combined_idx]
+        tissue_list = tissue_list[combined_idx]
+        platform_list = platform_list[combined_idx]
 
-        subset_dict = {'X': X, 'y': y, 'tissue_list': list(tissue_list),
-                       'platform_list': list(platform_list)}
+        subset_dict = {'X': X, 'y': y, 'tissue_list': tissue_list,
+                       'platform_list': platform_list}
         return subset_dict
 
     def _reshape_dict(self, data_dict, resize=False, output_shape=(512, 512), resize_target=400,
@@ -306,8 +306,8 @@ class DatasetBuilder(object):
             median cell size before resizing occurs
         """
         X, y = data_dict['X'], data_dict['y']
-        tissue_list = np.array(data_dict['tissue_list'])
-        platform_list = np.array(data_dict['platform_list'])
+        tissue_list = data_dict['tissue_list']
+        platform_list = data_dict['platform_list']
 
         if not resize:
             # no resizing
@@ -318,8 +318,8 @@ class DatasetBuilder(object):
             multiplier = int(X_new.shape[0] / X.shape[0])
 
             # then we duplicate the labels in place to match expanded array size
-            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
-            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
+            tissue_list_new = np.repeat(tissue_list, multiplier)
+            platform_list_new = np.repeat(platform_list, multiplier)
 
         elif isinstance(resize, (float, int)):
             # resized based on supplied value
@@ -331,8 +331,8 @@ class DatasetBuilder(object):
             multiplier = int(X_new.shape[0] / X.shape[0])
 
             # then we duplicate the labels in place to match expanded array size
-            tissue_list_new = [item for item in tissue_list for _ in range(multiplier)]
-            platform_list_new = [item for item in platform_list for _ in range(multiplier)]
+            tissue_list_new = np.repeat(tissue_list, multiplier)
+            platform_list_new = np.repeat(platform_list, multiplier)
         else:
             X_new, y_new, tissue_list_new, platform_list_new = [], [], [], []
 
@@ -377,9 +377,8 @@ class DatasetBuilder(object):
                 multiplier = int(X_batch_resized.shape[0] / X_batch.shape[0])
 
                 # then we duplicate the labels in place to match expanded array size
-                tissue_list_batch = [item for item in tissue_list_batch for _ in range(multiplier)]
-                platform_list_batch = \
-                    [item for item in platform_list_batch for _ in range(multiplier)]
+                tissue_list_batch = np.repeat(tissue_list_batch, multiplier)
+                platform_list_batch = np.repeat(platform_list_batch, multiplier)
 
                 # add each batch onto main list
                 X_new.append(X_batch_resized)
@@ -409,8 +408,8 @@ class DatasetBuilder(object):
             cleaned_dict: dictionary with cleaned labels
         """
         X, y = data_dict['X'], data_dict['y']
-        tissue_list = np.array(data_dict['tissue_list'])
-        platform_list = np.array(data_dict['platform_list'])
+        tissue_list = data_dict['tissue_list']
+        platform_list = data_dict['platform_list']
         keep_idx = np.repeat(True, y.shape[0])
         cleaned_y = np.zeros_like(y)
 
@@ -434,10 +433,67 @@ class DatasetBuilder(object):
         cleaned_tissue = tissue_list[keep_idx]
         cleaned_platform = platform_list[keep_idx]
 
-        cleaned_dict = {'X': cleaned_X, 'y': cleaned_y, 'tissue_list': list(cleaned_tissue),
-                        'platform_list': list(cleaned_platform)}
+        cleaned_dict = {'X': cleaned_X, 'y': cleaned_y, 'tissue_list': cleaned_tissue,
+                        'platform_list': cleaned_platform}
 
         return cleaned_dict
+
+    def _balance_dict(self, data_dict, seed, category):
+        """Balance a dictionary of training data so that each category is equally represented
+
+        Args:
+            data_dict: dictionary of training data
+            seed: seed for random duplication of less-represented classes
+            category: name of the key in the dictionary to use for balancing
+
+        Returns:
+            dict: training data that has been balanced
+        """
+
+        np.random.seed(seed)
+        category_list = data_dict[category]
+
+        unique_categories, unique_counts = np.unique(category_list, return_counts=True)
+        max_counts = np.max(unique_counts)
+
+        # original variables
+        X_unbalanced, y_unbalanced = data_dict['X'], data_dict['y']
+        tissue_unbalanced = np.array(data_dict['tissue_list'])
+        platform_unbalanced = np.array(data_dict['platform_list'])
+
+        # create list to hold balanced versions
+        X_balanced, y_balanced, tissue_balanced, platform_balanced = [], [], [], []
+        for category in unique_categories:
+            cat_idx = category == category_list
+            X_cat, y_cat = X_unbalanced[cat_idx], y_unbalanced[cat_idx]
+            tissue_cat, platform_cat = tissue_unbalanced[cat_idx], platform_unbalanced[cat_idx]
+
+            category_counts = X_cat.shape[0]
+            if category_counts == max_counts:
+                # we don't need to balance, as this category already has max number of examples
+                X_balanced.append(X_cat)
+                y_balanced.append(y_cat)
+                tissue_balanced.append(tissue_cat)
+                platform_balanced.append(platform_cat)
+            else:
+                # randomly select max_counts number of indices to upsample data
+                balance_idx = np.random.choice(range(category_counts), size=max_counts,
+                                               replace=True)
+
+                # index into each array using random index to generate randomly upsampled version
+                X_balanced.append(X_cat[balance_idx])
+                y_balanced.append(y_cat[balance_idx])
+                tissue_balanced.append(tissue_cat[balance_idx])
+                platform_balanced.append(platform_cat[balance_idx])
+
+        # combine balanced versions of each category into single array
+        X_balanced = np.concatenate(X_balanced, axis=0)
+        y_balanced = np.concatenate(y_balanced, axis=0)
+        tissue_balanced = np.concatenate(tissue_balanced, axis=0)
+        platform_balanced = np.concatenate(platform_balanced, axis=0)
+
+        return {'X': X_balanced, 'y': y_balanced, 'tissue_list': tissue_balanced,
+                'platform_list': platform_balanced}
 
     def _validate_categories(self, category_list, supplied_categories):
         """Check that an appropriate subset of a list of categories was supplied
@@ -508,7 +564,7 @@ class DatasetBuilder(object):
                              'or length 3, got {}'.format(output_shape))
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
-                      data_split=(0.8, 0.1, 0.1), seed=0, **kwargs):
+                      data_split=(0.8, 0.1, 0.1), seed=0, balance=False, **kwargs):
         """Construct a dataset for model training and evaluation
 
         Args:
@@ -526,6 +582,8 @@ class DatasetBuilder(object):
                     - by_image. Resizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
             seed: seed for reproducible splitting of dataset
+            balance: if true, randomly duplicate less-represented tissue types
+                in train and val splits so that there are the same number of images of each type
             **kwargs: other arguments to be passed to helper functions
 
         Returns:
@@ -534,7 +592,7 @@ class DatasetBuilder(object):
         Raises:
             ValueError: If invalid resize parameter supplied
         """
-        if self.all_tissues == []:
+        if self.all_tissues is None:
             self._identify_tissue_and_platform_types()
 
         # validate inputs
@@ -582,6 +640,11 @@ class DatasetBuilder(object):
             current_dict = self._clean_labels(data_dict=current_dict, relabel=relabel,
                                               small_object_threshold=small_object_threshold,
                                               min_objects=min_objects)
+
+            # don't balance test split
+            if balance and idx != 2:
+                current_dict = self._balance_dict(current_dict, seed=seed, category='tissue_list')
+
             dicts[idx] = current_dict
         return dicts
 
