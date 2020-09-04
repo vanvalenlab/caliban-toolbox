@@ -564,7 +564,7 @@ class DatasetBuilder(object):
                              'or length 3, got {}'.format(output_shape))
 
     def build_dataset(self, tissues='all', platforms='all', output_shape=(512, 512), resize=False,
-                      data_split=(0.8, 0.1, 0.1), seed=0, balance_dataset=False, **kwargs):
+                      data_split=(0.8, 0.1, 0.1), seed=0, balance=False, **kwargs):
         """Construct a dataset for model training and evaluation
 
         Args:
@@ -582,7 +582,7 @@ class DatasetBuilder(object):
                     - by_image. Resizes by median cell size within each image
             data_split: tuple specifying the fraction of the dataset for train/val/test
             seed: seed for reproducible splitting of dataset
-            balance_dataset: if true, randomly duplicate less-represented tissue types
+            balance: if true, randomly duplicate less-represented tissue types
                 in train and val splits so that there are the same number of images of each type
             **kwargs: other arguments to be passed to helper functions
 
@@ -642,7 +642,7 @@ class DatasetBuilder(object):
                                               min_objects=min_objects)
 
             # don't balance test split
-            if balance_dataset and idx != 2:
+            if balance and idx != 2:
                 current_dict = self._balance_dict(current_dict, seed=seed, category='tissue_list')
 
             dicts[idx] = current_dict

@@ -708,7 +708,7 @@ def test_build_dataset(tmp_path):
     # full runthrough with default options changed
     _ = db.build_dataset(tissues='all', platforms=platforms, output_shape=(10, 10),
                          relabel=True, resize='by_image', small_object_threshold=5,
-                         balance_dataset=True)
+                         balance=True)
 
 
 def test_summarize_dataset(tmp_path):
