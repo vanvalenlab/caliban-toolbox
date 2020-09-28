@@ -38,6 +38,8 @@ from skimage.external import tifffile as tiff
 
 import pandas as pd
 
+from pymongo import MongoClient
+
 from caliban_toolbox.utils.misc_utils import sorted_nicely
 
 
@@ -106,6 +108,8 @@ class UniversalDataLoader(object):
 
         self._datasets_available()  # TODO: keep list of datasets for comparison
         self._calc_upper_bound()
+
+        # self.mng_db = self._setup_mongo()
 
     def _vocab_check(self):
         """Check each user input for common mistakes and correct as neccesary
@@ -329,6 +333,21 @@ class UniversalDataLoader(object):
                 print(cur_dir)
                 print('only 1 file')
                 print('--------------------------------')
+
+    def _setup_mongo(self):
+        """Setup access to the database
+        """
+
+        # TODO: Move to environment variables
+        mongo_un = 'root'
+        mongo_pw = 'password'
+        mongo_host = 'mongo'
+        mongo_port = '27017'
+
+        mongo_uri = 'mongodb://%s:%s@%s:%s' % (mongo_un, mongo_pw, mongo_host, mongo_port)
+        client = MongoClient(mongo_uri)
+
+        return client['dcdatasets']
 
     def _check_compatibility(self):
         """Verify that the image data has the same resolution/size/etc
