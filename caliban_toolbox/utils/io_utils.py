@@ -87,7 +87,7 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir,
 
                 # save images as either npz or xarray
                 if save_format == 'npz':
-                    np.savez(save_path + '.npz', X=channels, y=labels)
+                    np.savez_compressed(save_path + '.npz', X=channels, y=labels)
 
                 elif save_format == 'xr':
                     raise NotImplementedError()
@@ -105,7 +105,7 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir,
 
                 # save images as either npz or xarray
                 if save_format == 'npz':
-                    np.savez(save_path + '.npz', X=channels, y=labels)
+                    np.savez_compressed(save_path + '.npz', X=channels, y=labels)
 
                 elif save_format == 'xr':
                     raise NotImplementedError()
@@ -116,16 +116,17 @@ def save_npzs_for_caliban(X_data, y_data, original_data, log_data, save_dir,
 
             # save images as either npz or xarray
             if save_format == 'npz':
-                np.savez(save_path + '.npz', X=channels, y=labels)
+                np.savez_compressed(save_path + '.npz', X=channels, y=labels)
 
             elif save_format == 'xr':
                 raise NotImplementedError()
 
     log_data['fov_names'] = fov_names.tolist()
-    log_data['channel_names'] = original_data.channels.values.tolist()
+    log_data['label_name'] = str(y_data.coords[y_data.dims[-1]][0].values)
     log_data['original_shape'] = original_data.shape
     log_data['slice_stack_len'] = X_data.shape[1]
     log_data['save_format'] = save_format
+    log_data['label_dtype'] = str(y_data.dtype)
 
     log_path = os.path.join(save_dir, 'log_data.json')
     with open(log_path, 'w') as write_file:
@@ -178,6 +179,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
     fov_names = log_data['fov_names']
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
     save_format = log_data['save_format']
+    label_dtype = log_data['label_dtype']
 
     # if cropped/sliced, get size of dimensions. Otherwise, use size in original data
     row_crop_size = log_data.get('row_crop_size', row_size)
@@ -187,7 +189,7 @@ def load_npzs(crop_dir, log_data, verbose=True):
     # if cropped/sliced, get number of crops/slices
     num_crops, num_slices = log_data.get('num_crops', 1), log_data.get('num_slices', 1)
     stack = np.zeros((fov_len, slice_stack_len, num_crops,
-                      num_slices, row_crop_size, col_crop_size, 1))
+                      num_slices, row_crop_size, col_crop_size, 1), dtype=label_dtype)
     saved_files = os.listdir(crop_dir)
 
     # for each fov, loop over each 2D crop and 3D slice
@@ -200,13 +202,16 @@ def load_npzs(crop_dir, log_data, verbose=True):
             if os.path.exists(npz_path):
                 temp_npz = np.load(npz_path)
 
+                # determine how labels were named
+                labels_key = 'y' if 'y' in temp_npz else 'annotated'
+
                 # last slice may be truncated, modify index
                 if slice == num_slices - 1:
-                    current_stack_len = temp_npz['X'].shape[1]
+                    current_stack_len = temp_npz[labels_key].shape[1]
                 else:
                     current_stack_len = slice_stack_len
 
-                stack[fov, :current_stack_len, crop, slice, ...] = temp_npz['y']
+                stack[fov, :current_stack_len, crop, slice, ...] = temp_npz[labels_key]
             else:
                 # npz not generated, did not contain any labels, keep blank
                 if verbose:

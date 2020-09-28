@@ -148,7 +148,8 @@ def test_stitch_slices():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=1)
+                            row_len=row_len, col_len=col_len, chan_len=1,
+                            last_dim_name='compartments')
 
     # generate ordered data
     linear_seq = np.arange(stack_len * row_len * col_len)
@@ -178,7 +179,8 @@ def test_stitch_slices():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=1)
+                            row_len=row_len, col_len=col_len, chan_len=1,
+                            last_dim_name='compartments')
 
     # generate ordered data
     linear_seq = np.arange(stack_len * row_len * col_len)

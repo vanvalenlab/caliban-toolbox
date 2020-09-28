@@ -47,7 +47,8 @@ def test_save_npzs_for_caliban():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
                             slice_num=num_slices,
-                            row_len=row_len, col_len=col_len, chan_len=1)
+                            row_len=row_len, col_len=col_len, chan_len=1,
+                            last_dim_name='compartments')
 
     sliced_X, sliced_y, log_data = reshape_data.create_slice_data(X_data=X_data, y_data=y_data,
                                                                   slice_stack_len=slice_stack_len)
@@ -194,7 +195,8 @@ def test_load_npzs():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # slice the data
         X_slice, y_slice, log_data = reshape_data.create_slice_data(X_data, y_data,
@@ -249,7 +251,8 @@ def test_load_npzs():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # slice the data
         X_slice, y_slice, log_data = reshape_data.create_slice_data(X_data,

@@ -26,14 +26,10 @@
 import os
 import sys
 import threading
-import re
 
 import boto3
-
-from urllib.parse import urlencode
-from getpass import getpass
-
-from caliban_toolbox.utils.misc_utils import list_npzs_folder
+import botocore
+import getpass
 
 
 # Taken from AWS Documentation
@@ -56,8 +52,8 @@ class ProgressPercentage(object):
 
 
 def connect_aws():
-    AWS_ACCESS_KEY_ID = getpass('What is your AWS access key id? ')
-    AWS_SECRET_ACCESS_KEY = getpass('What is your AWS secret access key id? ')
+    AWS_ACCESS_KEY_ID = getpass.getpass('What is your AWS access key id? ')
+    AWS_SECRET_ACCESS_KEY = getpass.getpass('What is your AWS secret access key id? ')
 
     session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
                             aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
@@ -67,67 +63,46 @@ def connect_aws():
     return s3
 
 
-def aws_upload_files(aws_folder, stage, upload_folder, pixel_only, label_only, rgb_mode):
+def aws_upload_files(local_paths, aws_paths):
     """Uploads files to AWS bucket for use in Figure 8
 
     Args:
-        aws_folder: folder where uploaded files will be stored
-        stage: specifies stage in pipeline for jobs requiring multiple rounds of annotation
-        upload_folder: path to folder containing files that will be uploaded
-        pixel_only: boolean flag to set pixel_only mode
-        label_only: boolean flag to set label_only mode
-        rgb_mode: boolean flag to set rgb_mode
+        local_paths: list of paths to npz files
+        aws_paths: list of paths for saving npz files in AWS
     """
 
     s3 = connect_aws()
 
-    # load the images from specified folder but not the json log file
-    files_to_upload = list_npzs_folder(upload_folder)
-
-    filename_list = []
-
-    # change slashes separating nested folders to underscores for URL generation
-    subfolders = re.split('/', aws_folder)
-    subfolders = '__'.join(subfolders)
-
-    url_dict = {'pixel_only': pixel_only, 'label_only': label_only, 'rgb': rgb_mode}
-    url_encoded_dict = urlencode(url_dict)
-
     # upload images
-    for img in files_to_upload:
-
-        # full path to image
-        img_path = os.path.join(upload_folder, img)
-
-        # destination path
-        img_key = os.path.join(aws_folder, stage, img)
-
-        # upload
-        s3.upload_file(img_path, 'caliban-input', img_key, Callback=ProgressPercentage(img_path),
-                       ExtraArgs={'ACL': 'public-read', 'Metadata': {'source_path': img_path}})
+    for i in range(len(local_paths)):
+        s3.upload_file(Filename=local_paths[i], Bucket='caliban-input', Key=aws_paths[i],
+                       Callback=ProgressPercentage(local_paths[i]),
+                       ExtraArgs={'ACL': 'public-read',
+                                  'Metadata': {'source_path': local_paths[i]}})
         print('\n')
 
-        url = 'https://caliban.deepcell.org/{}__{}__{}__' \
-              '{}__{}?{}'.format('caliban-input', 'caliban-output', subfolders, stage, img,
-                                 url_encoded_dict)
 
-        # add caliban url to list
-        filename_list.append(url)
+def aws_copy_files(current_folder, next_folder, filenames):
+    """Copy files from one AWS bucket to another.
 
-    return files_to_upload, filename_list
+    Args:
+        current_folder: aws folder with current files
+        next_folder: aws folder where files will be copied
+        filenames: list of NPZ files to copy
+    """
+
+    s3 = connect_aws()
+
+    for file in filenames:
+        copy_source = {'Bucket': 'caliban-output',
+                       'Key': os.path.join(current_folder, file)}
+
+        s3.copy(CopySource=copy_source, Bucket='caliban-input',
+                Key=os.path.join(next_folder, file),
+                ExtraArgs={'ACL': 'public-read'})
 
 
-def aws_transfer_file(s3, input_bucket, output_bucket, key_src, key_dst):
-    """Helper function to transfer files from one bucket/key to another. Used
-    in conjunction with a soon-to-be-created transfer jobs script for jobs with multiple stages"""
-
-    copy_source = {'Bucket': output_bucket,
-                   'Key': key_src}
-
-    s3.copy(copy_source, input_bucket, key_dst,
-            ExtraArgs={'ACL': 'public-read'})
-
-
+# TODO: catch missing files
 def aws_download_files(upload_log, output_dir):
     """Download files following Figure 8 annotation.
 
@@ -143,13 +118,27 @@ def aws_download_files(upload_log, output_dir):
     aws_folder = upload_log['aws_folder'][0]
     stage = upload_log['stage'][0]
 
+    # track missing files
+    missing = []
+
     # download all images
-    for img in files_to_download:
+    for file in files_to_download:
 
         # full path to save image
-        save_path = os.path.join(output_dir, img)
+        local_path = os.path.join(output_dir, file)
 
         # path to file in aws
-        img_path = os.path.join(aws_folder, stage, img)
+        aws_path = os.path.join(aws_folder, stage, file)
 
-        s3.download_file(Bucket='caliban-output', Key=img_path, Filename=save_path)
+        try:
+            s3.download_file(Bucket='caliban-output', Key=aws_path, Filename=local_path)
+        except botocore.exceptions.ClientError as e:
+            error_code = e.response['Error']['Code']
+
+            if error_code == '404':
+                print('The file {} does not exist'.format(aws_path))
+                missing.append(aws_path)
+            else:
+                raise e
+
+    return missing

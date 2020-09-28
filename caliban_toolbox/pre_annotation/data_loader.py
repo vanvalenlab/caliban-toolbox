@@ -447,7 +447,7 @@ class UniversalDataLoader(object):
                     # Read in the image
                     img_set = tiff.imread(path)
                     raw_images.append(img_set)
-                    if img_set.shape[0] > max_frames:
+                    if img_set.shape[0] > max_frames and len(img_set.shape) > 2:
                         max_frames = img_set.shape[0]
 
         # TODO: the following wont be neccesary when num_frames exist

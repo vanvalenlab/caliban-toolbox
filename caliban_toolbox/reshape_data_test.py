@@ -25,6 +25,7 @@
 # ==============================================================================
 import os
 import tempfile
+import pytest
 
 import numpy as np
 import xarray as xr
@@ -48,7 +49,7 @@ def test_crop_multichannel_data():
 
     test_y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                  slice_num=slice_num, row_len=row_len, col_len=col_len,
-                                 chan_len=channel_len)
+                                 chan_len=channel_len, last_dim_name='compartments')
 
     X_data_cropped, y_data_cropped, log_data = \
         reshape_data.crop_multichannel_data(X_data=test_X_data,
@@ -57,12 +58,68 @@ def test_crop_multichannel_data():
                                             overlap_frac=overlap_frac,
                                             test_parameters=False)
 
-    expected_crop_num = len(crop_utils.compute_crop_indices(row_len, crop_size[0],
-                                                            overlap_frac)[0]) ** 2
+    expected_crop_num = len(crop_utils.compute_crop_indices(img_len=row_len,
+                                                            crop_size=crop_size[0],
+                                                            overlap_frac=overlap_frac)[0]) ** 2
     assert (X_data_cropped.shape == (fov_len, stack_len, expected_crop_num, slice_num,
                                      crop_size[0], crop_size[1], channel_len))
 
     assert log_data["num_crops"] == expected_crop_num
+
+    # invalid arguments
+
+    # no crop_size or crop_num
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data)
+
+    # both crop_size and crop_num
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(20, 20), crop_num=(20, 20))
+    # bad crop_size dtype
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=5)
+    # bad crop_size shape
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(10, 5, 2))
+    # bad crop_size values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(0, 5))
+    # bad crop_size values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_size=(1.5, 5))
+    # bad crop_num dtype
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=5)
+    # bad crop_num shape
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(10, 5, 2))
+    # bad crop_num values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(0, 5))
+    # bad crop_num values
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                crop_num=(1.5, 5))
+    # bad overlap_frac value
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data,
+                                                overlap_frac=1.2)
+    # bad X_data dims
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data[0], y_data=test_y_data,
+                                                crop_size=(5, 5))
+    # bad y_data dims
+    with pytest.raises(ValueError):
+        _ = reshape_data.crop_multichannel_data(X_data=test_X_data, y_data=test_y_data[0],
+                                                crop_num=(5, 5))
 
 
 def test_create_slice_data():
@@ -76,7 +133,7 @@ def test_create_slice_data():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=num_crops,
                             slice_num=num_slices, row_len=row_len, col_len=col_len,
-                            chan_len=chan_len)
+                            chan_len=chan_len, last_dim_name='compartments')
 
     X_slice, y_slice, slice_indices = reshape_data.create_slice_data(X_data, y_data,
                                                                      slice_stack_len)
@@ -98,7 +155,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # create image with artificial objects to be segmented
 
@@ -121,9 +179,7 @@ def test_reconstruct_image_stack():
         io_utils.save_npzs_for_caliban(X_data=X_cropped, y_data=y_cropped, original_data=X_data,
                                        log_data=log_data, save_dir=temp_dir)
 
-        reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
-
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(crop_dir=temp_dir)
 
         # dims are the same
         assert np.all(stitched_imgs.shape == y_data.shape)
@@ -146,7 +202,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # tag upper left hand corner of the label in each image
         tags = np.arange(stack_len)
@@ -162,8 +219,7 @@ def test_reconstruct_image_stack():
                                        blank_labels="include",
                                        save_format="npz", verbose=False)
 
-        reshape_data.reconstruct_image_stack(temp_dir)
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(temp_dir)
 
         assert np.all(stitched_imgs.shape == y_data.shape)
         assert np.all(np.equal(stitched_imgs[0, :, 0, 0, 0, 0, 0], tags))
@@ -180,7 +236,8 @@ def test_reconstruct_image_stack():
 
         y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                                 slice_num=slice_num,
-                                row_len=row_len, col_len=col_len, chan_len=1)
+                                row_len=row_len, col_len=col_len, chan_len=1,
+                                last_dim_name='compartments')
 
         # create image with artificial objects to be segmented
 
@@ -215,8 +272,7 @@ def test_reconstruct_image_stack():
                                        blank_labels="include",
                                        save_format="npz", verbose=False)
 
-        reshape_data.reconstruct_image_stack(temp_dir)
-        stitched_imgs = xr.open_dataarray(os.path.join(temp_dir, 'stitched_images.xr'))
+        stitched_imgs = reshape_data.reconstruct_image_stack(temp_dir)
 
         assert np.all(stitched_imgs.shape == y_data.shape)
 

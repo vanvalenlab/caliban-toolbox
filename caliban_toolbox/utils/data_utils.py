@@ -158,17 +158,18 @@ def reorder_channels(new_channel_order, input_data, full_blank=True):
     return channel_xr_blanked
 
 
-def make_blank_labels(image_data):
+def make_blank_labels(image_data, dtype='uint16'):
     """Creates an xarray of blank y_labels which matches the image_data passed in
 
     Args:
         image_data: xarray of image channels used to get label names
+        dtype: dtype for labels
 
     Returns:
         xarray.DataArray: blank xarray of labeled data
     """
 
-    blank_data = np.zeros(image_data.shape[:-1] + (1,), dtype='int16')
+    blank_data = np.zeros(image_data.shape[:-1] + (1,), dtype=dtype)
 
     coords = [image_data.fovs, image_data.rows, image_data.cols, ['segmentation_label']]
     blank_xr = xr.DataArray(blank_data, coords=coords, dims=image_data.dims)

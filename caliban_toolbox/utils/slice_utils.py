@@ -86,21 +86,22 @@ def slice_helper(data_xr, slice_start_indices, slice_end_indices):
     if input_slice_num > 1:
         raise ValueError('Input array already contains slice data')
 
+    # get name of last dimension from input data to determine if X or y
+    last_dim_name = data_xr.dims[-1]
+
     slice_num = len(slice_start_indices)
     sliced_stack_len = slice_end_indices[0] - slice_start_indices[0]
 
     # create xarray to hold slices
     slice_data = np.zeros((fov_len, sliced_stack_len, crop_num,
-                           slice_num, row_len, col_len, chan_len))
+                           slice_num, row_len, col_len, chan_len), dtype=data_xr.dtype)
 
     # labels for each index within a dimension
     coordinate_labels = [data_xr.fovs, range(sliced_stack_len), range(crop_num), range(slice_num),
-                         range(row_len), range(col_len), data_xr.channels]
+                         range(row_len), range(col_len), data_xr[last_dim_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
-
-    slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=dimension_labels)
+    slice_xr = xr.DataArray(data=slice_data, coords=coordinate_labels, dims=data_xr.dims)
 
     # loop through slice indices to generate sliced data
     slice_counter = 0
@@ -143,7 +144,8 @@ def stitch_slices(slice_stack, log_data):
     slice_end_indices = log_data['slice_end_indices']
     num_slices, fov_names = log_data['num_slices'], log_data['fov_names']
 
-    stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1))
+    stitched_slices = np.zeros((fov_len, stack_len, crop_num, 1, row_len, col_len, 1),
+                               dtype=slice_stack.dtype)
 
     # loop slice indices to generate sliced data
     for i in range(num_slices - 1):

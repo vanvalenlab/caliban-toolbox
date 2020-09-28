@@ -32,7 +32,8 @@ from caliban_toolbox.utils import crop_utils
 import xarray as xr
 
 
-def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len):
+def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, chan_len,
+                   last_dim_name='channels'):
     """Test function to generate a blank xarray with the supplied dimensions
 
     Inputs
@@ -43,6 +44,7 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
         row_num: number of rows
         col_num: number of cols
         chan_num: number of channels
+        last_dim_name: name of last dimension. Either channels or compartments for X or y data
 
     Outputs
         test_xr: xarray of [fov_num, row_num, col_num, chan_num]"""
@@ -56,12 +58,12 @@ def _blank_data_xr(fov_len, stack_len, crop_num, slice_num, row_len, col_len, ch
                                  coords=[fovs, range(stack_len), range(crop_num), range(slice_num),
                                          range(row_len), range(col_len), channels],
                                  dims=["fovs", "stacks", "crops", "slices",
-                                       "rows", "cols", "channels"])
+                                       "rows", "cols", last_dim_name])
 
     return test_stack_xr
 
 
-def test_compute_crop_indices():
+def test_compute_crop_indices_crop_size():
     # test corner case of only one crop
     img_len, crop_size, overlap_frac = 100, 100, 0.2
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_size=crop_size,
@@ -83,6 +85,30 @@ def test_compute_crop_indices():
     # test overlap of 0 between crops
     img_len, crop_size, overlap_frac = 200, 20, 0
     starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_size=crop_size,
+                                                            overlap_frac=overlap_frac)
+    assert (np.all(starts == range(0, 200, 20)))
+    assert (np.all(ends == range(20, 201, 20)))
+    assert (padding == 0)
+
+
+def test_compute_crop_indices_num_crops():
+    # test corner case of only one crop
+    img_len, crop_num, overlap_frac = 100, 1, 0.2
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
+                                                            overlap_frac=overlap_frac)
+    assert (len(starts) == 1)
+    assert (len(ends) == 1)
+
+    # test num crops that don't divide evenly into image size
+    img_len, crop_num, overlap_frac = 105, 3, 0.2
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
+                                                            overlap_frac=overlap_frac)
+    assert len(starts) == crop_num
+    assert ends[-1] == img_len + padding
+
+    # test overlap of 0 between crops
+    img_len, crop_num, overlap_frac = 200, 10, 0
+    starts, ends, padding = crop_utils.compute_crop_indices(img_len=img_len, crop_num=crop_num,
                                                             overlap_frac=overlap_frac)
     assert (np.all(starts == range(0, 200, 20)))
     assert (np.all(ends == range(20, 201, 20)))
@@ -123,6 +149,24 @@ def test_crop_helper():
                                              padding=(row_padding, col_padding))
 
     assert (cropped.shape == (fov_len, stack_len, 30, slice_num, row_crop, col_crop, chan_len))
+
+    # test crops with number specified rather than size
+    row_crop_num, col_crop_num = 5, 6
+    row_starts, row_ends, row_padding = \
+        crop_utils.compute_crop_indices(img_len=row_len, crop_num=row_crop_num,
+                                        overlap_frac=overlap_frac)
+
+    col_starts, col_ends, col_padding = \
+        crop_utils.compute_crop_indices(img_len=col_len, crop_num=col_crop_num,
+                                        overlap_frac=overlap_frac)
+
+    cropped, padded = crop_utils.crop_helper(input_data=test_xr, row_starts=row_starts,
+                                             row_ends=row_ends, col_starts=col_starts,
+                                             col_ends=col_ends,
+                                             padding=(row_padding, col_padding))
+
+    # Because overlap is calculated differently, final size is not exactly equal
+    assert (cropped.shape == (fov_len, stack_len, 30, slice_num, 48, 40, chan_len))
 
     # test that correct region of image is being cropped
     row_crop, col_crop = 40, 40
@@ -171,7 +215,8 @@ def test_stitch_crops():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=1)
+                            row_len=row_len, col_len=col_len, chan_len=1,
+                            last_dim_name='compartments')
 
     # create image with artificial objects to be segmented
 
@@ -234,7 +279,8 @@ def test_stitch_crops():
 
     y_data = _blank_data_xr(fov_len=fov_len, stack_len=stack_len, crop_num=crop_num,
                             slice_num=slice_num,
-                            row_len=row_len, col_len=col_len, chan_len=chan_len)
+                            row_len=row_len, col_len=col_len, chan_len=chan_len,
+                            last_dim_name='compartments')
     side_len = 40
     cell_num = y_data.shape[4] // side_len
 
@@ -285,7 +331,7 @@ def test_stitch_crops():
     log_data["num_crops"] = y_cropped.shape[2]
     log_data["original_shape"] = y_data.shape
     log_data["fov_names"] = y_data.fovs.values.tolist()
-    log_data["channel_names"] = y_data.channels.values.tolist()
+    log_data["label_name"] = str(y_data.coords['compartments'][0].values)
 
     stitched_img = crop_utils.stitch_crops(crop_stack=y_cropped, log_data=log_data)
 

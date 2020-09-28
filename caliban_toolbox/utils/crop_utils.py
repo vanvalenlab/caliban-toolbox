@@ -35,12 +35,15 @@ from itertools import product
 import xarray as xr
 
 
-def compute_crop_indices(img_len, crop_size, overlap_frac):
+def compute_crop_indices(img_len, crop_size=None, crop_num=None, overlap_frac=0):
     """Determine how to crop the image across one dimension.
 
     Args:
         img_len: length of the image for given dimension
-        crop_size: size in pixels of the crop in given dimension
+        crop_size: size in pixels of the crop in given dimension; must be specified if
+            crop_num not provided
+        crop_num: number of crops in the given dimension; must be specified if
+            crop_size not provided
         overlap_frac: fraction that adjacent crops will overlap each other on each side
 
     Returns:
@@ -49,8 +52,23 @@ def compute_crop_indices(img_len, crop_size, overlap_frac):
         int: number of pixels of padding at start and end of image in given dimension
     """
 
-    # compute overlap fraction in pixels
-    overlap_pix = math.floor(crop_size * overlap_frac)
+    # compute indices based on fixed number of pixels per crop
+    if crop_size is not None:
+
+        # compute overlap fraction in pixels
+        overlap_pix = math.floor(crop_size * overlap_frac)
+
+    # compute indices based on fixed number of crops
+    elif crop_num is not None:
+        # number of pixels in non-overlapping portion of crop
+        non_overlap_crop_size = np.ceil(img_len / crop_num).astype('int')
+
+        # Technically this is the fraction the non-overlap, rather than fraction of the whole,
+        # but we're going to visually crop overlays anyway to make sure value is appropriate
+        overlap_pix = math.floor(non_overlap_crop_size * overlap_frac)
+
+        # total crop size
+        crop_size = non_overlap_crop_size + overlap_pix
 
     # the crops start at pixel 0, and are spaced crop_size - overlap_pix away from each other
     start_indices = np.arange(0, img_len - overlap_pix, crop_size - overlap_pix)
@@ -68,7 +86,7 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     """Crops an image into pieces according to supplied coordinates
 
     Args:
-        input_data: xarray of [fovs, stacks, crops, slices, rows, cols, channels] to be cropped
+        input_data: xarray of either X or y data to be cropped
         row_starts: list of indices where row crops start
         row_ends: list of indices where row crops end
         col_starts: list of indices where col crops start
@@ -86,22 +104,23 @@ def crop_helper(input_data, row_starts, row_ends, col_starts, col_ends, padding)
     if input_crop_num > 1:
         raise ValueError("Array has already been cropped")
 
+    # get name of last dimension from input data to determine if X or y
+    last_dim_name = input_data.dims[-1]
+
     crop_num = len(row_starts) * len(col_starts)
     crop_size_row = row_ends[0] - row_starts[0]
     crop_size_col = col_ends[0] - col_starts[0]
 
     # create xarray to hold crops
     cropped_stack = np.zeros((fov_len, stack_len, crop_num, slice_num,
-                              crop_size_row, crop_size_col, channel_len))
+                              crop_size_row, crop_size_col, channel_len), dtype=input_data.dtype)
 
     # labels for each index within a dimension
     coordinate_labels = [input_data.fovs, input_data.stacks, range(crop_num), input_data.slices,
-                         range(crop_size_row), range(crop_size_col), input_data.channels]
+                         range(crop_size_row), range(crop_size_col), input_data[last_dim_name]]
 
     # labels for each dimension
-    dimension_labels = ['fovs', 'stacks', 'crops', 'slices', 'rows', 'cols', 'channels']
-
-    cropped_xr = xr.DataArray(data=cropped_stack, coords=coordinate_labels, dims=dimension_labels)
+    cropped_xr = xr.DataArray(data=cropped_stack, coords=coordinate_labels, dims=input_data.dims)
 
     # pad the input to account for imperfectly overlapping final crop in rows and cols
     formatted_padding = ((0, 0), (0, 0), (0, 0), (0, 0), (0, padding[0]), (0, padding[1]), (0, 0))
@@ -134,7 +153,7 @@ def stitch_crops(crop_stack, log_data):
     fov_len, stack_len, _, _, row_size, col_size, _ = log_data['original_shape']
     row_padding, col_padding = log_data.get('row_padding', 0), log_data.get('col_padding', 0)
     stitched_labels = np.zeros((fov_len, stack_len, 1, 1, row_size + row_padding,
-                                col_size + col_padding, 1))
+                                col_size + col_padding, 1), dtype=crop_stack.dtype)
 
     row_starts, row_ends = log_data['row_starts'], log_data['row_ends']
     col_starts, col_ends = log_data['col_starts'], log_data['col_ends']
