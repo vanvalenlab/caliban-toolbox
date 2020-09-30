@@ -43,17 +43,15 @@ class DatasetSplitter(object):
         if splits is None:
             self.splits = [0.05, 0.10, 0.25, 0.5, 0.75, 1]
         else:
+            splits.sort()
             if splits[0] <= 0:
                 raise ValueError('Smallest split must be non-zero, got {}'.format(splits[0]))
-            else:
-                for idx in range(len(splits) - 1):
-                    if splits[idx] >= splits[idx + 1]:
-                        raise ValueError('Splits must be increasing in size. Split {} is {}, '
-                                         'split {} is {}'.format(idx, splits[idx],
-                                                                 idx + 1, splits[idx + 1]))
             if splits[-1] > 1:
                 raise ValueError('Largest split cannot be greater than 1, '
                                  'got {}'.format(splits[-1]))
+            ids, counts = np.unique(splits, return_counts=True)
+            if np.any(counts != 1):
+                raise ValueError('Duplicate splits are not allowed, each split must be uniqe')
             self.splits = splits
 
     def _validate_dict(self, train_dict):
@@ -74,6 +72,6 @@ class DatasetSplitter(object):
             split_idx = permuted_index[0:train_size]
             new_train_dict['X'] = X[split_idx]
             new_train_dict['y'] = y[split_idx]
-            split_dict[str(split)] = new_train_dict
+            split_dict[split] = new_train_dict
 
         return split_dict

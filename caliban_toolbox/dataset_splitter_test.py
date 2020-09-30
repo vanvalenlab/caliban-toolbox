@@ -39,6 +39,13 @@ def test__init__():
     assert ds.seed == seed
     assert ds.splits == splits
 
+    # unsorted splits get sorted
+    splits = [0.8, 0.3, 0.5]
+    ds = DatasetSplitter(seed=seed, splits=splits)
+    splits.sort()
+
+    assert ds.splits == splits
+
     with pytest.raises(ValueError):
         # first split is size 0
         splits = [0, 0.25, 0.5]
@@ -50,7 +57,7 @@ def test__init__():
         _ = DatasetSplitter(splits=splits)
 
     with pytest.raises(ValueError):
-        # splits are not sequentially increasing
+        # duplicate splits
         splits = [0.1, 0.1, 1]
         _ = DatasetSplitter(splits=splits)
 
@@ -81,7 +88,7 @@ def test_split():
 
     split_x_vals, split_y_vals = [], []
     for split in splits:
-        current_split = split_dict[str(split)]
+        current_split = split_dict[split]
 
         assert len(current_split['X']) == int(100 * split)
 
