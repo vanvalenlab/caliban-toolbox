@@ -55,7 +55,7 @@ class DatasetSplitter(object):
             self.splits = splits
 
     def _validate_dict(self, train_dict):
-        if 'X' not in train_dict.keys() or 'y' not in train_dict.keys():
+        if 'X' not in train_dict or 'y' not in train_dict:
             raise ValueError('X and y must be keys in the training dictionary')
 
     def split(self, train_dict):
