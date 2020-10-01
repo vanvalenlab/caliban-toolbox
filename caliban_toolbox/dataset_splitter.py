@@ -72,6 +72,6 @@ class DatasetSplitter(object):
             split_idx = permuted_index[0:train_size]
             new_train_dict['X'] = X[split_idx]
             new_train_dict['y'] = y[split_idx]
-            split_dict[split] = new_train_dict
+            split_dict[str(split)] = new_train_dict
 
         return split_dict

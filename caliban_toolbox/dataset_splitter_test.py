@@ -42,9 +42,8 @@ def test__init__():
     # unsorted splits get sorted
     splits = [0.8, 0.3, 0.5]
     ds = DatasetSplitter(seed=seed, splits=splits)
-    splits.sort()
 
-    assert ds.splits == splits
+    assert ds.splits == sorted(ds.splits)
 
     with pytest.raises(ValueError):
         # first split is size 0
@@ -88,7 +87,7 @@ def test_split():
 
     split_x_vals, split_y_vals = [], []
     for split in splits:
-        current_split = split_dict[split]
+        current_split = split_dict[str(split)]
 
         assert len(current_split['X']) == int(100 * split)
 
