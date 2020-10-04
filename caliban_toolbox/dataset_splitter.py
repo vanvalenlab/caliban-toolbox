@@ -69,8 +69,8 @@ class DatasetSplitter(object):
             array: duplicate indices
         """
 
-        multiplier = np.ceil(min_size / len(indices))
-        new_indices = np.repeat(indices, multiplier)
+        multiplier = int(np.ceil(min_size / len(indices)))
+        new_indices = np.tile(indices, multiplier)
         new_indices = new_indices[:min_size]
 
         return new_indices

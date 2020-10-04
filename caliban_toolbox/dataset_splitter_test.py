@@ -76,8 +76,8 @@ def test__validate_dict():
 
 
 def test__duplicate_indices():
-    test_indices = [np.arange(5), np.arange(1)]
-    min_size = 10
+    test_indices = [np.arange(5), np.arange(1), np.arange(7)]
+    min_size = 8
 
     for test_idx in test_indices:
         ds = DatasetSplitter()
