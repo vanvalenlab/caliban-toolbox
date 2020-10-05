@@ -144,7 +144,6 @@ def test_split():
     splits = [0.001, 0.3, 1]
     ds = DatasetSplitter(splits=splits, seed=0)
     split_dict = ds.split(train_dict=data_dict)
-    print(split_dict['0.001']['X'])
     assert len(split_dict['0.001']['X']) == 1
 
     # setting minimum size
