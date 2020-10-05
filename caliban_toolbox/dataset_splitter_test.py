@@ -75,6 +75,19 @@ def test__validate_dict():
         ds._validate_dict(invalid_dict)
 
 
+def test__duplicate_indices():
+    test_indices = [np.arange(5), np.arange(1), np.arange(7)]
+    min_size = 8
+
+    for test_idx in test_indices:
+        ds = DatasetSplitter()
+        duplicated_indices = ds._duplicate_indices(indices=test_idx, min_size=min_size)
+
+        assert len(duplicated_indices) == min_size
+        # all of the same indices are still present
+        assert set(test_idx) == set(duplicated_indices)
+
+
 def test_split():
     X_vals = np.arange(100)
     y_vals = np.arange(100, 200)
@@ -126,3 +139,13 @@ def test_split():
 
         for data in current_split:
             assert not np.array_equal(current_split[data], original_split[data])
+
+    # split corresponding to fewer than 1 image returns a single image
+    splits = [0.001, 0.3, 1]
+    ds = DatasetSplitter(splits=splits, seed=0)
+    split_dict = ds.split(train_dict=data_dict)
+    assert len(split_dict['0.001']['X']) == 1
+
+    # setting minimum size
+    split_dict = ds.split(train_dict=data_dict, min_size=10)
+    assert len(split_dict['0.001']['X']) == 10

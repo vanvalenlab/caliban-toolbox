@@ -58,18 +58,54 @@ class DatasetSplitter(object):
         if 'X' not in train_dict or 'y' not in train_dict:
             raise ValueError('X and y must be keys in the training dictionary')
 
-    def split(self, train_dict):
+    def _duplicate_indices(self, indices, min_size):
+        """Duplicates supplied indices to that there are min_size number
+
+        Args:
+            indices: array specifying indices of images to be included
+            min_size: minimum number of images in split
+
+        Returns:
+            array: duplicate indices
+        """
+
+        multiplier = int(np.ceil(min_size / len(indices)))
+        new_indices = np.tile(indices, multiplier)
+        new_indices = new_indices[:min_size]
+
+        return new_indices
+
+    def split(self, train_dict, min_size=1):
+        """Split training dict
+
+        Args:
+            train_dict: dictionary containing paired X and y data
+            min_size: minimum number of images for each split. If supplied split size leads to a
+                split with fewer than min_size, duplicates included images up to specified count
+
+        Returns:
+            dict: dict of dicts containing each split
+        """
         self._validate_dict(train_dict)
         X = train_dict['X']
         y = train_dict['y']
         N_batches = X.shape[0]
         index = np.arange(N_batches)
+
+        # randomize index so that we can take sequentially larger splits
         permuted_index = np.random.RandomState(seed=self.seed).permutation(index)
+
         split_dict = {}
         for split in self.splits:
-            new_train_dict = {}
-            train_size = int(split * N_batches)
+            # minimum of 1 image per split
+            train_size = max(int(split * N_batches), 1)
             split_idx = permuted_index[0:train_size]
+
+            # duplicate indices up to minimum batch size if necessary
+            if len(split_idx) < min_size:
+                split_idx = self._duplicate_indices(indices=split_idx, min_size=min_size)
+
+            new_train_dict = {}
             new_train_dict['X'] = X[split_idx]
             new_train_dict['y'] = y[split_idx]
             split_dict[str(split)] = new_train_dict
