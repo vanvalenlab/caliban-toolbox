@@ -133,6 +133,8 @@ class DatasetSplitter(object):
 
         # randomize index so that we can take sequentially larger splits
         index = np.arange(N_batches)
+
+        # randomize index so that we can take sequentially larger splits
         permuted_index = np.random.RandomState(seed=self.seed).permutation(index)
 
         split_dict = {}
