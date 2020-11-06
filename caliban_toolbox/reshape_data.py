@@ -138,10 +138,10 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
     log_data = {}
     log_data['row_starts'] = row_starts.tolist()
     log_data['row_ends'] = row_ends.tolist()
-    log_data['row_crop_size'] = crop_size[0]
+    log_data['row_crop_size'] = int(row_ends[0] - row_starts[0])
     log_data['col_starts'] = col_starts.tolist()
     log_data['col_ends'] = col_ends.tolist()
-    log_data['col_crop_size'] = crop_size[1]
+    log_data['col_crop_size'] = int(col_ends[0] - col_starts[0])
     log_data['row_padding'] = int(row_padding)
     log_data['col_padding'] = int(col_padding)
     log_data['num_crops'] = X_data_cropped.shape[2]
