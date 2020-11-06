@@ -103,7 +103,12 @@ def crop_multichannel_data(X_data, y_data, crop_size=None, crop_num=None, overla
 
     # check if testing or running all samples
     if test_parameters:
-        X_data, y_data = X_data[:1, ...], y_data[:1, ...]
+        # display image from middle of stack if multiple slices available
+        stack_height = X_data.shape[1]
+        stack_middle = stack_height // 2
+
+        X_data = X_data[:1, stack_middle:stack_middle + 1, ...]
+        y_data = y_data[:1, stack_middle:stack_middle + 1, ...]
 
     # compute the start and end coordinates for the row and column crops
     if crop_size is not None:
