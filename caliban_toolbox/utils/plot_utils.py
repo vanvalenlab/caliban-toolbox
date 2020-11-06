@@ -124,8 +124,8 @@ def overlay_crop_overlap(img_crop, row_starts, row_ends, col_starts, col_ends):
     dotted = dotted * side
 
     # trim dotted vectors to be same length as respective sides of image
-    row_dotted = dotted[:row_len]
-    col_dotted = np.expand_dims(np.array(dotted[:col_len]), axis=-1)
+    row_dotted = dotted[:col_len]
+    col_dotted = np.expand_dims(np.array(dotted[:row_len]), axis=-1)
 
     # overlay the dotted vectors on the original image at locations of overlap
     img_crop[[row_overlap, row_len - row_overlap], :] = row_dotted
