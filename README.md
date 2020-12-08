@@ -1,6 +1,6 @@
 # Caliban Toolbox: Data Engineering Tools for Single Cell Analysis
 
-[![Build Status](https://travis-ci.com/vanvalenlab/caliban-toolbox.svg?branch=master)](https://travis-ci.com/vanvalenlab/caliban-toolbox)
+[![Build Status](https://github.com/vanvalenlab/caliban-toolbox/workflows/build/badge.svg)](https://github.com/vanvalenlab/caliban-toolbox/actions)
 [![Coverage Status](https://coveralls.io/repos/github/vanvalenlab/caliban-toolbox/badge.svg?branch=master)](https://coveralls.io/github/vanvalenlab/caliban-toolbox?branch=master)
 
 Caliban Toolbox is a collection of data engineering tools to process and curate crowdsourced image annotations using [Caliban](https://github.com/vanvalenlab/caliban), our data annotation tool. The Toolbox and Caliban work together to generate  annotations for training [DeepCell](https://github.com/vanvalenlab/deepcell-tf).
