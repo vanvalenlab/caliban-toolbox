@@ -5,7 +5,7 @@ scikit-image>=0.14.1,<=0.16.2
 scikit-learn>=0.19.1,<1
 jupyter>=1.0.0,<2
 nbformat>=4.4.0,<5
-imageio==2.5.0
+imageio>=2.5.0,<3
 requests>=2.21.0
 boto3>=1.9.0
 xarray==0.13.0
