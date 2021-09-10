@@ -34,7 +34,6 @@ from caliban_toolbox import pre_annotation
 from caliban_toolbox import utils
 from caliban_toolbox import aws_functions
 from caliban_toolbox import figure_eight_functions
-from caliban_toolbox import log_file
 from caliban_toolbox import relabel
 from caliban_toolbox import reshape_data
 
